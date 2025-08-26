@@ -140,4 +140,4 @@ Este proyecto está bajo la Licencia MIT. Consulta el archivo `LICENSE` para má
 
 ## Contacto
 
-Si tienes alguna pregunta o sugerencia, no dudes en contactarme a través de [tu_email@example.com](mailto:tu_email@example.com) o abriendo un issue en este repositorio.
+Si tienes alguna pregunta o sugerencia, no dudes en contactarme a través de [tu_email@example.com](mailto:altovisual.ba@gmail.com) o abriendo un issue en este repositorio.
