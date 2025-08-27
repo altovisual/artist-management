@@ -27,6 +27,8 @@ Este proyecto es una aplicación web diseñada para la gestión integral de arti
 ## Características
 
 - **Gestión de Artistas:** Añade, edita y visualiza perfiles de artistas.
+- **Gestión Segura de Credenciales:** Almacena y gestiona de forma encriptada las contraseñas de cuentas sociales y de distribución.
+- **Eliminación de Artistas:** Permite eliminar perfiles de artistas y sus datos asociados.
 - **Autenticación Segura:** Inicio de sesión y registro de usuarios gestionado por Supabase Auth.
 - **Base de Datos en Tiempo Real:** Utiliza Supabase para una gestión de datos eficiente y escalable.
 - **Interfaz de Usuario Intuitiva:** Desarrollada con componentes de UI modernos y accesibles.
@@ -65,7 +67,7 @@ Sigue estos pasos para configurar el proyecto localmente:
     -   Crea un nuevo proyecto en [Supabase](https://supabase.com/).
     -   Obtén tu `URL` y `Anon Key` del proyecto en la sección de `Settings -> API`.
     -   Configura las variables de entorno como se describe en la siguiente sección.
-    -   Ejecuta las migraciones SQL ubicadas en `scripts/` para configurar tu base de datos Supabase. Puedes usar la interfaz de Supabase Studio o la CLI de Supabase.
+    -   Ejecuta las migraciones SQL ubicadas en `scripts/` para configurar tu base de datos Supabase. Esto incluye scripts para añadir campos de contraseña y otros detalles a las tablas de cuentas sociales y de distribución. Puedes usar la interfaz de Supabase Studio o la CLI de Supabase.
         ```bash
         # Ejemplo con Supabase CLI (asegúrate de tenerla instalada y configurada)
         supabase db push
