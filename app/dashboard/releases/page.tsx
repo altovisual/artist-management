@@ -11,6 +11,7 @@ import "@/styles/calendar.css"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { useSearchParams } from 'next/navigation'
+import { View } from 'react-big-calendar';
 import {
   Dialog,
   DialogContent,
@@ -62,7 +63,7 @@ export default function ReleasesPage() {
 
   const [events, setEvents] = useState<ReleaseEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [currentView, setCurrentView] = useState("month"); // Default view
+  const [currentView, setCurrentView] = useState<View>("month"); // Default view
   const [currentDate, setCurrentDate] = useState(new Date()); // Current date
   const [showAddReleaseModal, setShowAddReleaseModal] = useState(false)
   const [selectedRelease, setSelectedRelease] = useState<ReleaseEvent | null>(null)
