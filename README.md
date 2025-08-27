@@ -92,6 +92,17 @@ pnpm dev
 
 La aplicación estará disponible en `http://localhost:3000`.
 
+### Gestión de Credenciales de Redes Sociales
+
+Para acceder a las contraseñas de las cuentas de redes sociales de los artistas, que se almacenan de forma segura y encriptada, sigue estos pasos:
+
+1.  Navega a la página de edición de un artista específico.
+2.  En la sección "Social Media Accounts", localiza la cuenta social para la que deseas ver la contraseña.
+3.  Dentro de la tarjeta de la cuenta social, encontrarás una subsección de "Password Management" con un botón "View Saved Password".
+4.  Haz clic en este botón. Se te pedirá que ingreses tu contraseña maestra (la que utilizas para acceder a la bóveda de credenciales).
+5.  Una vez autenticado, la contraseña de la cuenta social se desencriptará y se mostrará temporalmente en un campo de texto. Por motivos de seguridad, esta contraseña se ocultará automáticamente después de 15 segundos.
+6.  Puedes copiar la contraseña mostrada para iniciar sesión en la plataforma de la red social.
+
 ## Estructura del Proyecto
 
 La estructura principal del proyecto es la siguiente:

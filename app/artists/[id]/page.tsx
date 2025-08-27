@@ -66,6 +66,7 @@ export default function ArtistDetailPage() {
   const [artist, setArtist] = useState<any>(null)
   const [socialAccounts, setSocialAccounts] = useState<any[]>([])
   const [distributionAccounts, setDistributionAccounts] = useState<any[]>([])
+  const [projects, setProjects] = useState<any[]>([]) // Nuevo estado para proyectos
   const [assets, setAssets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -128,16 +129,36 @@ export default function ArtistDetailPage() {
           setDistributionAccounts(distributionData || [])
         }
 
-        const { data: assetsData, error: assetsError } = await supabase
-          .from("assets")
-          .select("*")
+        // Fetch projects for the artist
+        const { data: projectsData, error: projectsError } = await supabase
+          .from("projects")
+          .select("*") // Ahora seleccionamos todos los campos del proyecto
           .eq("artist_id", artistId)
 
-        if (assetsError) {
-          console.error("[v0] Error fetching assets:", assetsError)
+        if (projectsError) {
+          console.error("[v0] Error fetching projects:", projectsError)
+          setProjects([]) // Asegurarse de que projects esté vacío en caso de error
+          setAssets([])
         } else {
-          console.log("[v0] Assets:", assetsData)
-          setAssets(assetsData || [])
+          console.log("[v0] Projects data:", projectsData)
+          setProjects(projectsData || []) // Guardar los proyectos en el nuevo estado
+          const projectIds = projectsData.map((p) => p.id)
+          if (projectIds.length > 0) {
+            const { data: assetsData, error: assetsError } = await supabase
+              .from("assets")
+              .select("*")
+              .in("project_id", projectIds)
+
+            if (assetsError) {
+              console.error("[v0] Error fetching assets:", assetsError)
+              setAssets([])
+            } else {
+              console.log("[v0] Assets:", assetsData)
+              setAssets(assetsData || [])
+            }
+          } else {
+            setAssets([])
+          }
         }
       } catch (error) {
         console.error("[v0] Unexpected error:", error)
@@ -222,10 +243,11 @@ export default function ArtistDetailPage() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="social">Social Media</TabsTrigger>
             <TabsTrigger value="distribution">Distribution</TabsTrigger>
+            <TabsTrigger value="releases">Releases</TabsTrigger>
             <TabsTrigger value="assets">Asset Kit</TabsTrigger>
           </TabsList>
 
@@ -295,6 +317,53 @@ export default function ArtistDetailPage() {
                   </CardContent>
                 </Card>
               </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="releases" className="space-y-6">
+            <h2 className="text-2xl font-bold">Artist Releases</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {projects.length > 0 ? (
+                projects.map((project: any) => (
+                  <Card key={project.id}>
+                    <CardHeader className="p-0">
+                      <img
+                        src={project.cover_art_url || "/placeholder-logo.png"}
+                        alt={project.name}
+                        className="w-full h-48 object-cover rounded-t-lg"
+                      />
+                    </CardHeader>
+                    <CardContent className="p-4 space-y-2">
+                      <h3 className="text-lg font-semibold">{project.name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {project.type} • {new Date(project.release_date).toLocaleDateString()}
+                      </p>
+                      <Badge variant="secondary">{project.status}</Badge>
+                      {project.music_file_url && (
+                        <div className="mt-2">
+                          <audio controls src={project.music_file_url} className="w-full" />
+                        </div>
+                      )}
+                      <div className="flex gap-2 mt-4">
+                        <Link href={`/dashboard/releases?id=${project.id}`}>
+                          <Button variant="outline" size="sm">
+                            <Eye className="h-4 w-4 mr-2" /> View Details
+                          </Button>
+                        </Link>
+                        {project.music_file_url && (
+                          <Button asChild variant="outline" size="sm">
+                            <a href={project.music_file_url} download>
+                              <Download className="h-4 w-4 mr-2" /> Download Music
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <p className="text-muted-foreground col-span-full text-center py-8">No releases found for this artist.</p>
+              )}
             </div>
           </TabsContent>
 

@@ -1,0 +1,52 @@
+/* styles/calendar.css */
+
+/* Adjust toolbar buttons */
+.rbc-toolbar button {
+  @apply px-3 py-1.5 rounded-md text-sm font-medium;
+  @apply bg-primary text-primary-foreground hover:bg-primary/90;
+}
+
+.rbc-toolbar button:hover {
+  @apply bg-primary/90;
+}
+
+.rbc-toolbar button.rbc-active {
+  @apply bg-accent text-accent-foreground;
+}
+
+/* Adjust event styling */
+.rbc-event {
+  @apply bg-blue-500 rounded-sm text-white text-xs p-1;
+}
+
+.rbc-event-content {
+  @apply truncate;
+}
+
+/* Adjust current day background */
+.rbc-day-bg.rbc-today {
+  @apply bg-accent/20;
+}
+
+/* Adjust selected day background */
+.rbc-day-bg.rbc-selected {
+  @apply bg-accent/40;
+}
+
+/* Adjust header for days of the week */
+.rbc-header {
+  @apply p-2 text-sm font-semibold text-muted-foreground;
+}
+
+/* Adjust month view cells */
+.rbc-month-row {
+  @apply border-b border-border;
+}
+
+.rbc-date-cell {
+  @apply p-2 text-sm;
+}
+
+.rbc-off-range-bg {
+  @apply bg-muted/20;
+}

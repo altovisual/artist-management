@@ -36,7 +36,7 @@ INSERT INTO public.projects (id, artist_id, name, type, status, release_date, de
 ('660e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440003', 'Alma Desnuda', 'ep', 'planning', '2024-05-10', 'EP intimista de R&B y soul');
 
 -- Insert sample assets
-INSERT INTO public.assets (artist_id, project_id, name, type, category, file_url, dimensions, format, description) VALUES
-('550e8400-e29b-41d4-a716-446655440001', '660e8400-e29b-41d4-a716-446655440001', 'Corazón Libre - Cover Art', 'cover_art', 'musical_releases', '/ana-garc-a-coraz-n-libre-single-cover-art.png', '3000x3000', 'png', 'Arte de portada oficial del single'),
-('550e8400-e29b-41d4-a716-446655440001', '660e8400-e29b-41d4-a716-446655440001', 'Spotify Canvas Loop', 'spotify_canvas', 'musical_releases', '/ana-garc-a-spotify-canvas-video-loop.png', '1080x1920', 'mp4', 'Video loop para Spotify Canvas'),
-('550e8400-e29b-41d4-a716-446655440001', NULL, 'Instagram Post Template', 'instagram_post', 'social_media', '/ana-garc-a-instagram-post-graphic.png', '1080x1080', 'png', 'Plantilla para posts de Instagram');
+INSERT INTO public.assets (project_id, name, type, category, file_url, dimensions, format, description) VALUES
+('660e8400-e29b-41d4-a716-446655440001', 'Corazón Libre - Cover Art', 'cover_art', 'musical_releases', '/ana-garc-a-coraz-n-libre-single-cover-art.png', '3000x3000', 'png', 'Arte de portada oficial del single'),
+('660e8400-e29b-41d4-a716-446655440001', 'Spotify Canvas Loop', 'spotify_canvas', 'musical_releases', '/ana-garc-a-spotify-canvas-video-loop.png', '1080x1920', 'mp4', 'Video loop para Spotify Canvas'),
+('660e8400-e29b-41d4-a716-446655440001', 'Instagram Post Template', 'instagram_post', 'social_media', '/ana-garc-a-instagram-post-graphic.png', '1080x1080', 'png', 'Plantilla para posts de Instagram');

@@ -43,7 +43,7 @@ export async function middleware(request: NextRequest) {
     default-src 'self';
     script-src 'self' 'unsafe-inline' 'unsafe-eval';
     style-src 'self' 'unsafe-inline';
-    img-src 'self' blob: data:;
+    img-src 'self' blob: data: https://tdbomtxyevggobphozdu.supabase.co;
     font-src 'self';
     object-src 'none';
     base-uri 'self';

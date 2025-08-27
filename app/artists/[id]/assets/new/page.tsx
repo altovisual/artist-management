@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useRef } from "react"
+import React, { useState, useRef, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { useParams, useRouter } from "next/navigation"
@@ -62,6 +62,34 @@ export default function NewAssetPage() {
   const [dragActive, setDragActive] = useState(false)
   const [preview, setPreview] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [projectIdToUse, setProjectIdToUse] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProjectId = async () => {
+      const artistId = params.id as string;
+      const { data: projects, error } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('artist_id', artistId)
+        .limit(1);
+
+      if (error) {
+        console.error("Error fetching project ID:", error);
+        // Handle error, maybe set an error state
+        return;
+      }
+
+      if (projects && projects.length > 0) {
+        setProjectIdToUse(projects[0].id);
+      } else {
+        // No projects found for this artist. Handle this case.
+        // For now, we'll leave projectIdToUse as null, which will cause an insert error.
+        console.warn("No projects found for this artist. Asset insertion might fail.");
+      }
+    };
+
+    fetchProjectId();
+  }, [params.id, supabase]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({
@@ -127,21 +155,35 @@ export default function NewAssetPage() {
         .upload(filePath, formData.file)
 
       if (uploadError) {
-        throw uploadError
+        console.log("Supabase upload error:", JSON.stringify(uploadError, null, 2)); // Log upload error
+        throw new Error(JSON.stringify(uploadError, null, 2)); // Throw a proper Error object with stringified content
       }
 
       const { data: { publicUrl } } = supabase.storage.from("artist-assets").getPublicUrl(filePath)
 
-      await supabase.from("assets").insert({
-        artist_id: params.id,
+      if (!projectIdToUse) {
+        toast({
+          title: "Error",
+          description: "No project found for this artist. Please create a project first.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      const { error: insertError } = await supabase.from("assets").insert({
+        artist_id: params.id, // Assuming user has successfully added this column
+        project_id: projectIdToUse, // Use the fetched project ID
         name: formData.name,
-        description: formData.description,
         category: formData.category,
         type: formData.type,
-        file_url: publicUrl,
-        file_size: formData.file.size,
-        format: formData.file.type,
+        url: publicUrl,
       })
+
+      if (insertError) {
+        console.log("Supabase insert error:", JSON.stringify(insertError, null, 2));
+        throw insertError;
+      }
 
       toast({
         title: "Success!",
@@ -234,7 +276,7 @@ export default function NewAssetPage() {
                         type="file"
                         ref={fileInputRef}
                         className="hidden"
-                        accept="image/*,video/*,.pdf"
+                        accept="image/*,video/*,.pdf,audio/mpeg,audio/wav"
                         onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
                       />
                       <Button
@@ -249,7 +291,7 @@ export default function NewAssetPage() {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Supported formats: JPG, PNG, GIF, MP4, MOV, PDF. Max size: 50MB
+                  Supported formats: JPG, PNG, GIF, MP4, MOV, PDF, MP3, WAV. Max size: 50MB
                 </p>
               </CardContent>
             </Card>
@@ -263,7 +305,7 @@ export default function NewAssetPage() {
                   <div>
                     <Label htmlFor="category">Category *</Label>
                     <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
-                      <SelectTrigger>
+                      <SelectTrigger id="category">
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
@@ -282,7 +324,7 @@ export default function NewAssetPage() {
                       onValueChange={(value) => handleInputChange("type", value)}
                       disabled={!formData.category}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="type">
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
