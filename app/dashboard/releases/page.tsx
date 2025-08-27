@@ -10,6 +10,7 @@ import "react-big-calendar/lib/css/react-big-calendar.css"
 import "@/styles/calendar.css"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
+import { useSearchParams } from 'next/navigation'
 import {
   Dialog,
   DialogContent,
@@ -56,9 +57,13 @@ type ReleaseEvent = {
 export default function ReleasesPage() {
   const supabase = createClient()
   const { toast } = useToast()
+  const searchParams = useSearchParams();
+  const initialArtistId = searchParams.get('artistId');
 
   const [events, setEvents] = useState<ReleaseEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [currentView, setCurrentView] = useState("month"); // Default view
+  const [currentDate, setCurrentDate] = useState(new Date()); // Current date
   const [showAddReleaseModal, setShowAddReleaseModal] = useState(false)
   const [selectedRelease, setSelectedRelease] = useState<ReleaseEvent | null>(null)
   const [showEditReleaseModal, setShowEditReleaseModal] = useState(false)
@@ -119,14 +124,19 @@ export default function ReleasesPage() {
       } else {
         setArtists(artistsData || [])
         if (artistsData && artistsData.length > 0) {
-          setSelectedArtistId(artistsData[0].id); // Seleccionar el primer artista por defecto
+          // Si hay un initialArtistId en la URL, úsalo
+          if (initialArtistId) {
+            setSelectedArtistId(initialArtistId);
+          } else {
+            setSelectedArtistId(artistsData[0].id); // Seleccionar el primer artista por defecto si no hay initialArtistId
+          }
         }
       }
       setIsLoading(false)
     }
 
     fetchInitialData()
-  }, [supabase, toast])
+  }, [supabase, toast, initialArtistId])
 
   useEffect(() => {
     if (selectedRelease) {
@@ -291,18 +301,38 @@ export default function ReleasesPage() {
       <div className="min-h-screen bg-background">
         <header className="border-b bg-card">
           <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center gap-4">
-              <Link href="/dashboard">
-                <Button variant="outline" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Volver al Dashboard
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-2xl font-bold">Calendario de Lanzamientos</h1>
-                <p className="text-muted-foreground">Gestiona los próximos lanzamientos musicales</p>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <Link href="/dashboard">
+                  <Button variant="outline" size="sm">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Volver al Dashboard
+                  </Button>
+                </Link>
+                <div>
+                  <h1 className="text-2xl font-bold">Calendario de Lanzamientos</h1>
+                  <p className="text-muted-foreground">Gestiona los próximos lanzamientos musicales</p>
+                </div>
               </div>
-              <Button className="flex items-center gap-2" onClick={() => setShowAddReleaseModal(true)}>
+              <Button className="flex items-center gap-2 w-full sm:w-auto" onClick={() => {
+                setShowAddReleaseModal(true);
+                // Resetear el formulario al abrir el modal
+                setNewReleaseTitle("");
+                setNewReleaseDate("");
+                setNewReleaseType("");
+                setNewReleaseStatus("planned");
+                setNewReleaseCoverArtUrl("");
+                setNewReleaseNotes("");
+                setNewReleaseMusicFileUrl("");
+                // Si hay un initialArtistId, preseleccionarlo
+                if (initialArtistId) {
+                  setSelectedArtistId(initialArtistId);
+                } else if (artists.length > 0) {
+                  setSelectedArtistId(artists[0].id);
+                } else {
+                  setSelectedArtistId(null);
+                }
+              }}>
                 <Plus className="h-4 w-4" />
                 Añadir Lanzamiento
               </Button>
@@ -316,7 +346,7 @@ export default function ReleasesPage() {
               <p>Cargando calendario...</p>
             </div>
           ) : (
-            <div style={{ height: "700px" }}>
+            <div className="h-[70vh] md:h-[80vh] lg:h-[700px]">
               <Calendar
                 localizer={localizer}
                 events={events}
@@ -341,6 +371,10 @@ export default function ReleasesPage() {
                   setSelectedRelease(event as ReleaseEvent)
                   setShowEditReleaseModal(true)
                 }}
+                view={currentView}
+                onView={(view) => setCurrentView(view)}
+                date={currentDate}
+                onNavigate={(date) => setCurrentDate(date)}
               />
             </div>
           )}
@@ -419,9 +453,9 @@ export default function ReleasesPage() {
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddReleaseModal(false)}>Cancelar</Button>
-            <Button onClick={handleAddRelease} disabled={isSavingRelease}>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowAddReleaseModal(false)} className="w-full sm:w-auto">Cancelar</Button>
+            <Button onClick={handleAddRelease} disabled={isSavingRelease} className="w-full sm:w-auto">
               {isSavingRelease ? "Guardando..." : "Guardar Lanzamiento"}
             </Button>
           </DialogFooter>
@@ -510,12 +544,12 @@ export default function ReleasesPage() {
             )}
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditReleaseModal(false)}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleDeleteRelease} disabled={isSavingRelease}>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowEditReleaseModal(false)} className="w-full sm:w-auto">Cancelar</Button>
+            <Button variant="destructive" onClick={handleDeleteRelease} disabled={isSavingRelease} className="w-full sm:w-auto">
               {isSavingRelease ? "Eliminando..." : "Eliminar"}
             </Button>
-            <Button onClick={handleUpdateRelease} disabled={isSavingRelease}>
+            <Button onClick={handleUpdateRelease} disabled={isSavingRelease} className="w-full sm:w-auto">
               {isSavingRelease ? "Guardando..." : "Guardar Cambios"}
             </Button>
           </DialogFooter>

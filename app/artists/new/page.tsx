@@ -155,7 +155,12 @@ export default function NewArtistPage() {
           .select("id") // solo columnas existentes
 
         if (distributionError) {
-          console.error("Error inserting distribution accounts:", distributionError)
+          console.error("Error inserting distribution accounts:", distributionError.message)
+          toast({
+            title: "Error",
+            description: `Failed to add distribution account: ${distributionError.message}`,
+            variant: "destructive",
+          });
         }
       }
 

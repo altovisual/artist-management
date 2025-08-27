@@ -26,6 +26,20 @@ const menuItems = [
   // Add other main navigation items here
 ];
 
+const getPageTitle = (path: string) => {
+  const item = menuItems.find(item => item.href === path);
+  if (item) return item.label;
+  // Handle specific routes not in menuItems, e.g., /artists/[id]
+  if (path.startsWith("/artists/")) {
+    // This is a simplified example. A real implementation might fetch the artist name.
+    return "Artist Details";
+  }
+  if (path.startsWith("/dashboard/releases")) {
+    return "Releases";
+  }
+  return "Dashboard"; // Default title
+};
+
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
@@ -35,7 +49,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         <Sidebar>
           <SidebarHeader>
             {/* You can add a logo here */}
-            <h1 className="text-2xl font-bold p-2">ArtMan</h1>
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
@@ -70,11 +83,13 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </SidebarFooter>
         </Sidebar>
         <SidebarInset>
-            <header className="p-4 border-b">
+            <header className="p-4 border-b flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <SidebarTrigger />
-                    {/* Header content can go here, like breadcrumbs */}
+                    <h1 className="text-2xl font-bold hidden sm:block">ArtMan</h1>
+                    <span className="ml-4 text-xl font-semibold">{getPageTitle(pathname)}</span>
                 </div>
+                {/* Header content can go here, like breadcrumbs or other actions */}
             </header>
             <main className="p-4 md:p-6">
                 {children}

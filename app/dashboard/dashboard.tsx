@@ -10,6 +10,7 @@ import { LogoutButton } from "@/components/logout-button"
 import { ArtistMobileCard } from "@/components/artist-mobile-card"
 import { DashboardTour } from "@/components/dashboard-tour"
 import { format } from 'date-fns'
+import { DbSizeCard } from "@/components/db-size-card"
 
 export default async function Dashboard() {
   const supabase = await createClient()
@@ -65,7 +66,7 @@ export default async function Dashboard() {
         <main className="container mx-auto px-4 py-8">
           <div className="space-y-6">
             {/* Stats Cards */}
-            <div className="flex overflow-x-auto pb-4 space-x-4 md:grid md:grid-cols-5 md:gap-4 animate-in fade-in duration-500 stats-cards-container">
+            <div className="flex overflow-x-auto pb-4 space-x-4 md:grid md:grid-cols-6 md:gap-4 animate-in fade-in duration-500 stats-cards-container">
               <Card className="min-w-[160px]">
                 <CardHeader className="pb-2 sm:pb-1">
                   <CardTitle className="text-sm font-medium text-muted-foreground sm:text-xs">Total Artists</CardTitle>
@@ -116,6 +117,7 @@ export default async function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
+              <DbSizeCard />
             </div>
 
             {/* Artists Table */}

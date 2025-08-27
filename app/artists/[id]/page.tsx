@@ -33,10 +33,17 @@ import {
   Eye,
   Download,
   Trash2,
+  MoreHorizontal,
 } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { ViewCredentialManager } from "@/components/view-credential-manager"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const getPlatformIcon = (platform: string) => {
   switch (platform.toLowerCase()) {
@@ -202,8 +209,8 @@ export default function ArtistDetailPage() {
       {/* Header */}
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-0">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full md:w-auto">
               <Link href="/dashboard">
                 <Button variant="outline" size="sm" className="flex items-center gap-2 bg-transparent">
                   <ArrowLeft className="h-4 w-4" />
@@ -227,38 +234,87 @@ export default function ArtistDetailPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Link href={`/artists/${artist.id}/assets`}>
-                <Button variant="outline" className="flex items-center gap-2 bg-transparent">
-                  <ImageIcon className="h-4 w-4" />
-                  Manage Assets
-                </Button>
-              </Link>
-              <Link href={`/artists/${artist.id}/edit`}>
-                <Button className="flex items-center gap-2">
-                  <Edit className="h-4 w-4" />
-                  Edit Artist
-                </Button>
-              </Link>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="flex items-center gap-2">
-                    <Trash2 className="h-4 w-4" />
-                    Delete Artist
+              {/* Botones visibles en pantallas grandes */}
+              <div className="hidden md:flex items-center gap-2">
+                <Link href={`/artists/${artist.id}/assets`}>
+                  <Button variant="outline" className="flex items-center gap-2 bg-transparent">
+                    <ImageIcon className="h-4 w-4" />
+                    Manage Assets
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete the artist and all their associated data.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                </Link>
+                <Link href={`/artists/${artist.id}/edit`}>
+                  <Button className="flex items-center gap-2">
+                    <Edit className="h-4 w-4" />
+                    Edit Artist
+                  </Button>
+                </Link>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="flex items-center gap-2">
+                      <Trash2 className="h-4 w-4" />
+                      Delete Artist
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the artist and all their associated data.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+
+              {/* Dropdown para pantallas pequeñas */}
+              <div className="md:hidden">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                      <MoreHorizontal className="h-4 w-4" />
+                      <span className="sr-only">Open menu</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild>
+                      <Link href={`/artists/${artist.id}/assets`}>
+                        <ImageIcon className="h-4 w-4 mr-2" />
+                        Manage Assets
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href={`/artists/${artist.id}/edit`}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Artist
+                      </Link>
+                    </DropdownMenuItem>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600">
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete Artist
+                        </DropdownMenuItem>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the artist and all their associated data.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           </div>
         </div>
@@ -267,7 +323,7 @@ export default function ArtistDetailPage() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="flex flex-wrap justify-center w-full">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="social">Social Media</TabsTrigger>
             <TabsTrigger value="distribution">Distribution</TabsTrigger>
@@ -276,7 +332,7 @@ export default function ArtistDetailPage() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {/* Artist Information */}
               <div className="lg:col-span-2">
                 <Card>
@@ -284,7 +340,7 @@ export default function ArtistDetailPage() {
                     <CardTitle>Artist Information</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Genre</label>
                         <p className="mt-1">{artist.genre}</p>
@@ -345,7 +401,15 @@ export default function ArtistDetailPage() {
           </TabsContent>
 
           <TabsContent value="releases" className="space-y-6">
-            <h2 className="text-2xl font-bold">Artist Releases</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">Artist Releases</h2>
+              <Link href={`/dashboard/releases?artistId=${artist.id}`}>
+                <Button className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Crear Lanzamiento
+                </Button>
+              </Link>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {projects.length > 0 ? (
                 projects.map((project: any) => (
@@ -398,7 +462,7 @@ export default function ArtistDetailPage() {
               </CardHeader>
               <CardContent>
                 {socialAccounts.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {socialAccounts.map((account: any) => (
                       <div key={account.id} className="p-4 border rounded-lg">
                         <div className="flex items-center gap-3">
@@ -441,7 +505,7 @@ export default function ArtistDetailPage() {
                           </Badge>
                         </div>
                       </div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-sm text-muted-foreground space-y-2">
                         <p><strong>Username:</strong> {account.username}</p>
                         <p><strong>Email:</strong> {account.email}</p>
                         <p><strong>Monthly Listeners:</strong> {account.monthly_listeners?.toLocaleString() || "0"}</p>
@@ -458,7 +522,7 @@ export default function ArtistDetailPage() {
           </TabsContent>
 
           <TabsContent value="assets" className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">Asset Kit</h2>
               <Link href={`/artists/${artist.id}/assets/new`}>
                 <Button className="flex items-center gap-2">
@@ -468,7 +532,7 @@ export default function ArtistDetailPage() {
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {/* Musical Releases */}
               <Card>
                 <CardHeader>
@@ -480,14 +544,14 @@ export default function ArtistDetailPage() {
                 <CardContent className="space-y-3">
                   {assetsByCategory.musicalReleases.length > 0 ? (
                     assetsByCategory.musicalReleases.map((asset: any) => (
-                      <div key={asset.id} className="p-3 border rounded-lg">
+                      <div key={asset.id} className="p-4 border rounded-lg">
                         <div className="flex items-start gap-3">
                           <img
                             src={asset.file_url || "/placeholder.svg"}
                             alt={asset.name}
                             className="w-12 h-12 rounded object-cover"
                           />
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 space-y-1">
                             <p className="font-medium text-sm truncate">{asset.name}</p>
                             <p className="text-xs text-muted-foreground">{asset.asset_type}</p>
                             <p className="text-xs text-muted-foreground">
@@ -524,14 +588,14 @@ export default function ArtistDetailPage() {
                 <CardContent className="space-y-3">
                   {assetsByCategory.socialMedia.length > 0 ? (
                     assetsByCategory.socialMedia.map((asset: any) => (
-                      <div key={asset.id} className="p-3 border rounded-lg">
+                      <div key={asset.id} className="p-4 border rounded-lg">
                         <div className="flex items-start gap-3">
                           <img
                             src={asset.file_url || "/placeholder.svg"}
                             alt={asset.name}
                             className="w-12 h-12 rounded object-cover"
                           />
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 space-y-1">
                             <p className="font-medium text-sm truncate">{asset.name}</p>
                             <p className="text-xs text-muted-foreground">{asset.asset_type}</p>
                             <p className="text-xs text-muted-foreground">
@@ -568,14 +632,14 @@ export default function ArtistDetailPage() {
                 <CardContent className="space-y-3">
                   {assetsByCategory.pressPromotion.length > 0 ? (
                     assetsByCategory.pressPromotion.map((asset: any) => (
-                      <div key={asset.id} className="p-3 border rounded-lg">
+                      <div key={asset.id} className="p-4 border rounded-lg">
                         <div className="flex items-start gap-3">
                           <img
                             src={asset.file_url || "/placeholder.svg"}
                             alt={asset.name}
                             className="w-12 h-12 rounded object-cover"
                           />
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 space-y-1">
                             <p className="font-medium text-sm truncate">{asset.name}</p>
                             <p className="text-xs text-muted-foreground">{asset.asset_type}</p>
                             <p className="text-xs text-muted-foreground">

@@ -58,7 +58,9 @@ export default function NewAssetPage() {
     type: "",
     tags: "",
     file: null as File | null,
+    externalUrl: "", // Nuevo campo para el link externo
   })
+  const [uploadOption, setUploadOption] = useState<'file' | 'external'>('file'); // 'file' o 'external'
   const [dragActive, setDragActive] = useState(false)
   const [preview, setPreview] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -134,32 +136,55 @@ export default function NewAssetPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.file || !formData.name || !formData.category || !formData.type) {
+    // Validaciones: requiere nombre, categoría, tipo, Y (archivo O enlace externo)
+    if (!formData.name || !formData.category || !formData.type) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields and select a file.",
+        description: "Please fill in all required fields.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
+    }
+    if (uploadOption === 'file' && !formData.file) {
+      toast({
+        title: "Error",
+        description: "Please select a file to upload.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (uploadOption === 'external' && !formData.externalUrl) {
+      toast({
+        title: "Error",
+        description: "Please provide an external link.",
+        variant: "destructive",
+      });
+      return;
     }
 
     setIsLoading(true)
 
     try {
-      const fileExt = formData.file.name.split(".").pop()
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
-      const filePath = `assets/${params.id}/${fileName}`
+      let assetUrl = "";
+      if (uploadOption === 'file' && formData.file) {
+        const fileExt = formData.file.name.split(".").pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `assets/${params.id}/${fileName}`;
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("artist-assets")
-        .upload(filePath, formData.file)
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from("artist-assets")
+          .upload(filePath, formData.file);
 
-      if (uploadError) {
-        console.log("Supabase upload error:", JSON.stringify(uploadError, null, 2)); // Log upload error
-        throw new Error(JSON.stringify(uploadError, null, 2)); // Throw a proper Error object with stringified content
+        if (uploadError) {
+          console.log("Supabase upload error:", JSON.stringify(uploadError, null, 2));
+          throw new Error(JSON.stringify(uploadError, null, 2));
+        }
+
+        const { data: { publicUrl } } = supabase.storage.from("artist-assets").getPublicUrl(filePath);
+        assetUrl = publicUrl;
+      } else if (uploadOption === 'external' && formData.externalUrl) {
+        assetUrl = formData.externalUrl;
       }
-
-      const { data: { publicUrl } } = supabase.storage.from("artist-assets").getPublicUrl(filePath)
 
       if (!projectIdToUse) {
         toast({
@@ -172,12 +197,13 @@ export default function NewAssetPage() {
       }
 
       const { error: insertError } = await supabase.from("assets").insert({
-        artist_id: params.id, // Assuming user has successfully added this column
-        project_id: projectIdToUse, // Use the fetched project ID
+        artist_id: params.id,
+        project_id: projectIdToUse,
         name: formData.name,
         category: formData.category,
         type: formData.type,
-        url: publicUrl,
+        url: assetUrl, // Usar assetUrl (puede ser publicUrl o externalUrl)
+        external_url: uploadOption === 'external' ? formData.externalUrl : null, // Guardar external_url si aplica
       })
 
       if (insertError) {
@@ -234,62 +260,95 @@ export default function NewAssetPage() {
                 <CardTitle>Upload File</CardTitle>
               </CardHeader>
               <CardContent>
-                <div
-                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                    dragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25"
-                  }`}
-                  onDragEnter={handleDrag}
-                  onDragLeave={handleDrag}
-                  onDragOver={handleDrag}
-                  onDrop={handleDrop}
-                >
-                  {preview ? (
-                    <div className="space-y-4">
-                      <img
-                        src={preview || "/placeholder.svg"}
-                        alt="Preview"
-                        className="max-w-full max-h-48 mx-auto rounded"
-                      />
-                      <div className="flex items-center justify-center gap-2">
-                        <p className="text-sm font-medium">{formData.file?.name}</p>
+                <div className="mb-4 flex justify-center gap-4">
+                  <Button
+                    type="button"
+                    variant={uploadOption === 'file' ? 'default' : 'outline'}
+                    onClick={() => setUploadOption('file')}
+                  >
+                    Upload File
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={uploadOption === 'external' ? 'default' : 'outline'}
+                    onClick={() => setUploadOption('external')}
+                  >
+                    Use External Link
+                  </Button>
+                </div>
+
+                {uploadOption === 'file' ? (
+                  <div
+                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                      dragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25"
+                    }`}
+                    onDragEnter={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDragOver={handleDrag}
+                    onDrop={handleDrop}
+                  >
+                    {preview ? (
+                      <div className="space-y-4">
+                        <img
+                          src={preview || "/placeholder.svg"}
+                          alt="Preview"
+                          className="max-w-full max-h-48 mx-auto rounded"
+                        />
+                        <div className="flex items-center justify-center gap-2">
+                          <p className="text-sm font-medium">{formData.file?.name}</p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setFormData((prev) => ({ ...prev, file: null }));
+                              setPreview(null);
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <Upload className="h-12 w-12 mx-auto text-muted-foreground" />
+                        <div>
+                          <p className="text-lg font-medium">Drop your file here</p>
+                          <p className="text-muted-foreground">or click to browse</p>
+                        </div>
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          className="hidden"
+                          accept="image/*,video/*,.pdf,audio/mpeg,audio/wav"
+                          onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
+                        />
                         <Button
                           type="button"
                           variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setFormData((prev) => ({ ...prev, file: null }))
-                            setPreview(null)
-                          }}
+                          className="cursor-pointer bg-transparent"
+                          onClick={() => fileInputRef.current?.click()}
                         >
-                          <X className="h-3 w-3" />
+                          Choose File
                         </Button>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <Upload className="h-12 w-12 mx-auto text-muted-foreground" />
-                      <div>
-                        <p className="text-lg font-medium">Drop your file here</p>
-                        <p className="text-muted-foreground">or click to browse</p>
-                      </div>
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        className="hidden"
-                        accept="image/*,video/*,.pdf,audio/mpeg,audio/wav"
-                        onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="cursor-pointer bg-transparent"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        Choose File
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="externalUrl">External Link</Label>
+                    <Input
+                      id="externalUrl"
+                      type="url"
+                      value={formData.externalUrl}
+                      onChange={(e) => handleInputChange("externalUrl", e.target.value)}
+                      placeholder="https://www.dropbox.com/s/your-asset.mp3"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Provide a direct link to your asset stored externally (e.g., Dropbox, Google Drive).
+                    </p>
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground mt-2">
                   Supported formats: JPG, PNG, GIF, MP4, MOV, PDF, MP3, WAV. Max size: 50MB
                 </p>

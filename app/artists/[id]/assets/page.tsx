@@ -314,7 +314,7 @@ export default function ArtistAssetsPage() {
       <div className="min-h-screen bg-background">
         <header className="border-b bg-card">
           <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <Link href={`/artists/${params.id}`}>
                   <Button variant="outline" size="sm" className="flex items-center gap-2 bg-transparent">
@@ -327,8 +327,8 @@ export default function ArtistAssetsPage() {
                   <p className="text-muted-foreground">For {artist?.name || "..."}</p>
                 </div>
               </div>
-              <Link href={`/artists/${params.id}/assets/new`}>
-                <Button className="flex items-center gap-2">
+              <Link href={`/artists/${params.id}/assets/new`} className="w-full sm:w-auto">
+                <Button className="flex items-center gap-2 w-full">
                   <Plus className="h-4 w-4" />
                   Upload Asset
                 </Button>
@@ -342,7 +342,7 @@ export default function ArtistAssetsPage() {
             <AssetsSkeleton />
           ) : (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">Total Assets</CardTitle>
@@ -510,8 +510,8 @@ export default function ArtistAssetsPage() {
             <LargeAssetPreview asset={selectedAsset} />
           </div>
           {selectedAsset && (
-            <div className="flex justify-center gap-2 mt-4">
-              <Button asChild variant="outline" size="sm">
+            <div className="flex flex-col sm:flex-row justify-center gap-2 mt-4">
+              <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
                 <a href={(selectedAsset.file_url || selectedAsset.url) ?? ""} download>
                   <Download className="h-4 w-4 mr-2" />
                   Download
@@ -521,7 +521,7 @@ export default function ArtistAssetsPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => handleCopyLink((selectedAsset.file_url || selectedAsset.url) ?? "")}
-              >
+                className="w-full sm:w-auto">
                 <Copy className="h-4 w-4 mr-2" />
                 Copy Link
               </Button>
