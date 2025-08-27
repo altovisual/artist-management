@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
@@ -8,6 +8,17 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import {
   ArrowLeft,
   Edit,
@@ -21,9 +32,11 @@ import {
   Plus,
   Eye,
   Download,
+  Trash2,
 } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
+import { ViewCredentialManager } from "@/components/view-credential-manager"
 
 const getPlatformIcon = (platform: string) => {
   switch (platform.toLowerCase()) {
@@ -92,7 +105,7 @@ export default function ArtistDetailPage() {
       try {
         const { data: artistData, error: artistError } = await supabase
           .from("artists")
-          .select("*")
+          .select("*, social_accounts(*), distribution_accounts(*)")
           .eq("id", artistId)
           .single()
 
@@ -104,30 +117,8 @@ export default function ArtistDetailPage() {
 
         console.log("[v0] Artist data:", artistData)
         setArtist(artistData)
-
-        const { data: socialData, error: socialError } = await supabase
-          .from("social_accounts")
-          .select("*")
-          .eq("artist_id", artistId)
-
-        if (socialError) {
-          console.error("[v0] Error fetching social accounts:", socialError)
-        } else {
-          console.log("[v0] Social accounts:", socialData)
-          setSocialAccounts(socialData || [])
-        }
-
-        const { data: distributionData, error: distributionError } = await supabase
-          .from("distribution_accounts")
-          .select("*")
-          .eq("artist_id", artistId)
-
-        if (distributionError) {
-          console.error("[v0] Error fetching distribution accounts:", distributionError)
-        } else {
-          console.log("[v0] Distribution accounts:", distributionData)
-          setDistributionAccounts(distributionData || [])
-        }
+        setSocialAccounts(artistData.social_accounts || [])
+        setDistributionAccounts(artistData.distribution_accounts || [])
 
         // Fetch projects for the artist
         const { data: projectsData, error: projectsError } = await supabase
@@ -187,6 +178,19 @@ export default function ArtistDetailPage() {
     )
   }
 
+  const handleDelete = async () => {
+    const supabase = createClient()
+    try {
+      const { error } = await supabase.from("artists").delete().eq("id", artist.id)
+      if (error) {
+        throw error
+      }
+      router.push("/dashboard")
+    } catch (error) {
+      console.error("Error deleting artist:", error)
+    }
+  }
+
   const assetsByCategory = {
     musicalReleases: assets.filter((asset) => asset.category === "musical_releases"),
     socialMedia: assets.filter((asset) => asset.category === "social_media"),
@@ -235,6 +239,26 @@ export default function ArtistDetailPage() {
                   Edit Artist
                 </Button>
               </Link>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="flex items-center gap-2">
+                    <Trash2 className="h-4 w-4" />
+                    Delete Artist
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete the artist and all their associated data.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
         </div>
@@ -376,18 +400,19 @@ export default function ArtistDetailPage() {
                 {socialAccounts.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {socialAccounts.map((account: any) => (
-                      <div key={account.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div key={account.id} className="p-4 border rounded-lg">
                         <div className="flex items-center gap-3">
                           {getPlatformIcon(account.platform)}
                           <div>
                             <p className="font-medium">{account.platform}</p>
-                            <p className="text-sm text-muted-foreground">{account.username}</p>
+                            <p className="text-sm text-muted-foreground">{account.handle}</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-medium">{account.followers?.toLocaleString() || "0"}</p>
-                          <p className="text-sm text-muted-foreground">followers</p>
+                          <p className="font-medium">{account.username}</p>
+                          <p className="text-sm text-muted-foreground">username</p>
                         </div>
+                        {account.password && <ViewCredentialManager accountId={account.id} tableName="social_accounts" />}
                       </div>
                     ))}
                   </div>
@@ -408,17 +433,21 @@ export default function ArtistDetailPage() {
                   distributionAccounts.map((account: any) => (
                     <div key={account.id} className="p-4 border rounded-lg">
                       <div className="flex items-center gap-3 mb-2">
-                        {getPlatformIcon(account.platform)}
+                        {getPlatformIcon(account.service)}
                         <div className="flex-1">
-                          <p className="font-medium">{account.platform}</p>
+                          <p className="font-medium">{account.service}</p>
                           <Badge variant="default" className="text-xs">
                             Active
                           </Badge>
                         </div>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        <p>{account.monthly_listeners?.toLocaleString() || "0"} monthly listeners</p>
+                        <p><strong>Username:</strong> {account.username}</p>
+                        <p><strong>Email:</strong> {account.email}</p>
+                        <p><strong>Monthly Listeners:</strong> {account.monthly_listeners?.toLocaleString() || "0"}</p>
+                        <p><strong>Notes:</strong> {account.notes}</p>
                       </div>
+                      {account.password && <ViewCredentialManager accountId={account.id} tableName="distribution_accounts" />}
                     </div>
                   ))
                 ) : (

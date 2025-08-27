@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import React, { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
@@ -12,28 +12,41 @@ import { ArrowLeft, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
-import { SocialCredentialManager } from "@/components/social-credential-manager"
+import { CredentialManager } from "@/components/credential-manager"
 import { Separator } from "@/components/ui/separator"
+import { encrypt } from "@/lib/crypto"
+import { useVault } from "@/components/vault-provider"
 
 interface SocialAccount {
   id: string | null;
   platform: string;
   username: string;
-  followers: string;
+  handle: string;
   url: string;
-  email: string;
+  followers: string;
+  password?: string;
+  newPassword?: string;
 }
 
 interface DistributionAccount {
   id: string | null;
-  platform: string;
-  monthlyListeners: string;
+  distributor: string;
+  service: string;
+  monthly_listeners: string;
+  username: string;
+  email: string;
+  notes: string;
+  url: string;
+  account_id: string;
+  password?: string;
+  newPassword?: string;
 }
 
 export default function EditArtistPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
+  const { promptForPassword } = useVault()
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingData, setIsLoadingData] = useState(true)
   const [artist, setArtist] = useState<any>(null)
@@ -50,7 +63,7 @@ export default function EditArtistPage() {
   const [distributionAccounts, setDistributionAccounts] = useState<DistributionAccount[]>([])
 
   const addSocialAccount = () => {
-    setSocialAccounts([...socialAccounts, { id: null, platform: "", username: "", followers: "", url: "", email: "" }]);
+    setSocialAccounts([...socialAccounts, { id: null, platform: "", username: "", handle: "", url: "", followers: "" }]);
   };
 
   const removeSocialAccount = (indexToRemove: number) => {
@@ -64,7 +77,7 @@ export default function EditArtistPage() {
   };
 
   const addDistributionAccount = () => {
-    setDistributionAccounts([...distributionAccounts, { id: null, platform: "", monthlyListeners: "" }]);
+    setDistributionAccounts([...distributionAccounts, { id: null, distributor: "", service: "", monthly_listeners: "", username: "", email: "", notes: "", url: "", account_id: "" }]);
   };
 
   const removeDistributionAccount = (indexToRemove: number) => {
@@ -76,8 +89,6 @@ export default function EditArtistPage() {
     (updatedAccounts[index] as any)[field] = value;
     setDistributionAccounts(updatedAccounts);
   };
-
-  // ... (state declarations remain the same)
 
   useEffect(() => {
     const fetchArtistData = async () => {
@@ -122,8 +133,6 @@ export default function EditArtistPage() {
     fetchArtistData()
   }, [params.id, router, supabase, toast])
 
-  // ... (add/remove/update functions remain the same)
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -147,33 +156,131 @@ export default function EditArtistPage() {
       if (artistError) throw artistError
 
       // Handle Social Accounts
-      const originalSocialIds = artist.social_accounts.map((a: any) => a.id)
-      const finalSocialIds = socialAccounts.map((a) => a.id).filter(Boolean)
-      const socialIdsToDelete = originalSocialIds.filter((id: string) => !finalSocialIds.includes(id))
-      if (socialIdsToDelete.length > 0) {
-        await supabase.from("social_accounts").delete().in("id", socialIdsToDelete)
+      const masterPassword = await promptForPassword();
+      if (!masterPassword) {
+        setIsLoading(false);
+        toast({ title: "Error", description: "Master password is required to save credentials.", variant: "destructive" });
+        return;
       }
-      const socialToUpsert = socialAccounts.filter(a => a.platform && a.username).map(a => ({ id: a.id, artist_id: artistId, platform: a.platform, username: a.username, followers: Number.parseInt(a.followers || '0'), url: a.url, email: a.email }))
-      if (socialToUpsert.length > 0) {
-        await supabase.from("social_accounts").upsert(socialToUpsert)
+
+      const socialAccountsToInsert = await Promise.all(
+        socialAccounts
+          .filter(a => !a.id && a.platform && (a.username || a.url))
+          .map(async a => {
+            let password = a.password;
+            if (a.newPassword) {
+              const { encrypted, iv } = await encrypt(a.newPassword, masterPassword);
+              password = JSON.stringify({ encrypted, iv });
+            }
+            return {
+              artist_id: artistId,
+              platform: a.platform,
+              username: a.username || null,
+              handle: a.handle || null,
+              url: a.url || null,
+              followers: Number.parseInt(a.followers || '0'),
+              password: password
+            }
+          })
+      );
+
+      const socialAccountsToUpdate = await Promise.all(
+        socialAccounts
+          .filter(a => a.id && a.platform && (a.username || a.url))
+          .map(async a => {
+            let password = a.password;
+            if (a.newPassword) {
+              const { encrypted, iv } = await encrypt(a.newPassword, masterPassword);
+              password = JSON.stringify({ encrypted, iv });
+            }
+            return {
+              id: a.id,
+              artist_id: artistId,
+              platform: a.platform,
+              username: a.username || null,
+              handle: a.handle || null,
+              url: a.url || null,
+              followers: Number.parseInt(a.followers || '0'),
+              password: password
+            }
+          })
+      );
+
+      if (socialAccountsToInsert.length > 0) {
+        const { error } = await supabase.from("social_accounts").insert(socialAccountsToInsert)
+        if(error) throw error
+      }
+
+      if (socialAccountsToUpdate.length > 0) {
+        const { error } = await supabase.from("social_accounts").upsert(socialAccountsToUpdate)
+        if(error) throw error
       }
 
       // Handle Distribution Accounts
-      const originalDistroIds = artist.distribution_accounts.map((a: any) => a.id)
-      const finalDistroIds = distributionAccounts.map((a) => a.id).filter(Boolean)
-      const distroIdsToDelete = originalDistroIds.filter((id: string) => !finalDistroIds.includes(id))
-      if (distroIdsToDelete.length > 0) {
-        await supabase.from("distribution_accounts").delete().in("id", distroIdsToDelete)
+      const distroAccountsToInsert = await Promise.all(
+        distributionAccounts
+          .filter(a => !a.id && a.distributor && a.service)
+          .map(async a => {
+            let password = a.password;
+            if (a.newPassword) {
+              const { encrypted, iv } = await encrypt(a.newPassword, masterPassword);
+              password = JSON.stringify({ encrypted, iv });
+            }
+            return {
+              artist_id: artistId,
+              distributor: a.distributor,
+              service: a.service,
+              monthly_listeners: Number.parseInt(a.monthly_listeners || '0'),
+              username: a.username || null,
+              email: a.email || null,
+              notes: a.notes || null,
+              url: a.url || null,
+              account_id: a.account_id || null,
+              password: password
+            }
+          })
+      );
+
+      const distroAccountsToUpdate = await Promise.all(
+        distributionAccounts
+          .filter(a => a.id && a.distributor && a.service)
+          .map(async a => {
+            let password = a.password;
+            if (a.newPassword) {
+              const { encrypted, iv } = await encrypt(a.newPassword, masterPassword);
+              password = JSON.stringify({ encrypted, iv });
+            }
+            return {
+              id: a.id,
+              artist_id: artistId,
+              distributor: a.distributor,
+              service: a.service,
+              monthly_listeners: Number.parseInt(a.monthly_listeners || '0'),
+              username: a.username || null,
+              email: a.email || null,
+              notes: a.notes || null,
+              url: a.url || null,
+              account_id: a.account_id || null,
+              password: password
+            }
+          })
+      );
+
+      if (distroAccountsToInsert.length > 0) {
+        const { error } = await supabase.from("distribution_accounts").insert(distroAccountsToInsert)
+        if(error) throw error
       }
-      const distroToUpsert = distributionAccounts.filter(a => a.platform).map(a => ({ id: a.id, artist_id: artistId, platform: a.platform, monthly_listeners: Number.parseInt(a.monthlyListeners || '0') }))
-      if (distroToUpsert.length > 0) {
-        await supabase.from("distribution_accounts").upsert(distroToUpsert)
+
+      if (distroAccountsToUpdate.length > 0) {
+        const { error } = await supabase.from("distribution_accounts").upsert(distroAccountsToUpdate)
+        if(error) throw error
       }
 
       toast({ title: "Success!", description: "Artist updated successfully." })
       router.push(`/artists/${artistId}`)
     } catch (error: any) {
-      toast({ title: "Error updating artist", description: error.message, variant: "destructive" })
+      console.error("Error updating artist:", JSON.stringify(error, null, 2))
+      toast({ title: "Error updating artist", description: error.message || "An unknown error occurred", variant: "destructive" })
     } finally {
       setIsLoading(false)
     }
@@ -277,19 +384,19 @@ export default function EditArtistPage() {
                     </div>
                     <div className="space-y-2">
                       <Label>Username</Label>
-                      <Input value={account.username} onChange={(e) => updateSocialAccount(index, "username", e.target.value)} placeholder="@username" />
+                      <Input value={account.username || ''} onChange={(e) => updateSocialAccount(index, "username", e.target.value)} placeholder="@username" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Handle</Label>
+                      <Input value={account.handle || ''} onChange={(e) => updateSocialAccount(index, "handle", e.target.value)} placeholder="@handle" />
                     </div>
                     <div className="space-y-2">
                       <Label>Followers</Label>
-                      <Input value={account.followers} onChange={(e) => updateSocialAccount(index, "followers", e.target.value)} placeholder="125K" />
+                      <Input value={account.followers || ''} onChange={(e) => updateSocialAccount(index, "followers", e.target.value)} placeholder="125K" />
                     </div>
                     <div className="space-y-2">
                       <Label>Profile URL</Label>
-                      <Input value={account.url} onChange={(e) => updateSocialAccount(index, "url", e.target.value)} placeholder="https://..." />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Email</Label>
-                      <Input type="email" value={account.email} onChange={(e) => updateSocialAccount(index, "email", e.target.value)} placeholder="email@example.com" />
+                      <Input value={account.url || ''} onChange={(e) => updateSocialAccount(index, "url", e.target.value)} placeholder="https://..." />
                     </div>
                   </div>
                   <Separator className="my-4" />
@@ -297,9 +404,16 @@ export default function EditArtistPage() {
                     <Label className="text-sm font-medium">Password Management</Label>
                     <p className="text-xs text-muted-foreground mb-2">Save or view the password for this account.</p>
                     {account.id && currentUserId ? (
-                      <SocialCredentialManager socialAccountId={account.id} userId={currentUserId} />
+                      <CredentialManager 
+                        accountId={account.id}
+                        tableName="social_accounts"
+                        onPasswordSave={(password) => updateSocialAccount(index, "password", password)}
+                      />
                     ) : (
-                      <p className="text-xs text-destructive">Save artist to enable password management.</p>
+                      <div className="space-y-2">
+                        <Label>New Password</Label>
+                        <Input type="password" onChange={(e) => updateSocialAccount(index, "newPassword", e.target.value)} placeholder="Enter new password" />
+                      </div>
                     )}
                   </div>
                 </div>
@@ -323,9 +437,13 @@ export default function EditArtistPage() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Platform</Label>
-                      <Select value={account.platform} onValueChange={(value) => updateDistributionAccount(index, "platform", value)}>
-                        <SelectTrigger><SelectValue placeholder="Select platform" /></SelectTrigger>
+                      <Label>Distributor</Label>
+                      <Input value={account.distributor || ''} onChange={(e) => updateDistributionAccount(index, "distributor", e.target.value)} placeholder="Distributor Name" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Service</Label>
+                      <Select value={account.service} onValueChange={(value) => updateDistributionAccount(index, "service", value)}>
+                        <SelectTrigger><SelectValue placeholder="Select service" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Spotify">Spotify</SelectItem>
                           <SelectItem value="Apple Music">Apple Music</SelectItem>
@@ -338,8 +456,45 @@ export default function EditArtistPage() {
                     </div>
                     <div className="space-y-2">
                       <Label>Monthly Listeners</Label>
-                      <Input value={account.monthlyListeners} onChange={(e) => updateDistributionAccount(index, "monthlyListeners", e.target.value)} placeholder="250K" />
+                      <Input value={account.monthly_listeners || ''} onChange={(e) => updateDistributionAccount(index, "monthly_listeners", e.target.value)} placeholder="250K" />
                     </div>
+                    <div className="space-y-2">
+                      <Label>Username</Label>
+                      <Input value={account.username || ''} onChange={(e) => updateDistributionAccount(index, "username", e.target.value)} placeholder="artist_username" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Email</Label>
+                      <Input type="email" value={account.email || ''} onChange={(e) => updateDistributionAccount(index, "email", e.target.value)} placeholder="contact@distro.com" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>URL</Label>
+                      <Input value={account.url || ''} onChange={(e) => updateDistributionAccount(index, "url", e.target.value)} placeholder="https://..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Account ID</Label>
+                      <Input value={account.account_id || ''} onChange={(e) => updateDistributionAccount(index, "account_id", e.target.value)} placeholder="Account ID" />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Notes</Label>
+                      <Textarea value={account.notes || ''} onChange={(e) => updateDistributionAccount(index, "notes", e.target.value)} placeholder="Add any relevant notes..." />
+                    </div>
+                  </div>
+                  <Separator className="my-4" />
+                  <div>
+                    <Label className="text-sm font-medium">Password Management</Label>
+                    <p className="text-xs text-muted-foreground mb-2">Save or view the password for this account.</p>
+                    {account.id && currentUserId ? (
+                      <CredentialManager
+                        accountId={account.id}
+                        tableName="distribution_accounts"
+                        onPasswordSave={(password) => updateDistributionAccount(index, "password", password)}
+                      />
+                    ) : (
+                      <div className="space-y-2">
+                        <Label>New Password</Label>
+                        <Input type="password" onChange={(e) => updateDistributionAccount(index, "newPassword", e.target.value)} placeholder="Enter new password" />
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

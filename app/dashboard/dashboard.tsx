@@ -9,6 +9,7 @@ import Link from "next/link"
 import { LogoutButton } from "@/components/logout-button"
 import { ArtistMobileCard } from "@/components/artist-mobile-card"
 import { DashboardTour } from "@/components/dashboard-tour"
+import { format } from 'date-fns'
 
 export default async function Dashboard() {
   const supabase = await createClient()
@@ -26,7 +27,7 @@ export default async function Dashboard() {
   // Si no tienes relaciones en la tabla, este *select('*')* está bien para ahora
   const { data: artists, error: artistsError } = await supabase
     .from("artists")
-    .select("*, projects(id, assets(id))") // Modificado para incluir proyectos y assets
+    .select("*, social_accounts(*), distribution_accounts(*), projects(id, assets(id))") // Modificado para incluir proyectos y assets
 
   if (artistsError) {
     console.error("Error fetching artists:", artistsError)
@@ -184,7 +185,7 @@ export default async function Dashboard() {
                               {artist.assetCount}
                             </div>
                           </TableCell>
-                          <TableCell>{new Date(artist.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell>{format(new Date(artist.created_at), 'MM/dd/yyyy')}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Link href={`/artists/${artist.id}`}>

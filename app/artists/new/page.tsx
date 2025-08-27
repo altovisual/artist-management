@@ -20,13 +20,13 @@ import { Separator } from "@/components/ui/separator";
 interface SocialAccount {
   platform: string
   username: string
-  followers: string
+  followers: string   // <- se mantiene en UI, pero NO se envía al DB
   url: string
 }
 
 interface DistributionAccount {
-  platform: string
-  monthlyListeners: string
+  platform: string    // <- en DB se guarda como service
+  monthlyListeners: string // <- se mantiene en UI, pero NO se envía al DB
 }
 
 export default function NewArtistPage() {
@@ -97,10 +97,10 @@ export default function NewArtistPage() {
         }
 
         const { data: urlData } = supabase.storage.from("artist-profiles").getPublicUrl(uploadData.path)
-
         imageUrl = urlData.publicUrl
       }
-      // Insert artist
+
+      // 1) Insert artist
       const { data: artistData, error: artistError } = await supabase
         .from("artists")
         .insert({
@@ -115,53 +115,51 @@ export default function NewArtistPage() {
         .select()
         .single()
 
-      if (artistError) {
-        throw artistError
-      }
-
+      if (artistError) throw artistError
       const artistId = artistData.id
 
-      // Insert social accounts
+      // 2) Insert social_accounts (schema: artist_id, platform, handle, username, url, ...)
       const validSocialAccounts = socialAccounts.filter((acc) => acc.platform && acc.username)
       if (validSocialAccounts.length > 0) {
         const socialAccountsData = validSocialAccounts.map((acc) => ({
           artist_id: artistId,
           platform: acc.platform,
-          username: acc.username,
-          followers: Number.parseInt(acc.followers.replace(/[^\d]/g, "")) || 0,
-          url: acc.url,
+          handle: acc.username || acc.url || acc.platform, // <- handle OBLIGATORIO
+          username: acc.username || null,
+          url: acc.url || null,
+          // followers NO existe en tabla; si lo quieres persistir, agrega la columna vía SQL
         }))
 
-        const { error: socialError } = await supabase.from("social_accounts").insert(socialAccountsData)
+        const { error: socialError } = await supabase
+          .from("social_accounts")
+          .insert(socialAccountsData)
+          .select("id") // solo columnas existentes
 
         if (socialError) {
           console.error("Error inserting social accounts:", socialError)
         }
       }
 
-      // Insert distribution accounts
+      // 3) Insert distribution_accounts (schema: artist_id, service, account_id?, email?)
       const validDistributionAccounts = distributionAccounts.filter((acc) => acc.platform)
       if (validDistributionAccounts.length > 0) {
         const distributionAccountsData = validDistributionAccounts.map((acc) => ({
           artist_id: artistId,
-          platform: acc.platform,
-          monthly_listeners: Number.parseInt(acc.monthlyListeners.replace(/[^\d]/g, "")) || 0,
+          service: acc.platform, // <- en DB es service, no platform
+          // monthly_listeners NO existe; si lo quieres, agrega la columna vía SQL
         }))
 
         const { error: distributionError } = await supabase
           .from("distribution_accounts")
           .insert(distributionAccountsData)
+          .select("id") // solo columnas existentes
 
         if (distributionError) {
           console.error("Error inserting distribution accounts:", distributionError)
         }
       }
 
-      toast({
-        title: "Success!",
-        description: "Artist created successfully.",
-      })
-
+      toast({ title: "Success!", description: "Artist created successfully." })
       router.push("/dashboard")
     } catch (error) {
       console.error("Error creating artist:", error)
@@ -327,7 +325,7 @@ export default function NewArtistPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Followers</Label>
+                      <Label>Followers (UI only)</Label>
                       <Input
                         value={account.followers}
                         onChange={(e) => updateSocialAccount(index, "followers", e.target.value)}
@@ -347,9 +345,10 @@ export default function NewArtistPage() {
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Password Management</Label>
                     <div className="p-3 bg-muted rounded-md mt-2">
-                        <p className="text-xs text-muted-foreground">
-                            Password management will be available after the artist has been created. Please save this artist first, then edit their profile to add credentials.
-                        </p>
+                      <p className="text-xs text-muted-foreground">
+                        Password management will be available after the artist has been created. Please save this artist
+                        first, then edit their profile to add credentials.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -412,7 +411,7 @@ export default function NewArtistPage() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Monthly Listeners</Label>
+                      <Label>Monthly Listeners (UI only)</Label>
                       <Input
                         value={account.monthlyListeners}
                         onChange={(e) => updateDistributionAccount(index, "monthlyListeners", e.target.value)}
