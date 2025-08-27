@@ -54,7 +54,7 @@ export async function encrypt(plaintext: string, masterPassword: string): Promis
   );
 
   const encryptedBase64 = btoa(String.fromCharCode(...new Uint8Array(encryptedContent)));
-  const ivBase64 = btoa(String.fromCharCode.apply(null, iv));
+  const ivBase64 = btoa(String.fromCharCode(...iv));
 
   return { encrypted: encryptedBase64, iv: ivBase64 };
 }
