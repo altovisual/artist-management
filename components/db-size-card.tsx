@@ -73,10 +73,10 @@ export function DbSizeCard() {
       </CardHeader>
       <CardContent className="sm:py-2">
         {isDbSizeLoading ? (
-          <div className="text-2xl font-bold sm:text-xl animate-pulse">Loading...</div>
+          <div className="text-lg font-bold animate-pulse">Loading...</div>
         ) : (
           <>
-            <div className="text-2xl font-bold sm:text-xl">
+            <div className="text-lg font-bold">
               {dbSizeUsedMb?.toFixed(1)} MB / {dbSizeLimitMb} MB
             </div>
             <p className="text-xs text-muted-foreground mt-1">

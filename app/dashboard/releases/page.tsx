@@ -30,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 const localizer = momentLocalizer(moment)
 
@@ -384,77 +385,77 @@ export default function ReleasesPage() {
 
       {/* MODAL: Añadir */}
       <Dialog open={showAddReleaseModal} onOpenChange={setShowAddReleaseModal}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Añadir Nuevo Lanzamiento</DialogTitle>
             <DialogDescription>Introduce los detalles del nuevo lanzamiento musical.</DialogDescription>
           </DialogHeader>
-
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="artist">Artista</Label>
-              <Select value={selectedArtistId || ""} onValueChange={setSelectedArtistId}>
-                <SelectTrigger id="artist">
-                  <SelectValue placeholder="Selecciona un artista" />
-                </SelectTrigger>
-                <SelectContent>
-                  {artists.map((artist) => (
-                    <SelectItem key={artist.id} value={artist.id}>
-                      {artist.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <ScrollArea className="max-h-[70vh] p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="artist">Artista</Label>
+                <Select value={selectedArtistId || ""} onValueChange={setSelectedArtistId}>
+                  <SelectTrigger id="artist">
+                    <SelectValue placeholder="Selecciona un artista" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {artists.map((artist) => (
+                      <SelectItem key={artist.id} value={artist.id}>
+                        {artist.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="title">Título</Label>
+                <Input id="title" value={newReleaseTitle} onChange={(e) => setNewReleaseTitle(e.target.value)} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="date">Fecha de Lanzamiento</Label>
+                <Input id="date" type="date" value={newReleaseDate} onChange={(e) => setNewReleaseDate(e.target.value)} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="type">Tipo de Lanzamiento</Label>
+                <Select value={newReleaseType} onValueChange={setNewReleaseType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="single">Single</SelectItem>
+                    <SelectItem value="ep">EP</SelectItem>
+                    <SelectItem value="album">Álbum</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="status">Estado</Label>
+                <Select value={newReleaseStatus} onValueChange={setNewReleaseStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un estado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="planned">Planeado</SelectItem>
+                    <SelectItem value="released">Lanzado</SelectItem>
+                    <SelectItem value="postponed">Pospuesto</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="coverArtUrl">URL de la Portada</Label>
+                <Input id="coverArtUrl" type="url" value={newReleaseCoverArtUrl} onChange={(e) => setNewReleaseCoverArtUrl(e.target.value)} placeholder="https://ejemplo.com/portada.jpg" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="musicFileUrl">URL del Archivo Musical</Label>
+                <Input id="musicFileUrl" type="url" value={newReleaseMusicFileUrl} onChange={(e) => setNewReleaseMusicFileUrl(e.target.value)} placeholder="https://ejemplo.com/musica.mp3" />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="notes">Notas</Label>
+                <Textarea id="notes" value={newReleaseNotes} onChange={(e) => setNewReleaseNotes(e.target.value)} placeholder="Notas adicionales sobre el lanzamiento..." className="min-h-[100px]" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="title">Título</Label>
-              <Input id="title" value={newReleaseTitle} onChange={(e) => setNewReleaseTitle(e.target.value)} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="date">Fecha de Lanzamiento</Label>
-              <Input id="date" type="date" value={newReleaseDate} onChange={(e) => setNewReleaseDate(e.target.value)} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="type">Tipo de Lanzamiento</Label>
-              <Select value={newReleaseType} onValueChange={setNewReleaseType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="single">Single</SelectItem>
-                  <SelectItem value="ep">EP</SelectItem>
-                  <SelectItem value="album">Álbum</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="status">Estado</Label>
-              <Select value={newReleaseStatus} onValueChange={setNewReleaseStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="planned">Planeado</SelectItem>
-                  <SelectItem value="released">Lanzado</SelectItem>
-                  <SelectItem value="postponed">Pospuesto</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="coverArtUrl">URL de la Portada</Label>
-              <Input id="coverArtUrl" type="url" value={newReleaseCoverArtUrl} onChange={(e) => setNewReleaseCoverArtUrl(e.target.value)} placeholder="https://ejemplo.com/portada.jpg" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="musicFileUrl">URL del Archivo Musical</Label>
-              <Input id="musicFileUrl" type="url" value={newReleaseMusicFileUrl} onChange={(e) => setNewReleaseMusicFileUrl(e.target.value)} placeholder="https://ejemplo.com/musica.mp3" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notas</Label>
-              <Textarea id="notes" value={newReleaseNotes} onChange={(e) => setNewReleaseNotes(e.target.value)} placeholder="Notas adicionales sobre el lanzamiento..." />
-            </div>
-          </div>
-
-          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+          </ScrollArea>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
             <Button variant="outline" onClick={() => setShowAddReleaseModal(false)} className="w-full sm:w-auto">Cancelar</Button>
             <Button onClick={handleAddRelease} disabled={isSavingRelease} className="w-full sm:w-auto">
               {isSavingRelease ? "Guardando..." : "Guardar Lanzamiento"}
@@ -465,87 +466,87 @@ export default function ReleasesPage() {
 
       {/* MODAL: Editar */}
       <Dialog open={showEditReleaseModal} onOpenChange={setShowEditReleaseModal}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Editar Lanzamiento</DialogTitle>
             <DialogDescription>Modifica los detalles del lanzamiento musical.</DialogDescription>
           </DialogHeader>
-
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="editArtist">Artista</Label>
-              <Select value={selectedArtistId || ""} onValueChange={setSelectedArtistId}>
-                <SelectTrigger id="editArtist">
-                  <SelectValue placeholder="Selecciona un artista" />
-                </SelectTrigger>
-                <SelectContent>
-                  {artists.map((artist) => (
-                    <SelectItem key={artist.id} value={artist.id}>
-                      {artist.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editTitle">Título</Label>
-              <Input id="editTitle" value={newReleaseTitle} onChange={(e) => setNewReleaseTitle(e.target.value)} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editDate">Fecha de Lanzamiento</Label>
-              <Input id="editDate" type="date" value={newReleaseDate} onChange={(e) => setNewReleaseDate(e.target.value)} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editType">Tipo de Lanzamiento</Label>
-              <Select value={newReleaseType} onValueChange={setNewReleaseType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="single">Single</SelectItem>
-                  <SelectItem value="ep">EP</SelectItem>
-                  <SelectItem value="album">Álbum</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editStatus">Estado</Label>
-              <Select value={newReleaseStatus} onValueChange={setNewReleaseStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="planned">Planeado</SelectItem>
-                  <SelectItem value="released">Lanzado</SelectItem>
-                  <SelectItem value="postponed">Pospuesto</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editCoverArtUrl">URL de la Portada</Label>
-              <Input id="editCoverArtUrl" type="url" value={newReleaseCoverArtUrl} onChange={(e) => setNewReleaseCoverArtUrl(e.target.value)} placeholder="https://ejemplo.com/portada.jpg" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editMusicFileUrl">URL del Archivo Musical</Label>
-              <Input id="editMusicFileUrl" type="url" value={newReleaseMusicFileUrl} onChange={(e) => setNewReleaseMusicFileUrl(e.target.value)} placeholder="https://ejemplo.com/musica.mp3" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editNotes">Notas</Label>
-              <Textarea id="editNotes" value={newReleaseNotes} onChange={(e) => setNewReleaseNotes(e.target.value)} placeholder="Notas adicionales sobre el lanzamiento..." />
-            </div>
-
-            {selectedRelease?.resource?.music_file_url && (
-              <div className="space-y-2">
-                <Label>Reproductor de Música</Label>
-                <audio controls src={selectedRelease.resource.music_file_url || undefined} className="w-full" />
-                <Button asChild variant="outline" className="w-full">
-                  <a href={selectedRelease.resource.music_file_url} download>Descargar Música</a>
-                </Button>
+          <ScrollArea className="max-h-[70vh] p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="editArtist">Artista</Label>
+                <Select value={selectedArtistId || ""} onValueChange={setSelectedArtistId}>
+                  <SelectTrigger id="editArtist">
+                    <SelectValue placeholder="Selecciona un artista" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {artists.map((artist) => (
+                      <SelectItem key={artist.id} value={artist.id}>
+                        {artist.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            )}
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="editTitle">Título</Label>
+                <Input id="editTitle" value={newReleaseTitle} onChange={(e) => setNewReleaseTitle(e.target.value)} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editDate">Fecha de Lanzamiento</Label>
+                <Input id="editDate" type="date" value={newReleaseDate} onChange={(e) => setNewReleaseDate(e.target.value)} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editType">Tipo de Lanzamiento</Label>
+                <Select value={newReleaseType} onValueChange={setNewReleaseType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="single">Single</SelectItem>
+                    <SelectItem value="ep">EP</SelectItem>
+                    <SelectItem value="album">Álbum</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editStatus">Estado</Label>
+                <Select value={newReleaseStatus} onValueChange={setNewReleaseStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un estado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="planned">Planeado</SelectItem>
+                    <SelectItem value="released">Lanzado</SelectItem>
+                    <SelectItem value="postponed">Pospuesto</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editCoverArtUrl">URL de la Portada</Label>
+                <Input id="editCoverArtUrl" type="url" value={newReleaseCoverArtUrl} onChange={(e) => setNewReleaseCoverArtUrl(e.target.value)} placeholder="https://ejemplo.com/portada.jpg" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editMusicFileUrl">URL del Archivo Musical</Label>
+                <Input id="editMusicFileUrl" type="url" value={newReleaseMusicFileUrl} onChange={(e) => setNewReleaseMusicFileUrl(e.target.value)} placeholder="https://ejemplo.com/musica.mp3" />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="editNotes">Notas</Label>
+                <Textarea id="editNotes" value={newReleaseNotes} onChange={(e) => setNewReleaseNotes(e.target.value)} placeholder="Notas adicionales sobre el lanzamiento..." className="min-h-[100px]" />
+              </div>
 
-          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+              {selectedRelease?.resource?.music_file_url && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Reproductor de Música</Label>
+                  <audio controls src={selectedRelease.resource.music_file_url || undefined} className="w-full" />
+                  <Button asChild variant="outline" className="w-full">
+                    <a href={selectedRelease.resource.music_file_url} download>Descargar Música</a>
+                  </Button>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
             <Button variant="outline" onClick={() => setShowEditReleaseModal(false)} className="w-full sm:w-auto">Cancelar</Button>
             <Button variant="destructive" onClick={handleDeleteRelease} disabled={isSavingRelease} className="w-full sm:w-auto">
               {isSavingRelease ? "Eliminando..." : "Eliminar"}

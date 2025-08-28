@@ -2,14 +2,11 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Plus, Eye, Edit, ImageIcon, Calendar } from "lucide-react"
+import { Plus, ImageIcon, Calendar } from "lucide-react"
 import Link from "next/link"
 import { LogoutButton } from "@/components/logout-button"
-import { ArtistMobileCard } from "@/components/artist-mobile-card"
+import { ArtistViewSwitcher } from "@/components/artist-view-switcher"
 import { DashboardTour } from "@/components/dashboard-tour"
-import { format } from 'date-fns'
 import { DbSizeCard } from "@/components/db-size-card"
 
 export default async function Dashboard() {
@@ -24,11 +21,9 @@ export default async function Dashboard() {
     redirect("/auth/login")
   }
 
-  // Si no tienes relaciones en la tabla, este *select('*')* está bien para ahora
-  // Si no tienes relaciones en la tabla, este *select('*')* está bien para ahora
   const { data: artists, error: artistsError } = await supabase
     .from("artists")
-    .select("*, social_accounts(*), distribution_accounts(*), projects(id, assets(id))") // Modificado para incluir proyectos y assets
+    .select("*, social_accounts(*), distribution_accounts(*), projects(id, assets(id))")
 
   if (artistsError) {
     console.error("Error fetching artists:", artistsError)
@@ -52,12 +47,14 @@ export default async function Dashboard() {
         {/* Header */}
         <header className="border-b bg-card">
           <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <div>
                 <h1 className="text-2xl font-bold">Artist Management</h1>
-                <p className="text-muted-foreground">Welcome back, {user.email}</p>
+                <p className="text-muted-foreground text-sm">Welcome back, {user.email}</p>
               </div>
-              <LogoutButton />
+              <div className="w-full sm:w-auto">
+                <LogoutButton />
+              </div>
             </div>
           </div>
         </header>
@@ -143,87 +140,7 @@ export default async function Dashboard() {
               </CardHeader>
 
               <CardContent>
-                {/* Desktop Table View */}
-                <div className="hidden md:block overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Artist</TableHead>
-                        <TableHead>Genre</TableHead>
-                        <TableHead>Country</TableHead>
-                        <TableHead>Social Accounts</TableHead>
-                        <TableHead>Distribution</TableHead>
-                        <TableHead>Assets</TableHead>
-                        <TableHead>Created</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-
-                    <TableBody>
-                      {artistsWithCounts.map((artist: any) => (
-                        <TableRow key={artist.id}>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-8 w-8">
-                                <AvatarImage src={artist.profile_image || "/placeholder.svg"} alt={artist.name} />
-                                <AvatarFallback>
-                                  {(artist.name || "")
-                                    .split(" ")
-                                    .map((n: string) => n[0])
-                                    .join("")}
-                                </AvatarFallback>
-                              </Avatar>
-                              {artist.name}
-                            </div>
-                          </TableCell>
-
-                          <TableCell>{artist.genre}</TableCell>
-                          <TableCell>{artist.country}</TableCell>
-                          <TableCell>{artist.socialAccountsCount}</TableCell>
-                          <TableCell>{artist.distributionAccountsCount}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              <ImageIcon className="h-3 w-3" />
-                              {artist.assetCount}
-                            </div>
-                          </TableCell>
-                          <TableCell>{format(new Date(artist.created_at), 'MM/dd/yyyy')}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Link href={`/artists/${artist.id}`}>
-                                <Button variant="outline" size="sm" className="flex items-center gap-1 bg-transparent">
-                                  <Eye className="h-3 w-3" />
-                                  View
-                                </Button>
-                              </Link>
-                              {artist.projects && artist.projects.length > 0 && (
-                                <Link href={`/artists/${artist.id}/assets`}>
-                                  <Button variant="outline" size="sm" className="flex items-center gap-1 bg-transparent">
-                                    <ImageIcon className="h-3 w-3" />
-                                    Assets
-                                  </Button>
-                                </Link>
-                              )}
-                              <Link href={`/artists/${artist.id}/edit`}>
-                                <Button variant="outline" size="sm" className="flex items-center gap-1 bg-transparent">
-                                  <Edit className="h-3 w-3" />
-                                  Edit
-                                </Button>
-                              </Link>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {/* Mobile Card View */}
-                <div className="block md:hidden space-y-4">
-                  {artistsWithCounts.map((artist: any) => (
-                    <ArtistMobileCard key={artist.id} artist={artist} />
-                  ))}
-                </div>
+                <ArtistViewSwitcher artists={artistsWithCounts} />
               </CardContent>
             </Card>
           </div>

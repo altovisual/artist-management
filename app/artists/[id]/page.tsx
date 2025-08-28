@@ -38,6 +38,7 @@ import {
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { ViewCredentialManager } from "@/components/view-credential-manager"
+import { AssetKitTab } from "@/components/asset-kit-tab"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -62,31 +63,13 @@ const getPlatformIcon = (platform: string) => {
   }
 }
 
-const getAssetTypeIcon = (type: string) => {
-  switch (type.toLowerCase()) {
-    case "cover art":
-    case "press photo":
-    case "concert poster":
-      return <ImageIcon className="h-4 w-4" />
-    case "spotify canvas":
-    case "lyric video":
-      return <Youtube className="h-4 w-4" />
-    case "story template":
-    case "post template":
-    case "youtube thumbnail":
-      return <ImageIcon className="h-4 w-4" />
-    default:
-      return <ImageIcon className="h-4 w-4" />
-  }
-}
-
 export default function ArtistDetailPage() {
   const params = useParams()
   const router = useRouter()
   const [artist, setArtist] = useState<any>(null)
   const [socialAccounts, setSocialAccounts] = useState<any[]>([])
   const [distributionAccounts, setDistributionAccounts] = useState<any[]>([])
-  const [projects, setProjects] = useState<any[]>([]) // Nuevo estado para proyectos
+  const [projects, setProjects] = useState<any[]>([])
   const [assets, setAssets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -102,12 +85,9 @@ export default function ArtistDetailPage() {
 
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
       if (!uuidRegex.test(artistId)) {
-        console.error("[v0] Invalid UUID format:", artistId)
         router.push("/dashboard")
         return
       }
-
-      console.log("[v0] Fetching artist data for ID:", artistId)
 
       try {
         const { data: artistData, error: artistError } = await supabase
@@ -117,29 +97,24 @@ export default function ArtistDetailPage() {
           .single()
 
         if (artistError) {
-          console.error("[v0] Error fetching artist:", artistError.message)
           router.push("/dashboard")
           return
         }
 
-        console.log("[v0] Artist data:", artistData)
         setArtist(artistData)
         setSocialAccounts(artistData.social_accounts || [])
         setDistributionAccounts(artistData.distribution_accounts || [])
 
-        // Fetch projects for the artist
         const { data: projectsData, error: projectsError } = await supabase
           .from("projects")
-          .select("*") // Ahora seleccionamos todos los campos del proyecto
+          .select("*")
           .eq("artist_id", artistId)
 
         if (projectsError) {
-          console.error("[v0] Error fetching projects:", projectsError)
-          setProjects([]) // Asegurarse de que projects esté vacío en caso de error
+          setProjects([])
           setAssets([])
         } else {
-          console.log("[v0] Projects data:", projectsData)
-          setProjects(projectsData || []) // Guardar los proyectos en el nuevo estado
+          setProjects(projectsData || [])
           const projectIds = projectsData.map((p) => p.id)
           if (projectIds.length > 0) {
             const { data: assetsData, error: assetsError } = await supabase
@@ -148,10 +123,8 @@ export default function ArtistDetailPage() {
               .in("project_id", projectIds)
 
             if (assetsError) {
-              console.error("[v0] Error fetching assets:", assetsError)
               setAssets([])
             } else {
-              console.log("[v0] Assets:", assetsData)
               setAssets(assetsData || [])
             }
           } else {
@@ -159,7 +132,6 @@ export default function ArtistDetailPage() {
           }
         }
       } catch (error) {
-        console.error("[v0] Unexpected error:", error)
         router.push("/dashboard")
       } finally {
         setLoading(false)
@@ -170,38 +142,21 @@ export default function ArtistDetailPage() {
   }, [params.id, router])
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">Loading...</div>
-      </div>
-    )
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
 
   if (!artist) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">Artist not found</div>
-      </div>
-    )
+    return <div className="min-h-screen flex items-center justify-center">Artist not found</div>
   }
 
   const handleDelete = async () => {
     const supabase = createClient()
     try {
-      const { error } = await supabase.from("artists").delete().eq("id", artist.id)
-      if (error) {
-        throw error
-      }
+      await supabase.from("artists").delete().eq("id", artist.id)
       router.push("/dashboard")
     } catch (error) {
       console.error("Error deleting artist:", error)
     }
-  }
-
-  const assetsByCategory = {
-    musicalReleases: assets.filter((asset) => asset.category === "musical_releases"),
-    socialMedia: assets.filter((asset) => asset.category === "social_media"),
-    pressPromotion: assets.filter((asset) => asset.category === "press_promotion"),
   }
 
   return (
@@ -220,12 +175,7 @@ export default function ArtistDetailPage() {
               <div className="flex items-center gap-3">
                 <Avatar className="h-12 w-12">
                   <AvatarImage src={artist.profile_image || "/placeholder.svg"} alt={artist.name} />
-                  <AvatarFallback>
-                    {artist.name
-                      .split(" ")
-                      .map((n: string) => n[0])
-                      .join("")}
-                  </AvatarFallback>
+                  <AvatarFallback>{artist.name.split(" ").map((n: string) => n[0]).join("")}</AvatarFallback>
                 </Avatar>
                 <div>
                   <h1 className="text-2xl font-bold">{artist.name}</h1>
@@ -234,7 +184,6 @@ export default function ArtistDetailPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {/* Botones visibles en pantallas grandes */}
               <div className="hidden md:flex items-center gap-2">
                 <Link href={`/artists/${artist.id}/assets`}>
                   <Button variant="outline" className="flex items-center gap-2 bg-transparent">
@@ -269,8 +218,6 @@ export default function ArtistDetailPage() {
                   </AlertDialogContent>
                 </AlertDialog>
               </div>
-
-              {/* Dropdown para pantallas pequeñas */}
               <div className="md:hidden">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -333,34 +280,16 @@ export default function ArtistDetailPage() {
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Artist Information */}
               <div className="lg:col-span-2">
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Artist Information</CardTitle>
-                  </CardHeader>
+                  <CardHeader><CardTitle>Artist Information</CardTitle></CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Genre</label>
-                        <p className="mt-1">{artist.genre}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Country</label>
-                        <p className="mt-1">{artist.country}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Total Streams</label>
-                        <p className="mt-1">{artist.total_streams?.toLocaleString() || "0"}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Monthly Listeners</label>
-                        <p className="mt-1">{artist.monthly_listeners?.toLocaleString() || "0"}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Created</label>
-                        <p className="mt-1">{new Date(artist.created_at).toLocaleDateString()}</p>
-                      </div>
+                      <div><label className="text-sm font-medium text-muted-foreground">Genre</label><p className="mt-1">{artist.genre}</p></div>
+                      <div><label className="text-sm font-medium text-muted-foreground">Country</label><p className="mt-1">{artist.country}</p></div>
+                      <div><label className="text-sm font-medium text-muted-foreground">Total Streams</label><p className="mt-1">{artist.total_streams?.toLocaleString() || "0"}</p></div>
+                      <div><label className="text-sm font-medium text-muted-foreground">Monthly Listeners</label><p className="mt-1">{artist.monthly_listeners?.toLocaleString() || "0"}</p></div>
+                      <div><label className="text-sm font-medium text-muted-foreground">Created</label><p className="mt-1">{new Date(artist.created_at).toLocaleDateString()}</p></div>
                     </div>
                     <Separator />
                     <div>
@@ -370,30 +299,14 @@ export default function ArtistDetailPage() {
                   </CardContent>
                 </Card>
               </div>
-
-              {/* Quick Stats */}
               <div>
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Quick Stats</CardTitle>
-                  </CardHeader>
+                  <CardHeader><CardTitle>Quick Stats</CardTitle></CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Social Accounts</span>
-                      <span className="font-medium">{socialAccounts.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Distribution Platforms</span>
-                      <span className="font-medium">{distributionAccounts.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Total Assets</span>
-                      <span className="font-medium">{assets.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Total Streams</span>
-                      <span className="font-medium">{artist.total_streams?.toLocaleString() || "0"}</span>
-                    </div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Social Accounts</span><span className="font-medium">{socialAccounts.length}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Distribution Platforms</span><span className="font-medium">{distributionAccounts.length}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Total Assets</span><span className="font-medium">{assets.length}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Total Streams</span><span className="font-medium">{artist.total_streams?.toLocaleString() || "0"}</span></div>
                   </CardContent>
                 </Card>
               </div>
@@ -457,9 +370,7 @@ export default function ArtistDetailPage() {
 
           <TabsContent value="social" className="space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle>Social Media Accounts</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle>Social Media Accounts</CardTitle></CardHeader>
               <CardContent>
                 {socialAccounts.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -489,9 +400,7 @@ export default function ArtistDetailPage() {
 
           <TabsContent value="distribution" className="space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle>Distribution Accounts</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle>Distribution Accounts</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 {distributionAccounts.length > 0 ? (
                   distributionAccounts.map((account: any) => (
@@ -524,147 +433,14 @@ export default function ArtistDetailPage() {
           <TabsContent value="assets" className="space-y-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">Asset Kit</h2>
-              <Link href={`/artists/${artist.id}/assets/new`}>
-                <Button className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add Asset
+              <Link href={`/artists/${artist.id}/assets`}>
+                <Button>
+                  <ImageIcon className="h-4 w-4 mr-2" />
+                  Manage All Assets
                 </Button>
               </Link>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Musical Releases */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Music className="h-5 w-5" />
-                    Musical Releases
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {assetsByCategory.musicalReleases.length > 0 ? (
-                    assetsByCategory.musicalReleases.map((asset: any) => (
-                      <div key={asset.id} className="p-4 border rounded-lg">
-                        <div className="flex items-start gap-3">
-                          <img
-                            src={asset.file_url || "/placeholder.svg"}
-                            alt={asset.name}
-                            className="w-12 h-12 rounded object-cover"
-                          />
-                          <div className="flex-1 min-w-0 space-y-1">
-                            <p className="font-medium text-sm truncate">{asset.name}</p>
-                            <p className="text-xs text-muted-foreground">{asset.asset_type}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {asset.file_format} • {asset.file_size}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 mt-2">
-                          <Button variant="outline" size="sm" className="flex-1 bg-transparent">
-                            <Eye className="h-3 w-3 mr-1" />
-                            View
-                          </Button>
-                          <Button variant="outline" size="sm" className="flex-1 bg-transparent">
-                            <Download className="h-3 w-3 mr-1" />
-                            Download
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-muted-foreground text-center py-4 text-sm">No musical release assets yet.</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Social Media */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Instagram className="h-5 w-5" />
-                    Social Media
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {assetsByCategory.socialMedia.length > 0 ? (
-                    assetsByCategory.socialMedia.map((asset: any) => (
-                      <div key={asset.id} className="p-4 border rounded-lg">
-                        <div className="flex items-start gap-3">
-                          <img
-                            src={asset.file_url || "/placeholder.svg"}
-                            alt={asset.name}
-                            className="w-12 h-12 rounded object-cover"
-                          />
-                          <div className="flex-1 min-w-0 space-y-1">
-                            <p className="font-medium text-sm truncate">{asset.name}</p>
-                            <p className="text-xs text-muted-foreground">{asset.asset_type}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {asset.file_format} • {asset.file_size}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 mt-2">
-                          <Button variant="outline" size="sm" className="flex-1 bg-transparent">
-                            <Eye className="h-3 w-3 mr-1" />
-                            View
-                          </Button>
-                          <Button variant="outline" size="sm" className="flex-1 bg-transparent">
-                            <Download className="h-3 w-3 mr-1" />
-                            Download
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-muted-foreground text-center py-4 text-sm">No social media assets yet.</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Press & Promotion */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ImageIcon className="h-5 w-5" />
-                    Press & Promotion
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {assetsByCategory.pressPromotion.length > 0 ? (
-                    assetsByCategory.pressPromotion.map((asset: any) => (
-                      <div key={asset.id} className="p-4 border rounded-lg">
-                        <div className="flex items-start gap-3">
-                          <img
-                            src={asset.file_url || "/placeholder.svg"}
-                            alt={asset.name}
-                            className="w-12 h-12 rounded object-cover"
-                          />
-                          <div className="flex-1 min-w-0 space-y-1">
-                            <p className="font-medium text-sm truncate">{asset.name}</p>
-                            <p className="text-xs text-muted-foreground">{asset.asset_type}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {asset.file_format} • {asset.file_size}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 mt-2">
-                          <Button variant="outline" size="sm" className="flex-1 bg-transparent">
-                            <Eye className="h-3 w-3 mr-1" />
-                            View
-                          </Button>
-                          <Button variant="outline" size="sm" className="flex-1 bg-transparent">
-                            <Download className="h-3 w-3 mr-1" />
-                            Download
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-muted-foreground text-center py-4 text-sm">No press & promotion assets yet.</p>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+            <AssetKitTab assets={assets} />
           </TabsContent>
         </Tabs>
       </main>

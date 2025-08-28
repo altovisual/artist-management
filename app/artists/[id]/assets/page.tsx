@@ -238,7 +238,7 @@ export default function ArtistAssetsPage() {
           const { data: assetsData, error: assetsError } = await supabase
             .from("assets")
             .select("*")
-            .or(`project_id.in.(${projectIds.join(",")}),project_id.is.null`)
+            .in("project_id", projectIds)
             .order("created_at", { ascending: false })
 
           if (assetsError) {
