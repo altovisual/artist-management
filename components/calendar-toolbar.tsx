@@ -3,12 +3,13 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { View } from 'react-big-calendar'; // Import View type
 
 interface CalendarToolbarProps {
   label: string;
   onNavigate: (action: 'PREV' | 'NEXT' | 'TODAY') => void;
-  view: string; // current view
-  onView: (view: string) => void; // function to change view
+  view: View; // current view, now using View type
+  onView: (view: View) => void; // function to change view, now using View type
 }
 
 export function CalendarToolbar({ label, onNavigate, view, onView }: CalendarToolbarProps) {
