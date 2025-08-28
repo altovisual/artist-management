@@ -3,6 +3,7 @@
 import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
+import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/components/auth-provider";
 import { VaultProvider } from "@/components/vault-provider";
 import NextNProgress from 'nextjs-toploader';
@@ -27,10 +28,17 @@ export default function RootLayout({
   return (
     <html lang="en" className={GeistSans.className} suppressHydrationWarning>
       <body>
-        <NextNProgress />
-        <AuthProvider>
-          <VaultProvider>{children}</VaultProvider>
-        </AuthProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <NextNProgress />
+          <AuthProvider>
+            <VaultProvider>{children}</VaultProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

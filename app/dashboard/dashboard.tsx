@@ -8,6 +8,7 @@ import { LogoutButton } from "@/components/logout-button"
 import { ArtistViewSwitcher } from "@/components/artist-view-switcher"
 import { DashboardTour } from "@/components/dashboard-tour"
 import { DbSizeCard } from "@/components/db-size-card"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export default async function Dashboard() {
   const supabase = await createClient()
@@ -53,7 +54,10 @@ export default async function Dashboard() {
                 <p className="text-muted-foreground text-sm">Welcome back, {user.email}</p>
               </div>
               <div className="w-full sm:w-auto">
+                <div className="flex items-center gap-2">
+                <ThemeToggle />
                 <LogoutButton />
+              </div>
               </div>
             </div>
           </div>

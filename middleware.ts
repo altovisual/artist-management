@@ -41,7 +41,7 @@ export async function middleware(request: NextRequest) {
   // Creamos la política de seguridad de contenido (CSP)
   const cspHeader = `
     default-src 'self';
-    script-src 'self' 'unsafe-inline' 'unsafe-eval';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval';
     style-src 'self' 'unsafe-inline';
     img-src 'self' blob: data: https://tdbomtxyevggobphozdu.supabase.co;
     font-src 'self';
