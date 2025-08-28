@@ -331,7 +331,7 @@ export function ReleaseCalendar({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="artist">Artist</Label>
-                {console.log("Artists array before Select component (Add modal):", artists)}
+                
                 {artists && artists.length > 0 ? (
                   <select
                     id="artist" // or editArtist
@@ -420,7 +420,7 @@ export function ReleaseCalendar({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="editArtist">Artist</Label>
-                {console.log("Artists array before Select component (Edit modal):", artists)}
+                
                 {artists && artists.length > 0 ? (
                   <Select value={selectedArtistId || ""} onValueChange={setSelectedArtistId}>
                     <SelectTrigger id="editArtist">
