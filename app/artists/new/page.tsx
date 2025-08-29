@@ -84,6 +84,14 @@ export default function NewArtistPage() {
     e.preventDefault()
     setIsLoading(true)
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({ title: "Error", description: "You must be logged in to create an artist.", variant: "destructive" });
+      setIsLoading(false);
+      router.push("/auth/login");
+      return;
+    }
+
     try {
       let imageUrl: string | null = null
       if (profileImage) {
@@ -104,6 +112,7 @@ export default function NewArtistPage() {
       const { data: artistData, error: artistError } = await supabase
         .from("artists")
         .insert({
+          user_id: user.id,
           name,
           genre,
           country: location,
@@ -168,6 +177,11 @@ export default function NewArtistPage() {
       router.push("/dashboard")
     } catch (error) {
       console.error("Error creating artist:", error)
+      if (error instanceof Error) {
+        console.error("Error name:", error.name)
+        console.error("Error message:", error.message)
+        console.error("Error stack:", error.stack)
+      }
       toast({
         title: "Error",
         description: "Failed to create artist. Please try again.",

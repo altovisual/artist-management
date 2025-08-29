@@ -45,6 +45,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import Image from "next/image"
 
 const getPlatformIcon = (platform: string) => {
   switch (platform.toLowerCase()) {
@@ -328,9 +329,11 @@ export default function ArtistDetailPage() {
                 projects.map((project: any) => (
                   <Card key={project.id}>
                     <CardHeader className="p-0">
-                      <img
+                      <Image
                         src={project.cover_art_url || "/placeholder-logo.png"}
                         alt={project.name}
+                        width={500}
+                        height={192}
                         className="w-full h-48 object-cover rounded-t-lg"
                       />
                     </CardHeader>

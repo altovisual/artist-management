@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Upload, Save, X } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 
 const assetCategories = {
   "Musical Releases": [
@@ -202,8 +203,8 @@ export default function NewAssetPage() {
         name: formData.name,
         category: formData.category,
         type: formData.type,
-        url: assetUrl, // Usar assetUrl (puede ser publicUrl o externalUrl)
-        external_url: uploadOption === 'external' ? formData.externalUrl : null, // Guardar external_url si aplica
+        file_url: assetUrl, // Correct: Use file_url which can be a publicUrl or an external link
+        description: formData.description, // Add description from form
       })
 
       if (insertError) {
@@ -245,7 +246,7 @@ export default function NewAssetPage() {
               </Link>
               <div>
                 <h1 className="text-2xl font-bold">Upload New Asset</h1>
-                <p className="text-muted-foreground">Add a new visual asset to the artist's kit</p>
+                <p className="text-muted-foreground">Add a new visual asset to the artist&apos;s kit</p>
               </div>
             </div>
           </div>
@@ -289,10 +290,12 @@ export default function NewAssetPage() {
                   >
                     {preview ? (
                       <div className="space-y-4">
-                        <img
+                                                <Image
                           src={preview || "/placeholder.svg"}
                           alt="Preview"
-                          className="max-w-full max-h-48 mx-auto rounded"
+                          width={192}
+                          height={192}
+                          className="max-w-full h-auto mx-auto rounded"
                         />
                         <div className="flex items-center justify-center gap-2">
                           <p className="text-sm font-medium">{formData.file?.name}</p>

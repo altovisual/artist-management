@@ -79,7 +79,7 @@ export default function Dashboard() {
       setIsLoading(false)
     }
     fetchData()
-  }, []) // Empty dependency array to run once on mount
+  }, [router]) // Empty dependency array to run once on mount
 
   const filteredArtists = artistsData.filter((artist: any) =>
     artist.name.toLowerCase().includes(searchTerm.toLowerCase())

@@ -13,6 +13,7 @@ import { ArrowLeft, Plus, Search, Upload, Eye, Download, Music, Instagram, Image
 import Link from "next/link"
 import { AssetsSkeleton } from "./assets-skeleton"
 import { useToast } from "@/components/ui/use-toast"
+import Image from "next/image"
 
 /* ---------------- helpers de normalización/preview ---------------- */
 
@@ -72,10 +73,11 @@ const AssetPreview = ({ asset }: { asset: any }) => {
   if (fmt.startsWith("image/")) {
     return (
       <div className="relative w-full h-full bg-gray-200 animate-pulse">
-        <img
+                <Image
           src={url}
           alt={asset.name}
-          className={`w-full h-full object-cover ${imageLoaded ? "opacity-100" : "opacity-0"}`}
+          fill
+          className={`object-cover ${imageLoaded ? "opacity-100" : "opacity-0"}`}
           onLoad={() => setImageLoaded(true)}
           style={{ transition: "opacity 0.3s ease-in-out" }}
         />
@@ -139,7 +141,7 @@ const LargeAssetPreview = ({ asset }: { asset: any }) => {
   }
 
   if (fmt.startsWith("image/")) {
-    return <img src={url} alt={asset.name} className="max-h-[80vh] w-auto rounded-lg" onError={() => setMediaError(true)} />
+    return <Image src={url} alt={asset.name} width={1000} height={1000} className="max-h-[80vh] w-auto rounded-lg" onError={() => setMediaError(true)} />
   }
   if (fmt.startsWith("video/")) {
     return (

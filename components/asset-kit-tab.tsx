@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
 import { Music, Instagram, ImageIcon, Eye, Download, Copy, Video, FileText } from "lucide-react"
+import Image from "next/image"
 
 // --- Helper Functions for Asset Preview ---
 
@@ -73,7 +74,7 @@ const LargeAssetPreview = ({ asset }: { asset: any }) => {
   }
 
   if (fmt.startsWith("image/")) {
-    return <img src={url} alt={asset.name} className="max-h-[80vh] w-auto rounded-lg" onError={() => setMediaError(true)} />
+    return <Image src={url} alt={asset.name} width={1000} height={1000} className="max-h-[80vh] w-auto rounded-lg" onError={() => setMediaError(true)} />
   }
   if (fmt.startsWith("video/")) {
     return <video key={url} src={url} controls autoPlay className="max-h-[80vh] w-auto rounded-lg bg-black" onError={() => setMediaError(true)} />
@@ -134,7 +135,7 @@ export function AssetKitTab({ assets }: { assets: any[] }) {
   const renderAssetCard = (asset: any) => (
     <div key={asset.id} className="p-4 border rounded-lg">
       <div className="flex items-start gap-3">
-        <img src={asset.url || "/placeholder.svg"} alt={asset.name} className="w-12 h-12 rounded object-cover" />
+        <Image src={asset.url || "/placeholder.svg"} alt={asset.name} width={48} height={48} className="rounded object-cover" />
         <div className="flex-1 min-w-0 space-y-1">
           <p className="font-medium text-sm truncate">{asset.name}</p>
           <p className="text-xs text-muted-foreground">{asset.type}</p>

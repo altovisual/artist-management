@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { CredentialManager } from "@/components/credential-manager"
@@ -347,7 +348,7 @@ export default function EditArtistPage() {
               </div>
               <div className="space-y-2">
                 <Label>Profile Image</Label>
-                {artist?.profile_image && <img src={artist.profile_image} alt={artist.name} className="h-24 w-24 rounded-full object-cover"/>}
+                {artist?.profile_image && <Image src={artist.profile_image} alt={artist.name} width={96} height={96} className="rounded-full object-cover"/>}
                 <Input id="profile-image" type="file" accept="image/*" onChange={(e) => setNewProfileImage(e.target.files ? e.target.files[0] : null)} />
                 <p className="text-sm text-muted-foreground">Upload a new image to replace the current one.</p>
               </div>
