@@ -74,11 +74,11 @@ export default function ArtistSignUpPage() {
 
   return (
     <div className="w-full min-h-screen flex flex-col lg:grid lg:grid-cols-2 xl:min-h-screen">
-      <div className="flex items-center justify-center flex-grow">
+      <div className="flex flex-col items-center justify-center flex-grow relative">
+        <div className="absolute top-4 left-4">
+          <Image src="/mi-logo.svg" alt="Logo" width={100} height={32} />
+        </div>
         <div className="mx-auto grid w-[350px] gap-6">
-          <div className="mb-4">
-            <Image src="/mi-logo.svg" alt="Logo" width={100} height={32} />
-          </div>
           <div className="grid gap-2 text-center">
             <h1 className="text-3xl font-bold">Artist Sign Up</h1>
             <p className="text-balance text-muted-foreground">

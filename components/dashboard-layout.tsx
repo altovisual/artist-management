@@ -16,6 +16,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { LayoutDashboard, Calendar, Shield, User, LogOut } from "lucide-react"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { useTheme } from "next-themes"
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -24,6 +26,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [userEmail, setUserEmail] = React.useState<string | null>(null);
 
   const supabase = createClient();
+  const { theme } = useTheme();
 
   React.useEffect(() => {
     const fetchUser = async () => {
@@ -51,7 +54,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-6">
             <Link href="/dashboard" className="flex items-center gap-2 font-bold">
-              <Image src="/mi-logo.svg" width={120} height={32} alt="Logo" />
+              <Image src={theme === "dark" ? "/mi-logo-blanco.svg" : "/mi-logo.svg"} width={120} height={32} alt="Logo" />
               <span className="text-sm text-muted-foreground hidden sm:block">Your Artist Management Solution</span>
             </Link>
             <nav className="hidden md:flex items-center gap-4 text-sm font-medium">
@@ -65,6 +68,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
