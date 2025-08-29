@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from 'react';
-import { useVault } from './vault-provider';
 import { encrypt, decrypt } from '@/lib/crypto';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -18,7 +17,6 @@ export function SocialCredentialManager({ socialAccountId, userId }: SocialCrede
   const [passwordInput, setPasswordInput] = useState('');
   const [decryptedPassword, setDecryptedPassword] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { promptForPassword } = useVault();
   const { toast } = useToast();
   const supabase = createClient();
 
@@ -30,13 +28,7 @@ export function SocialCredentialManager({ socialAccountId, userId }: SocialCrede
 
     setIsLoading(true);
     try {
-      const masterPassword = await promptForPassword();
-      if (!masterPassword) {
-        setIsLoading(false);
-        return; // User cancelled
-      }
-
-      const { encrypted, iv } = await encrypt(passwordInput, masterPassword);
+      const { encrypted, iv } = await encrypt(passwordInput);
 
       const { error } = await supabase.from('social_credentials').upsert({
         social_account_id: socialAccountId,
@@ -59,12 +51,6 @@ export function SocialCredentialManager({ socialAccountId, userId }: SocialCrede
   const handleView = async () => {
     setIsLoading(true);
     try {
-      const masterPassword = await promptForPassword();
-      if (!masterPassword) {
-        setIsLoading(false);
-        return; // User cancelled
-      }
-
       const { data, error } = await supabase
         .from('social_credentials')
         .select('encrypted_password, iv')
@@ -75,7 +61,7 @@ export function SocialCredentialManager({ socialAccountId, userId }: SocialCrede
         throw new Error('No credential found for this account.');
       }
 
-      const decrypted = await decrypt(data.encrypted_password, data.iv, masterPassword);
+      const decrypted = await decrypt(data.encrypted_password, data.iv);
       setDecryptedPassword(decrypted);
 
       // Automatically hide the password after 15 seconds
