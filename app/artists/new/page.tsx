@@ -1,6 +1,7 @@
 'use client'
 
 import type React from "react"
+
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -13,19 +14,20 @@ import { ArrowLeft, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
+
 import { Separator } from "@/components/ui/separator";
 import { DashboardLayout } from "@/components/dashboard-layout"
 
 interface SocialAccount {
   platform: string
   username: string
-  followers: string
+  followers: string   // <- se mantiene en UI, pero NO se envía al DB
   url: string
 }
 
 interface DistributionAccount {
-  platform: string
-  monthlyListeners: string
+  platform: string    // <- en DB se guarda como service
+  monthlyListeners: string // <- se mantiene en UI, pero NO se envía al DB
 }
 
 export default function NewArtistPage() {
@@ -34,14 +36,19 @@ export default function NewArtistPage() {
   const [isLoading, setIsLoading] = useState(false)
   const supabase = createClient()
 
+  // Basic artist info
   const [name, setName] = useState("")
   const [genre, setGenre] = useState("")
   const [location, setLocation] = useState("")
   const [bio, setBio] = useState("")
   const [profileImage, setProfileImage] = useState<File | null>(null)
+
+  // Social accounts
   const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([
     { platform: "", username: "", followers: "", url: "" },
   ])
+
+  // Distribution accounts
   const [distributionAccounts, setDistributionAccounts] = useState<DistributionAccount[]>([
     { platform: "", monthlyListeners: "" },
   ])
@@ -102,6 +109,7 @@ export default function NewArtistPage() {
         imageUrl = urlData.publicUrl
       }
 
+      // 1) Insert artist
       const { data: artistData, error: artistError } = await supabase
         .from("artists")
         .insert({
@@ -120,35 +128,41 @@ export default function NewArtistPage() {
       if (artistError) throw artistError
       const artistId = artistData.id
 
+      // 2) Insert social_accounts (schema: artist_id, platform, handle, username, url, ...)
       const validSocialAccounts = socialAccounts.filter((acc) => acc.platform && acc.username)
       if (validSocialAccounts.length > 0) {
         const socialAccountsData = validSocialAccounts.map((acc) => ({
           artist_id: artistId,
           platform: acc.platform,
-          handle: acc.username || acc.url || acc.platform,
+          handle: acc.username || acc.url || acc.platform, // <- handle OBLIGATORIO
           username: acc.username || null,
           url: acc.url || null,
+          // followers NO existe en tabla; si lo quieres persistir, agrega la columna vía SQL
         }))
 
         const { error: socialError } = await supabase
           .from("social_accounts")
           .insert(socialAccountsData)
+          .select("id") // solo columnas existentes
 
         if (socialError) {
           console.error("Error inserting social accounts:", socialError)
         }
       }
 
+      // 3) Insert distribution_accounts (schema: artist_id, service, account_id?, email?)
       const validDistributionAccounts = distributionAccounts.filter((acc) => acc.platform)
       if (validDistributionAccounts.length > 0) {
         const distributionAccountsData = validDistributionAccounts.map((acc) => ({
           artist_id: artistId,
-          service: acc.platform,
+          service: acc.platform, // <- en DB es service, no platform
+          // monthly_listeners NO existe; si lo quieres, agrega la columna vía SQL
         }))
 
         const { error: distributionError } = await supabase
           .from("distribution_accounts")
           .insert(distributionAccountsData)
+          .select("id") // solo columnas existentes
 
         if (distributionError) {
           console.error("Error inserting distribution accounts:", distributionError.message)
