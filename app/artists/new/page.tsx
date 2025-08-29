@@ -221,7 +221,7 @@ export default function NewArtistPage() {
                 <div className="space-y-2">
                   <Label htmlFor="genre">Genre *</Label>
                   <Select value={genre} onValueChange={setGenre} required>
-                    <SelectTrigger>
+                    <SelectTrigger id="genre">
                       <SelectValue placeholder="Select genre" />
                     </SelectTrigger>
                     <SelectContent>
@@ -304,12 +304,12 @@ export default function NewArtistPage() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Platform</Label>
+                      <Label htmlFor={`social-platform-${index}`}>Platform</Label>
                       <Select
                         value={account.platform}
                         onValueChange={(value) => updateSocialAccount(index, "platform", value)}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger id={`social-platform-${index}`}>
                           <SelectValue placeholder="Select platform" />
                         </SelectTrigger>
                         <SelectContent>
@@ -397,12 +397,12 @@ export default function NewArtistPage() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Platform</Label>
+                      <Label htmlFor={`distribution-platform-${index}`}>Platform</Label>
                       <Select
                         value={account.platform}
                         onValueChange={(value) => updateDistributionAccount(index, "platform", value)}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger id={`distribution-platform-${index}`}>
                           <SelectValue placeholder="Select platform" />
                         </SelectTrigger>
                         <SelectContent>

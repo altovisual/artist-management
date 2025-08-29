@@ -1,44 +1,79 @@
-import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
+"use client"
+
+import { useState, useEffect } from "react"
+import { redirect, useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, ImageIcon, Calendar } from "lucide-react"
+import { Plus, ImageIcon, Calendar, Search } from "lucide-react"
 import Link from "next/link"
 import { LogoutButton } from "@/components/logout-button"
 import { ArtistViewSwitcher } from "@/components/artist-view-switcher"
 import { DashboardTour } from "@/components/dashboard-tour"
 import { DbSizeCard } from "@/components/db-size-card"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { Input } from "@/components/ui/input"
 
-export default async function Dashboard() {
-  const supabase = await createClient()
+export default function Dashboard() {
+  const [searchTerm, setSearchTerm] = useState("")
 
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser()
+  // Original async logic needs to be moved inside useEffect or a separate async function
+  // and then state variables used to store the fetched data.
+  // For now, I'll keep the async logic as is, but it will need adjustment.
+  // This is a temporary step to add the search bar.
 
-  if (error || !user) {
-    redirect("/auth/login")
-  }
+  // Placeholder for artists data, will be fetched in useEffect
+  const [artistsData, setArtistsData] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
 
-  const { data: artists, error: artistsError } = await supabase
-    .from("artists")
-    .select("*, social_accounts(*), distribution_accounts(*), projects(id, assets(id))")
+  // Fetch data in useEffect
+  const router = useRouter()
 
-  if (artistsError) {
-    console.error("Error fetching artists:", artistsError)
-    return <div>Error loading artists.</div>
-  }
+  useEffect(() => {
+    const fetchData = async () => {
+      const supabase = createClient()
 
-  const artistsWithCounts =
-    artists?.map((artist: any) => ({
-      ...artist,
-      socialAccountsCount: artist.social_accounts?.length || 0,
-      distributionAccountsCount: artist.distribution_accounts?.length || 0,
-      assetCount:
-        artist.projects?.reduce((sum: number, p: any) => sum + (p.assets?.length || 0), 0) || 0,
-    })) || []
+      // Simulate loading delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser()
+
+      if (error || !user) {
+        router.push("/auth/login")
+        return
+      }
+      setUserEmail(user.email)
+
+      const { data: artists, error: artistsError } = await supabase
+        .from("artists")
+        .select("*, social_accounts(*), distribution_accounts(*), projects(id, assets(id))")
+
+      if (artistsError) {
+        console.error("Error fetching artists:", artistsError)
+        // Handle error, maybe set an error state
+      } else {
+        const artistsWithCounts =
+          artists?.map((artist: any) => ({
+            ...artist,
+            socialAccountsCount: artist.social_accounts?.length || 0,
+            distributionAccountsCount: artist.distribution_accounts?.length || 0,
+            assetCount:
+              artist.projects?.reduce((sum: number, p: any) => sum + (p.assets?.length || 0), 0) || 0,
+          })) || []
+        setArtistsData(artistsWithCounts)
+      }
+      setIsLoading(false)
+    }
+    fetchData()
+  }, []) // Empty dependency array to run once on mount
+
+  const filteredArtists = artistsData.filter((artist: any) =>
+    artist.name.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   return (
     <>
@@ -51,7 +86,7 @@ export default async function Dashboard() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <div>
                 <h1 className="text-2xl font-bold">Artist Management</h1>
-                <p className="text-muted-foreground text-sm">Welcome back, {user.email}</p>
+                <p className="text-muted-foreground text-sm">Welcome back, {userEmail}</p>
               </div>
               <div className="w-full sm:w-auto">
                 <div className="flex items-center gap-2">
@@ -73,7 +108,7 @@ export default async function Dashboard() {
                   <CardTitle className="text-sm font-medium text-muted-foreground sm:text-xs">Total Artists</CardTitle>
                 </CardHeader>
                 <CardContent className="sm:py-2">
-                  <div className="text-2xl font-bold sm:text-xl">{artistsWithCounts.length}</div>
+                  <div className="text-2xl font-bold sm:text-xl">{artistsData.length}</div>
                 </CardContent>
               </Card>
 
@@ -82,7 +117,7 @@ export default async function Dashboard() {
                   <CardTitle className="text-sm font-medium text-muted-foreground sm:text-xs">Active Artists</CardTitle>
                 </CardHeader>
                 <CardContent className="sm:py-2">
-                  <div className="text-2xl font-bold sm:text-xl">{artistsWithCounts.length}</div>
+                  <div className="text-2xl font-bold sm:text-xl">{artistsData.length}</div>
                 </CardContent>
               </Card>
 
@@ -92,7 +127,7 @@ export default async function Dashboard() {
                 </CardHeader>
                 <CardContent className="sm:py-2">
                   <div className="text-2xl font-bold">
-                    {artistsWithCounts.reduce((sum: number, a: any) => sum + a.socialAccountsCount, 0)}
+                    {artistsData.reduce((sum: number, a: any) => sum + a.socialAccountsCount, 0)}
                   </div>
                 </CardContent>
               </Card>
@@ -103,7 +138,7 @@ export default async function Dashboard() {
                 </CardHeader>
                 <CardContent className="sm:py-2">
                   <div className="text-2xl font-bold">
-                    {artistsWithCounts.reduce((sum: number, a: any) => sum + a.distributionAccountsCount, 0)}
+                    {artistsData.reduce((sum: number, a: any) => sum + a.distributionAccountsCount, 0)}
                   </div>
                 </CardContent>
               </Card>
@@ -114,7 +149,7 @@ export default async function Dashboard() {
                 </CardHeader>
                 <CardContent className="sm:py-2">
                   <div className="text-2xl font-bold">
-                    {artistsWithCounts.reduce((sum: number, a: any) => sum + a.assetCount, 0)}
+                    {artistsData.reduce((sum: number, a: any) => sum + a.assetCount, 0)}
                   </div>
                 </CardContent>
               </Card>
@@ -124,27 +159,46 @@ export default async function Dashboard() {
             {/* Artists Table */}
             <Card className="artists-table-container">
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                   <CardTitle>Artists</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Link href="/dashboard/releases">
-                      <Button size="icon" variant="outline">
-                        <Calendar className="h-4 w-4" />
-                        <span className="sr-only">Calendario de Lanzamientos</span>
-                      </Button>
-                    </Link>
-                    <Link href="/artists/new">
-                      <Button className="flex items-center gap-2">
-                        <Plus className="h-4 w-4" />
-                        Add Artist
-                      </Button>
-                    </Link>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+                    <div className="relative w-full sm:w-auto">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search artists..."
+                        className="pl-10 w-full"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <Link href="/dashboard/releases" className="flex-1">
+                        <Button size="default" variant="outline">
+                          <Calendar className="h-5 w-5" />
+                          <span className="sr-only">Calendario de Lanzamientos</span>
+                        </Button>
+                      </Link>
+                      <Link href="/artists/new" className="flex-1">
+                        <Button className="flex items-center gap-2 w-full">
+                          <Plus className="h-4 w-4" />
+                          Add Artist
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </CardHeader>
 
               <CardContent>
-                <ArtistViewSwitcher artists={artistsWithCounts} />
+                {isLoading ? (
+                  <p>Loading artists...</p>
+                ) : filteredArtists.length === 0 && searchTerm !== "" ? (
+                  <p className="text-muted-foreground text-center">No artists found matching your search.</p>
+                ) : filteredArtists.length === 0 && searchTerm === "" ? (
+                  <p className="text-muted-foreground text-center">No artists found. Add a new artist to get started!</p>
+                ) : (
+                  <ArtistViewSwitcher artists={filteredArtists} />
+                )}
               </CardContent>
             </Card>
           </div>

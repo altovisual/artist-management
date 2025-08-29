@@ -323,7 +323,7 @@ export default function EditArtistPage() {
                 <div className="space-y-2">
                   <Label htmlFor="genre">Genre *</Label>
                   <Select value={genre} onValueChange={setGenre} required>
-                    <SelectTrigger><SelectValue placeholder="Select genre" /></SelectTrigger>
+                    <SelectTrigger id="genre"><SelectValue placeholder="Select genre" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Pop">Pop</SelectItem>
                       <SelectItem value="Rock">Rock</SelectItem>
@@ -370,9 +370,9 @@ export default function EditArtistPage() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Platform</Label>
+                      <Label htmlFor={`social-platform-${index}`}>Platform</Label>
                       <Select value={account.platform} onValueChange={(value) => updateSocialAccount(index, "platform", value)}>
-                        <SelectTrigger><SelectValue placeholder="Select platform" /></SelectTrigger>
+                        <SelectTrigger id={`social-platform-${index}`}><SelectValue placeholder="Select platform" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Instagram">Instagram</SelectItem>
                           <SelectItem value="Twitter">Twitter</SelectItem>
@@ -441,9 +441,9 @@ export default function EditArtistPage() {
                       <Input value={account.distributor || ''} onChange={(e) => updateDistributionAccount(index, "distributor", e.target.value)} placeholder="Distributor Name" />
                     </div>
                     <div className="space-y-2">
-                      <Label>Service</Label>
+                      <Label htmlFor={`distribution-service-${index}`}>Service</Label>
                       <Select value={account.service} onValueChange={(value) => updateDistributionAccount(index, "service", value)}>
-                        <SelectTrigger><SelectValue placeholder="Select service" /></SelectTrigger>
+                        <SelectTrigger id={`distribution-service-${index}`}><SelectValue placeholder="Select service" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Spotify">Spotify</SelectItem>
                           <SelectItem value="Apple Music">Apple Music</SelectItem>

@@ -392,7 +392,7 @@ export default function ArtistAssetsPage() {
                       </div>
                     </div>
                     <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                      <SelectTrigger className="w-full md:w-48">
+                      <SelectTrigger id="filter-category" className="w-full md:w-48">
                         <SelectValue placeholder="Filter by category" />
                       </SelectTrigger>
                       <SelectContent>
@@ -405,7 +405,7 @@ export default function ArtistAssetsPage() {
                       </SelectContent>
                     </Select>
                     <Select value={typeFilter} onValueChange={setTypeFilter}>
-                      <SelectTrigger className="w-full md:w-48">
+                      <SelectTrigger id="filter-type" className="w-full md:w-48">
                         <SelectValue placeholder="Filter by type" />
                       </SelectTrigger>
                       <SelectContent>

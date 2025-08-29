@@ -1,9 +1,12 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import { useState, useEffect } from "react"
+
+
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { useSearchParams } from 'next/navigation'
+
 import { ReleaseCalendar } from "@/components/release-calendar"
 
 /** Fila real de la tabla projects (ajusta si tu esquema difiere) */

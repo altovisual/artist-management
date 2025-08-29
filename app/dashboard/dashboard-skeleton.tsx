@@ -22,8 +22,8 @@ export function DashboardSkeleton() {
       <main className="container mx-auto px-4 py-8">
         <div className="space-y-6">
           {/* Stats Cards */}
-          <div className="flex overflow-x-auto pb-4 space-x-4 md:grid md:grid-cols-5 md:gap-4">
-            {[...Array(5)].map((_, i) => (
+          <div className="flex overflow-x-auto pb-4 space-x-4 md:grid md:grid-cols-6 md:gap-4">
+            {[...Array(6)].map((_, i) => (
               <Card key={i} className="min-w-[160px]">
                 <CardHeader className="pb-2 sm:pb-1">
                   <Skeleton className="h-4 w-32 sm:w-24" /> {/* Adjust width for mobile */}
