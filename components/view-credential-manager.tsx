@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react';
-import { useVault } from './vault-provider';
 import { decrypt } from '@/lib/crypto';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -17,19 +16,12 @@ interface ViewCredentialManagerProps {
 export function ViewCredentialManager({ accountId, tableName }: ViewCredentialManagerProps) {
   const [decryptedPassword, setDecryptedPassword] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { promptForPassword } = useVault();
   const { toast } = useToast();
   const supabase = createClient();
 
   const handleView = async () => {
     setIsLoading(true);
     try {
-      const masterPassword = await promptForPassword();
-      if (!masterPassword) {
-        setIsLoading(false);
-        return; // User cancelled
-      }
-
       const { data, error } = await supabase
         .from(tableName)
         .select('password')
@@ -41,8 +33,7 @@ export function ViewCredentialManager({ accountId, tableName }: ViewCredentialMa
       }
 
       const { encrypted, iv } = JSON.parse(data.password);
-
-      const decrypted = await decrypt(encrypted, iv, masterPassword);
+      const decrypted = await decrypt(encrypted, iv);
       setDecryptedPassword(decrypted);
 
       // Automatically hide the password after 15 seconds

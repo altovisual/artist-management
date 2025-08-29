@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   title: "Artist Management System",
   description: "Manage your artists and their social media accounts",
   generator: "v0.app",
-  icons: [{ rel: "icon", url: "/placeholder-logo.svg" }],
+  icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
 // --- AQUÍ ESTÁ LA PARTE IMPORTANTE ---
@@ -34,10 +34,8 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <NextNProgress />
-          <AuthProvider>
-            <VaultProvider>{children}</VaultProvider>
-          </AuthProvider>
+          <NextNProgress color="#e1348f" />
+          <AuthProvider>{children}</AuthProvider>
         </ThemeProvider>
       </body>
     </html>

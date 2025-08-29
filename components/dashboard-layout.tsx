@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -50,13 +51,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-6">
             <Link href="/dashboard" className="flex items-center gap-2 font-bold">
-              <span className="text-lg">ArtMan</span>
+              <Image src="/mi-logo.svg" width={120} height={32} alt="Logo" />
+              <span className="text-sm text-muted-foreground hidden sm:block">Your Artist Management Solution</span>
             </Link>
             <nav className="hidden md:flex items-center gap-4 text-sm font-medium">
-              <Link href="/dashboard" className={`transition-colors hover:text-foreground ${pathname === '/dashboard' ? 'text-foreground' : 'text-muted-foreground'}`}>
+              <Link href="/dashboard" className={`transition-colors hover:!text-primary-accent ${pathname === '/dashboard' ? 'text-foreground' : 'text-muted-foreground'}`}>
                 Dashboard
               </Link>
-              <Link href="/dashboard/releases" className={`transition-colors hover:text-foreground ${pathname === '/dashboard/releases' ? 'text-foreground' : 'text-muted-foreground'}`}>
+              <Link href="/dashboard/releases" className={`transition-colors hover:!text-primary-accent ${pathname === '/dashboard/releases' ? 'text-foreground' : 'text-muted-foreground'}`}>
                 Releases
               </Link>
             </nav>

@@ -9,14 +9,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Plus, Trash2 } from "lucide-react"
-import Link from "next/link"
 import Image from "next/image"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { CredentialManager } from "@/components/credential-manager"
 import { Separator } from "@/components/ui/separator"
 import { encrypt } from "@/lib/crypto"
-import { useVault } from "@/components/vault-provider"
 import { DashboardLayout } from "@/components/dashboard-layout"
 
 interface SocialAccount {
@@ -48,7 +46,6 @@ export default function EditArtistPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
-  const { promptForPassword } = useVault()
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingData, setIsLoadingData] = useState(true)
   const [artist, setArtist] = useState<any>(null)
@@ -63,6 +60,11 @@ export default function EditArtistPage() {
   const [newProfileImage, setNewProfileImage] = useState<File | null>(null)
   const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([])
   const [distributionAccounts, setDistributionAccounts] = useState<DistributionAccount[]>([])
+  
+  // Track original account IDs for deletion
+  const [initialSocialAccountIds, setInitialSocialAccountIds] = useState<string[]>([]);
+  const [initialDistributionAccountIds, setInitialDistributionAccountIds] = useState<string[]>([]);
+
 
   const addSocialAccount = () => {
     setSocialAccounts([...socialAccounts, { id: null, platform: "", username: "", handle: "", url: "", followers: "" }]);
@@ -121,8 +123,14 @@ export default function EditArtistPage() {
         setGenre(artistData.genre || "")
         setLocation(artistData.country || "")
         setBio(artistData.bio || "")
-        setSocialAccounts(artistData.social_accounts || [])
-        setDistributionAccounts(artistData.distribution_accounts || [])
+        
+        const loadedSocialAccounts = artistData.social_accounts || [];
+        setSocialAccounts(loadedSocialAccounts);
+        setInitialSocialAccountIds(loadedSocialAccounts.map((a: any) => a.id).filter(Boolean));
+
+        const loadedDistributionAccounts = artistData.distribution_accounts || [];
+        setDistributionAccounts(loadedDistributionAccounts);
+        setInitialDistributionAccountIds(loadedDistributionAccounts.map((a: any) => a.id).filter(Boolean));
 
       } catch (error) {
         toast({ title: "Error", description: "Failed to load artist data.", variant: "destructive" })
@@ -154,73 +162,100 @@ export default function EditArtistPage() {
       const updateData: any = { name, genre, country: location, bio }
       if (imageUrl) updateData.profile_image = imageUrl
 
-      const { error: artistError } = await supabase.from("artists").update(updateData).eq("id", artistId)
-      if (artistError) throw artistError
+      const { error: artistError } = await supabase.from("artists").update(updateData).eq("id", artistId);
+      if (artistError) throw new Error(`Error updating artist details: ${artistError.message}`);
 
-      const masterPassword = await promptForPassword();
-      if (!masterPassword) {
-        setIsLoading(false);
-        toast({ title: "Error", description: "Master password is required to save credentials.", variant: "destructive" });
-        return;
+      // Handle social account deletions
+      const finalSocialAccountIds = socialAccounts.map(a => a.id).filter(Boolean);
+      const socialAccountIdsToDelete = initialSocialAccountIds.filter(id => !finalSocialAccountIds.includes(id));
+      if (socialAccountIdsToDelete.length > 0) {
+        const { error: deleteError } = await supabase.from('social_accounts').delete().in('id', socialAccountIdsToDelete);
+        if (deleteError) throw new Error(`Error deleting social accounts: ${deleteError.message}`);
       }
 
       const socialAccountsToUpsert = await Promise.all(
         socialAccounts.map(async a => {
-            let password = a.password;
-            if (a.newPassword) {
-              const { encrypted, iv } = await encrypt(a.newPassword, masterPassword);
-              password = JSON.stringify({ encrypted, iv });
-            }
-            return {
-              id: a.id,
-              artist_id: artistId,
-              platform: a.platform,
-              username: a.username || null,
-              handle: a.handle || null,
-              url: a.url || null,
-              followers: Number.parseInt(a.followers || '0'),
-              password: password
-            }
-          })
-      );
+          let password = a.password;
+          if (a.newPassword) {
+            const { encrypted, iv } = await encrypt(a.newPassword);
+            password = JSON.stringify({ encrypted, iv });
+          }
+      
+          const cleanedFollowers = String(a.followers || '').replace(/\D/g, '');
+          const followersCount = cleanedFollowers ? parseInt(cleanedFollowers, 10) : 0;
 
+          const accountData: any = {
+            artist_id: artistId,
+            platform: a.platform,
+            username: a.username || null,
+            handle: a.handle || null,
+            url: a.url || null,
+            followers: followersCount,
+            password: password
+          };
+      
+          if (a.id) {
+            accountData.id = a.id;
+          }
+      
+          return accountData;
+        })
+      );
+      
       if (socialAccountsToUpsert.length > 0) {
-        const { error } = await supabase.from("social_accounts").upsert(socialAccountsToUpsert.filter(a => a.platform))
-        if(error) throw error
+        const { error } = await supabase.from("social_accounts").upsert(socialAccountsToUpsert.filter(a => a.platform));
+        if (error) throw new Error(`Error handling social accounts: ${error.message}`);
       }
 
+      // Handle distribution account deletions
+      const finalDistributionAccountIds = distributionAccounts.map(a => a.id).filter(Boolean);
+      const distributionAccountIdsToDelete = initialDistributionAccountIds.filter(id => !finalDistributionAccountIds.includes(id));
+      if (distributionAccountIdsToDelete.length > 0) {
+        const { error: deleteError } = await supabase.from('distribution_accounts').delete().in('id', distributionAccountIdsToDelete);
+        if (deleteError) throw new Error(`Error deleting distribution accounts: ${deleteError.message}`);
+      }
+      
       const distroAccountsToUpsert = await Promise.all(
         distributionAccounts.map(async a => {
-            let password = a.password;
-            if (a.newPassword) {
-              const { encrypted, iv } = await encrypt(a.newPassword, masterPassword);
-              password = JSON.stringify({ encrypted, iv });
-            }
-            return {
-              id: a.id,
-              artist_id: artistId,
-              distributor: a.distributor,
-              service: a.service,
-              monthly_listeners: Number.parseInt(a.monthly_listeners || '0'),
-              username: a.username || null,
-              email: a.email || null,
-              notes: a.notes || null,
-              url: a.url || null,
-              account_id: a.account_id || null,
-              password: password
-            }
-          })
+          let password = a.password;
+          if (a.newPassword) {
+            const { encrypted, iv } = await encrypt(a.newPassword);
+            password = JSON.stringify({ encrypted, iv });
+          }
+      
+          const cleanedListeners = String(a.monthly_listeners || '').replace(/\D/g, '');
+          const listenersCount = cleanedListeners ? parseInt(cleanedListeners, 10) : 0;
+
+          const accountData: any = {
+            artist_id: artistId,
+            distributor: a.distributor,
+            service: a.service,
+            monthly_listeners: listenersCount,
+            username: a.username || null,
+            email: a.email || null,
+            notes: a.notes || null,
+            url: a.url || null,
+            account_id: a.account_id || null,
+            password: password
+          };
+      
+          if (a.id) {
+            accountData.id = a.id;
+          }
+      
+          return accountData;
+        })
       );
 
       if (distroAccountsToUpsert.length > 0) {
-        const { error } = await supabase.from("distribution_accounts").upsert(distroAccountsToUpsert.filter(a => a.distributor && a.service))
-        if(error) throw error
+        const { error } = await supabase.from("distribution_accounts").upsert(distroAccountsToUpsert.filter(a => a.distributor && a.service));
+        if (error) throw new Error(`Error handling distribution accounts: ${error.message}`);
       }
 
       toast({ title: "Success!", description: "Artist updated successfully." })
       router.push(`/artists/${artistId}`)
     } catch (error: any) {
-      console.error("Error updating artist:", JSON.stringify(error, null, 2))
+      console.error("Error updating artist:", error)
       toast({ title: "Error updating artist", description: error.message || "An unknown error occurred", variant: "destructive" })
     } finally {
       setIsLoading(false)
@@ -341,7 +376,6 @@ export default function EditArtistPage() {
                         <CredentialManager 
                           accountId={account.id}
                           tableName="social_accounts"
-                          onPasswordSave={(password) => updateSocialAccount(index, "password", password)}
                         />
                       ) : (
                         <div className="space-y-2">
@@ -421,7 +455,6 @@ export default function EditArtistPage() {
                         <CredentialManager
                           accountId={account.id}
                           tableName="distribution_accounts"
-                          onPasswordSave={(password) => updateDistributionAccount(index, "password", password)}
                         />
                       ) : (
                         <div className="space-y-2">

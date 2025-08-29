@@ -1,125 +1,104 @@
-// components/artist-card.tsx
-"use client"
+'use client'
 
 import Link from "next/link"
-import { Card, CardContent } from "@/components/ui/card"
+import Image from "next/image"
+import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Eye, Edit, ImageIcon, Users, Music, Globe } from "lucide-react"
-import { format } from 'date-fns'
-import dayjs from 'dayjs'
+import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Users, Music, ImageIcon, MoreVertical, Edit } from "lucide-react"
 
 type Artist = {
   id: string | number
   name: string
   genre?: string
-  country?: string
   profile_image?: string | null
   social_accounts?: any[]
   distribution_accounts?: any[]
-  projects?: any[]
   assetCount?: number
-  created_at?: string
-  nextRelease?: { name: string; release_date: string } | null;
 }
 
 export function ArtistCard({ artist }: { artist: Artist }) {
-  const initials =
-    (artist.name || "")
-      .split(" ")
-      .map((n) => n[0])
-      .join("") || "AR"
-
+  const initials = (artist.name || "").split(" ").map((n) => n[0]).join("") || "AR"
   const socialAccountsCount = artist.social_accounts?.length ?? 0
   const distributionAccountsCount = artist.distribution_accounts?.length ?? 0
 
   return (
-    <Card className="transition-all hover:shadow-md hover:shadow-primary/10">
-      <CardContent className="p-4">
-        <div className="flex flex-col sm:flex-row items-start gap-4">
-          {/* Avatar */}
-          <Link href={`/artists/${artist.id}`} className="block flex-shrink-0">
-            <Avatar className="h-24 w-24 sm:h-28 sm:w-28 border-2 border-transparent hover:border-primary transition-colors">
-              <AvatarImage src={artist.profile_image || "/placeholder.svg"} alt={artist.name} className="object-cover" />
-              <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
-            </Avatar>
-          </Link>
-
-          {/* Artist Info & Stats */}
-          <div className="flex-grow w-full">
-            {/* Name and Genre */}
-            <div className="mb-2">
-              <Link href={`/artists/${artist.id}`}>
-                <h3 className="text-xl font-bold hover:text-primary transition-colors">{artist.name}</h3>
-              </Link>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                {artist.genre && <Badge variant="secondary">{artist.genre}</Badge>}
-                {artist.country && (
-                  <>
-                    <span className="text-xs">•</span>
-                    <div className="flex items-center gap-1">
-                      <Globe className="h-3 w-3" />
-                      <span>{artist.country}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm border-t pt-3 my-3">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <div className="font-semibold">{socialAccountsCount}</div>
-                  <div className="text-xs text-muted-foreground">Social</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Music className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <div className="font-semibold">{distributionAccountsCount}</div>
-                  <div className="text-xs text-muted-foreground">Distrib.</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <div className="font-semibold">{artist.assetCount ?? 0}</div>
-                  <div className="text-xs text-muted-foreground">Assets</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Next Release */}
-            {artist.nextRelease && (
-              <div className="border-t pt-3 mt-3">
-                <h4 className="font-semibold text-sm mb-1">Next Release:</h4>
-                <p className="text-sm">
-                  {artist.nextRelease.name} ({dayjs(artist.nextRelease.release_date).format('MMM D, YYYY')})
-                </p>
-              </div>
-            )}
-            
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-2 mt-2">
-              <Link href={`/artists/${artist.id}`}>
-                <Button variant="outline" size="sm" className="flex items-center gap-1">
-                  <Eye className="h-3 w-3" />
-                  View
-                </Button>
-              </Link>
+    <Card className="relative group overflow-hidden rounded-lg transition-all hover:shadow-xl hover:scale-[1.02] duration-300 ease-in-out">
+      {/* Action Menu */}
+      <div className="absolute top-2 right-2 z-20">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-black/20 hover:bg-black/40 text-white hover:text-white">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem asChild>
               <Link href={`/artists/${artist.id}/edit`}>
-                <Button variant="ghost" size="sm" className="flex items-center gap-1">
-                  <Edit className="h-3 w-3" />
-                  Edit
-                </Button>
+                <Edit className="mr-2 h-4 w-4" />
+                <span>Edit Artist</span>
               </Link>
-            </div>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Main Content Link */}
+      <Link href={`/artists/${artist.id}`} className="block">
+        {/* Banner Section */}
+        <div className="relative h-28 bg-secondary/50">
+          {artist.profile_image && (
+            <Image
+              src={artist.profile_image}
+              alt={`${artist.name} banner`}
+              fill
+              className="object-cover filter blur-lg scale-110 opacity-40"
+            />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-card via-card/80 to-transparent"></div>
+        </div>
+
+        {/* Avatar & Name Section */}
+        <div className="relative px-6 pb-6">
+          <div className="-mt-16 flex flex-col items-center text-center">
+            <Avatar className="h-24 w-24 border-4 border-card shadow-lg">
+              <AvatarImage src={artist.profile_image || "/placeholder.svg"} alt={artist.name} className="object-cover" />
+              <AvatarFallback className="text-3xl">{initials}</AvatarFallback>
+            </Avatar>
+            <h3 className="text-xl font-bold mt-4">{artist.name}</h3>
+            {artist.genre && <Badge variant="outline" className="mt-1">{artist.genre}</Badge>}
+          </div>
+
+          {/* Stats Section */}
+          <div className="mt-6 pt-6 border-t">
+            <dl className="grid grid-cols-3 gap-4 text-center">
+              <div className="flex flex-col items-center">
+                <dt className="text-sm font-medium text-muted-foreground">Social</dt>
+                <dd className="flex items-center gap-1 text-lg font-semibold mt-1">
+                  <Users className="h-4 w-4 text-primary" />
+                  {socialAccountsCount}
+                </dd>
+              </div>
+              <div className="flex flex-col items-center">
+                <dt className="text-sm font-medium text-muted-foreground">Distrib.</dt>
+                <dd className="flex items-center gap-1 text-lg font-semibold mt-1">
+                  <Music className="h-4 w-4 text-primary" />
+                  {distributionAccountsCount}
+                </dd>
+              </div>
+              <div className="flex flex-col items-center">
+                <dt className="text-sm font-medium text-muted-foreground">Assets</dt>
+                <dd className="flex items-center gap-1 text-lg font-semibold mt-1">
+                  <ImageIcon className="h-4 w-4 text-primary" />
+                  {artist.assetCount ?? 0}
+                </dd>
+              </div>
+            </dl>
           </div>
         </div>
-      </CardContent>
+      </Link>
     </Card>
   )
 }

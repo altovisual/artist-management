@@ -15,8 +15,11 @@
 }
 
 /* Adjust event styling */
-.rbc-event {
-  @apply bg-blue-500 rounded-sm text-white text-xs p-1;
+.rbc-event,
+.rbc-event-content {
+  background-color: #e1348f !important; /* Custom color with increased specificity */
+  color: #ffffff !important; /* Ensure text is white */
+  @apply rounded-sm text-xs p-1;
 }
 
 .rbc-event-content {
