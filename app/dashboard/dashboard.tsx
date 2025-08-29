@@ -13,6 +13,7 @@ import { DashboardTour } from "@/components/dashboard-tour"
 import { DbSizeCard } from "@/components/db-size-card"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Input } from "@/components/ui/input"
+import dayjs from "dayjs"
 
 export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -50,20 +51,29 @@ export default function Dashboard() {
 
       const { data: artists, error: artistsError } = await supabase
         .from("artists")
-        .select("*, social_accounts(*), distribution_accounts(*), projects(id, assets(id))")
+        .select("*, social_accounts(*), distribution_accounts(*), projects(name, release_date, assets(id))")
 
       if (artistsError) {
         console.error("Error fetching artists:", artistsError)
         // Handle error, maybe set an error state
       } else {
         const artistsWithCounts =
-          artists?.map((artist: any) => ({
-            ...artist,
-            socialAccountsCount: artist.social_accounts?.length || 0,
-            distributionAccountsCount: artist.distribution_accounts?.length || 0,
-            assetCount:
-              artist.projects?.reduce((sum: number, p: any) => sum + (p.assets?.length || 0), 0) || 0,
-          })) || []
+          artists?.map((artist: any) => {
+            const now = dayjs();
+            const upcomingProjects = (artist.projects || [])
+              .filter((project: any) => dayjs(project.release_date).isAfter(now) || dayjs(project.release_date).isSame(now, 'day'))
+              .sort((a: any, b: any) => dayjs(a.release_date).diff(dayjs(b.release_date)));
+
+            const nextRelease = upcomingProjects.length > 0 ? upcomingProjects[0] : null;
+
+            return {
+              ...artist,
+              socialAccountsCount: artist.social_accounts?.length || 0,
+              distributionAccountsCount: artist.distribution_accounts?.length || 0,
+              assetCount: artist.projects?.reduce((sum: number, p: any) => sum + (p.assets?.length || 0), 0) || 0,
+              nextRelease: nextRelease,
+            };
+          }) || [];
         setArtistsData(artistsWithCounts)
       }
       setIsLoading(false)

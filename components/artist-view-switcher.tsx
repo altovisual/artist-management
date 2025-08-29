@@ -10,6 +10,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Eye, Edit, ImageIcon, LayoutGrid, List } from "lucide-react"
 import Link from "next/link"
 import { format } from 'date-fns'
+import dayjs from 'dayjs'
 
 type Artist = any // Using any for simplicity as it matches the dashboard data
 
@@ -48,6 +49,7 @@ export function ArtistViewSwitcher({ artists }: { artists: Artist[] }) {
                 <TableHead>Social</TableHead>
                 <TableHead>Distrib.</TableHead>
                 <TableHead>Assets</TableHead>
+                <TableHead>Next Release</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -78,6 +80,18 @@ export function ArtistViewSwitcher({ artists }: { artists: Artist[] }) {
                       <ImageIcon className="h-3 w-3" />
                       {artist.assetCount}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {artist.nextRelease ? (
+                      <div className="text-sm">
+                        <p className="font-medium">{artist.nextRelease.name}</p>
+                        <p className="text-muted-foreground text-xs">
+                          ({dayjs(artist.nextRelease.release_date).format('MMM D, YYYY')})
+                        </p>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">N/A</span>
+                    )}
                   </TableCell>
                   <TableCell>{format(new Date(artist.created_at), 'MM/dd/yyyy')}</TableCell>
                   <TableCell className="text-right">

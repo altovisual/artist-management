@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Eye, Edit, ImageIcon, Users, Music, Globe } from "lucide-react"
 import { format } from 'date-fns'
+import dayjs from 'dayjs'
 
 type Artist = {
   id: string | number
@@ -20,6 +21,7 @@ type Artist = {
   projects?: any[]
   assetCount?: number
   created_at?: string
+  nextRelease?: { name: string; release_date: string } | null;
 }
 
 export function ArtistCard({ artist }: { artist: Artist }) {
@@ -89,6 +91,16 @@ export function ArtistCard({ artist }: { artist: Artist }) {
                 </div>
               </div>
             </div>
+
+            {/* Next Release */}
+            {artist.nextRelease && (
+              <div className="border-t pt-3 mt-3">
+                <h4 className="font-semibold text-sm mb-1">Next Release:</h4>
+                <p className="text-sm">
+                  {artist.nextRelease.name} ({dayjs(artist.nextRelease.release_date).format('MMM D, YYYY')})
+                </p>
+              </div>
+            )}
             
             {/* Actions */}
             <div className="flex items-center justify-end gap-2 mt-2">
