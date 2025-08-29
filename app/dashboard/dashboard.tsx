@@ -46,7 +46,7 @@ export default function Dashboard() {
         router.push("/auth/login")
         return
       }
-      setUserEmail(user.email)
+      setUserEmail(user.email ?? null)
 
       const { data: artists, error: artistsError } = await supabase
         .from("artists")
