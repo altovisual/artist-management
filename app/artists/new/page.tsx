@@ -1,7 +1,6 @@
-"use client"
+'use client'
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -14,19 +13,19 @@ import { ArrowLeft, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
-
 import { Separator } from "@/components/ui/separator";
+import { DashboardLayout } from "@/components/dashboard-layout"
 
 interface SocialAccount {
   platform: string
   username: string
-  followers: string   // <- se mantiene en UI, pero NO se envía al DB
+  followers: string
   url: string
 }
 
 interface DistributionAccount {
-  platform: string    // <- en DB se guarda como service
-  monthlyListeners: string // <- se mantiene en UI, pero NO se envía al DB
+  platform: string
+  monthlyListeners: string
 }
 
 export default function NewArtistPage() {
@@ -35,19 +34,14 @@ export default function NewArtistPage() {
   const [isLoading, setIsLoading] = useState(false)
   const supabase = createClient()
 
-  // Basic artist info
   const [name, setName] = useState("")
   const [genre, setGenre] = useState("")
   const [location, setLocation] = useState("")
   const [bio, setBio] = useState("")
   const [profileImage, setProfileImage] = useState<File | null>(null)
-
-  // Social accounts
   const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([
     { platform: "", username: "", followers: "", url: "" },
   ])
-
-  // Distribution accounts
   const [distributionAccounts, setDistributionAccounts] = useState<DistributionAccount[]>([
     { platform: "", monthlyListeners: "" },
   ])
@@ -108,7 +102,6 @@ export default function NewArtistPage() {
         imageUrl = urlData.publicUrl
       }
 
-      // 1) Insert artist
       const { data: artistData, error: artistError } = await supabase
         .from("artists")
         .insert({
@@ -127,41 +120,35 @@ export default function NewArtistPage() {
       if (artistError) throw artistError
       const artistId = artistData.id
 
-      // 2) Insert social_accounts (schema: artist_id, platform, handle, username, url, ...)
       const validSocialAccounts = socialAccounts.filter((acc) => acc.platform && acc.username)
       if (validSocialAccounts.length > 0) {
         const socialAccountsData = validSocialAccounts.map((acc) => ({
           artist_id: artistId,
           platform: acc.platform,
-          handle: acc.username || acc.url || acc.platform, // <- handle OBLIGATORIO
+          handle: acc.username || acc.url || acc.platform,
           username: acc.username || null,
           url: acc.url || null,
-          // followers NO existe en tabla; si lo quieres persistir, agrega la columna vía SQL
         }))
 
         const { error: socialError } = await supabase
           .from("social_accounts")
           .insert(socialAccountsData)
-          .select("id") // solo columnas existentes
 
         if (socialError) {
           console.error("Error inserting social accounts:", socialError)
         }
       }
 
-      // 3) Insert distribution_accounts (schema: artist_id, service, account_id?, email?)
       const validDistributionAccounts = distributionAccounts.filter((acc) => acc.platform)
       if (validDistributionAccounts.length > 0) {
         const distributionAccountsData = validDistributionAccounts.map((acc) => ({
           artist_id: artistId,
-          service: acc.platform, // <- en DB es service, no platform
-          // monthly_listeners NO existe; si lo quieres, agrega la columna vía SQL
+          service: acc.platform,
         }))
 
         const { error: distributionError } = await supabase
           .from("distribution_accounts")
           .insert(distributionAccountsData)
-          .select("id") // solo columnas existentes
 
         if (distributionError) {
           console.error("Error inserting distribution accounts:", distributionError.message)
@@ -193,29 +180,22 @@ export default function NewArtistPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard">
-              <Button variant="outline" size="sm" className="flex items-center gap-2 bg-transparent">
-                <ArrowLeft className="h-4 w-4" />
-                Back to Dashboard
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold">Add New Artist</h1>
-              <p className="text-muted-foreground">Create a new artist profile</p>
-            </div>
+    <DashboardLayout>
+      <div className="p-4 md:p-6">
+        <div className="flex items-center gap-4 mb-8">
+          <Link href="/dashboard">
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">Add New Artist</h1>
+            <p className="text-muted-foreground">Create a new artist profile</p>
           </div>
         </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
         <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
-          {/* Basic Information */}
           <Card>
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
@@ -282,7 +262,6 @@ export default function NewArtistPage() {
             </CardContent>
           </Card>
 
-          {/* Social Media Accounts */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -375,7 +354,6 @@ export default function NewArtistPage() {
             </CardContent>
           </Card>
 
-          {/* Distribution Accounts */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -443,7 +421,6 @@ export default function NewArtistPage() {
             </CardContent>
           </Card>
 
-          {/* Submit Button */}
           <div className="flex items-center justify-end gap-4">
             <Link href="/dashboard">
               <Button type="button" variant="outline" className="bg-transparent">
@@ -455,7 +432,7 @@ export default function NewArtistPage() {
             </Button>
           </div>
         </form>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   )
 }

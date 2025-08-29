@@ -1,5 +1,3 @@
-// Archivo: middleware.ts
-
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
@@ -35,13 +33,32 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  await supabase.auth.getSession()
+  const { data: { session } } = await supabase.auth.getSession()
+  const { data: user } = await supabase.auth.getUser();
 
-  // --- ¡AQUÍ ESTÁ LA PARTE IMPORTANTE! ---
-  // Creamos la política de seguridad de contenido (CSP)
+  // If user is logged in and doesn't have an artist profile, redirect to onboarding
+  if (
+    user && user.user &&
+    !request.nextUrl.pathname.startsWith('/artists/onboarding') &&
+    !request.nextUrl.pathname.startsWith('/auth')
+  ) {
+    const { data: artist, error } = await supabase
+      .from('artists')
+      .select('id')
+      .eq('user_id', user.user.id)
+      .single();
+
+    // If no artist profile is found for the user, redirect to onboarding.
+    // A null artist and a PGRST116 error from .single() is the expected outcome for a new user.
+    if (!artist) {
+      return NextResponse.redirect(new URL('/artists/onboarding', request.url))
+    }
+  }
+
+  // --- Content Security Policy (CSP) ---
   const cspHeader = `
     default-src 'self';
-        script-src 'self' 'unsafe-inline' 'unsafe-eval';
+    script-src 'self' 'unsafe-inline' 'unsafe-eval';
     style-src 'self' 'unsafe-inline';
     img-src 'self' blob: data: https://tdbomtxyevggobphozdu.supabase.co;
     font-src 'self';
@@ -54,7 +71,6 @@ export async function middleware(request: NextRequest) {
     .replace(/\s{2,}/g, ' ')
     .trim()
 
-  // Añadimos el encabezado CSP a la respuesta
   response.headers.set('Content-Security-Policy', cspHeader)
 
   return response
@@ -62,13 +78,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
-     */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico|auth/sign-up|auth/login).*)',
   ],
 }

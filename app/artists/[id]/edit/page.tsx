@@ -17,6 +17,7 @@ import { CredentialManager } from "@/components/credential-manager"
 import { Separator } from "@/components/ui/separator"
 import { encrypt } from "@/lib/crypto"
 import { useVault } from "@/components/vault-provider"
+import { DashboardLayout } from "@/components/dashboard-layout"
 
 interface SocialAccount {
   id: string | null;
@@ -156,7 +157,6 @@ export default function EditArtistPage() {
       const { error: artistError } = await supabase.from("artists").update(updateData).eq("id", artistId)
       if (artistError) throw artistError
 
-      // Handle Social Accounts
       const masterPassword = await promptForPassword();
       if (!masterPassword) {
         setIsLoading(false);
@@ -164,31 +164,8 @@ export default function EditArtistPage() {
         return;
       }
 
-      const socialAccountsToInsert = await Promise.all(
-        socialAccounts
-          .filter(a => !a.id && a.platform && (a.username || a.url))
-          .map(async a => {
-            let password = a.password;
-            if (a.newPassword) {
-              const { encrypted, iv } = await encrypt(a.newPassword, masterPassword);
-              password = JSON.stringify({ encrypted, iv });
-            }
-            return {
-              artist_id: artistId,
-              platform: a.platform,
-              username: a.username || null,
-              handle: a.handle || null,
-              url: a.url || null,
-              followers: Number.parseInt(a.followers || '0'),
-              password: password
-            }
-          })
-      );
-
-      const socialAccountsToUpdate = await Promise.all(
-        socialAccounts
-          .filter(a => a.id && a.platform && (a.username || a.url))
-          .map(async a => {
+      const socialAccountsToUpsert = await Promise.all(
+        socialAccounts.map(async a => {
             let password = a.password;
             if (a.newPassword) {
               const { encrypted, iv } = await encrypt(a.newPassword, masterPassword);
@@ -207,45 +184,13 @@ export default function EditArtistPage() {
           })
       );
 
-      if (socialAccountsToInsert.length > 0) {
-        const { error } = await supabase.from("social_accounts").insert(socialAccountsToInsert)
+      if (socialAccountsToUpsert.length > 0) {
+        const { error } = await supabase.from("social_accounts").upsert(socialAccountsToUpsert.filter(a => a.platform))
         if(error) throw error
       }
 
-      if (socialAccountsToUpdate.length > 0) {
-        const { error } = await supabase.from("social_accounts").upsert(socialAccountsToUpdate)
-        if(error) throw error
-      }
-
-      // Handle Distribution Accounts
-      const distroAccountsToInsert = await Promise.all(
-        distributionAccounts
-          .filter(a => !a.id && a.distributor && a.service)
-          .map(async a => {
-            let password = a.password;
-            if (a.newPassword) {
-              const { encrypted, iv } = await encrypt(a.newPassword, masterPassword);
-              password = JSON.stringify({ encrypted, iv });
-            }
-            return {
-              artist_id: artistId,
-              distributor: a.distributor,
-              service: a.service,
-              monthly_listeners: Number.parseInt(a.monthly_listeners || '0'),
-              username: a.username || null,
-              email: a.email || null,
-              notes: a.notes || null,
-              url: a.url || null,
-              account_id: a.account_id || null,
-              password: password
-            }
-          })
-      );
-
-      const distroAccountsToUpdate = await Promise.all(
-        distributionAccounts
-          .filter(a => a.id && a.distributor && a.service)
-          .map(async a => {
+      const distroAccountsToUpsert = await Promise.all(
+        distributionAccounts.map(async a => {
             let password = a.password;
             if (a.newPassword) {
               const { encrypted, iv } = await encrypt(a.newPassword, masterPassword);
@@ -267,13 +212,8 @@ export default function EditArtistPage() {
           })
       );
 
-      if (distroAccountsToInsert.length > 0) {
-        const { error } = await supabase.from("distribution_accounts").insert(distroAccountsToInsert)
-        if(error) throw error
-      }
-
-      if (distroAccountsToUpdate.length > 0) {
-        const { error } = await supabase.from("distribution_accounts").upsert(distroAccountsToUpdate)
+      if (distroAccountsToUpsert.length > 0) {
+        const { error } = await supabase.from("distribution_accounts").upsert(distroAccountsToUpsert.filter(a => a.distributor && a.service))
         if(error) throw error
       }
 
@@ -287,227 +227,221 @@ export default function EditArtistPage() {
     }
   }
 
-  if (isLoadingData) {
-    return <div className="min-h-screen flex items-center justify-center"><p>Loading...</p></div>
-  }
-
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link href={`/artists/${artist.id}`}>
-              <Button variant="outline" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Artist
-              </Button>
-            </Link>
+    <DashboardLayout>
+      {isLoadingData ? (
+        <div className="flex h-full items-center justify-center"><p>Loading...</p></div>
+      ) : !artist ? (
+        <div className="flex h-full items-center justify-center"><p>Artist not found.</p></div>
+      ) : (
+        <>
+          <div className="flex items-center gap-4 mb-6">
+            <Button variant="outline" size="sm" onClick={() => router.back()}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
             <div>
-              <h1 className="text-2xl font-bold">Edit {artist.name}</h1>
-              <p className="text-muted-foreground">Update artist information</p>
+              <h1 className="text-xl font-semibold">Edit Artist</h1>
+              <p className="text-muted-foreground">{artist.name}</p>
             </div>
           </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8">
-        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
-          
-          <Card>
-            <CardHeader><CardTitle>Basic Information</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Artist Name *</Label>
-                  <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="genre">Genre *</Label>
-                  <Select value={genre} onValueChange={setGenre} required>
-                    <SelectTrigger id="genre"><SelectValue placeholder="Select genre" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Pop">Pop</SelectItem>
-                      <SelectItem value="Rock">Rock</SelectItem>
-                      <SelectItem value="Hip Hop">Hip Hop</SelectItem>
-                      <SelectItem value="R&B">R&B</SelectItem>
-                      <SelectItem value="Electronic">Electronic</SelectItem>
-                      <SelectItem value="Country">Country</SelectItem>
-                      <SelectItem value="Jazz">Jazz</SelectItem>
-                      <SelectItem value="Classical">Classical</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="City, Country" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="bio">Biography</Label>
-                <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell us about the artist..." rows={4} />
-              </div>
-              <div className="space-y-2">
-                <Label>Profile Image</Label>
-                {artist?.profile_image && <Image src={artist.profile_image} alt={artist.name} width={96} height={96} className="rounded-full object-cover"/>}
-                <Input id="profile-image" type="file" accept="image/*" onChange={(e) => setNewProfileImage(e.target.files ? e.target.files[0] : null)} />
-                <p className="text-sm text-muted-foreground">Upload a new image to replace the current one.</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Social Media Accounts</CardTitle>
-                <Button type="button" variant="outline" onClick={addSocialAccount}><Plus className="h-4 w-4 mr-2" />Add Account</Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {socialAccounts.map((account, index) => (
-                <div key={account.id || index} className="p-4 border rounded-lg space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium">Social Account {index + 1}</h4>
-                    <Button type="button" variant="outline" size="sm" onClick={() => removeSocialAccount(index)}><Trash2 className="h-3 w-3 mr-1" />Remove</Button>
+          <form onSubmit={handleSubmit} className="max-w-4xl space-y-6">
+            <Card>
+              <CardHeader><CardTitle>Basic Information</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Artist Name *</Label>
+                    <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor={`social-platform-${index}`}>Platform</Label>
-                      <Select value={account.platform} onValueChange={(value) => updateSocialAccount(index, "platform", value)}>
-                        <SelectTrigger id={`social-platform-${index}`}><SelectValue placeholder="Select platform" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Instagram">Instagram</SelectItem>
-                          <SelectItem value="Twitter">Twitter</SelectItem>
-                          <SelectItem value="YouTube">YouTube</SelectItem>
-                          <SelectItem value="TikTok">TikTok</SelectItem>
-                          <SelectItem value="Facebook">Facebook</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Username</Label>
-                      <Input value={account.username || ''} onChange={(e) => updateSocialAccount(index, "username", e.target.value)} placeholder="@username" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Handle</Label>
-                      <Input value={account.handle || ''} onChange={(e) => updateSocialAccount(index, "handle", e.target.value)} placeholder="@handle" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Followers</Label>
-                      <Input value={account.followers || ''} onChange={(e) => updateSocialAccount(index, "followers", e.target.value)} placeholder="125K" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Profile URL</Label>
-                      <Input value={account.url || ''} onChange={(e) => updateSocialAccount(index, "url", e.target.value)} placeholder="https://..." />
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="genre">Genre *</Label>
+                    <Select value={genre} onValueChange={setGenre} required>
+                      <SelectTrigger id="genre"><SelectValue placeholder="Select genre" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Pop">Pop</SelectItem>
+                        <SelectItem value="Rock">Rock</SelectItem>
+                        <SelectItem value="Hip Hop">Hip Hop</SelectItem>
+                        <SelectItem value="R&B">R&B</SelectItem>
+                        <SelectItem value="Electronic">Electronic</SelectItem>
+                        <SelectItem value="Country">Country</SelectItem>
+                        <SelectItem value="Jazz">Jazz</SelectItem>
+                        <SelectItem value="Classical">Classical</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <Separator className="my-4" />
-                  <div>
-                    <Label className="text-sm font-medium">Password Management</Label>
-                    <p className="text-xs text-muted-foreground mb-2">Save or view the password for this account.</p>
-                    {account.id && currentUserId ? (
-                      <CredentialManager 
-                        accountId={account.id}
-                        tableName="social_accounts"
-                        onPasswordSave={(password) => updateSocialAccount(index, "password", password)}
-                      />
-                    ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="location">Location</Label>
+                    <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="City, Country" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bio">Biography</Label>
+                  <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell us about the artist..." rows={4} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Profile Image</Label>
+                  {artist?.profile_image && <Image src={artist.profile_image} alt={artist.name} width={96} height={96} className="rounded-full object-cover"/>}
+                  <Input id="profile-image" type="file" accept="image/*" onChange={(e) => setNewProfileImage(e.target.files ? e.target.files[0] : null)} />
+                  <p className="text-sm text-muted-foreground">Upload a new image to replace the current one.</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Social Media Accounts</CardTitle>
+                  <Button type="button" variant="outline" onClick={addSocialAccount}><Plus className="h-4 w-4 mr-2" />Add Account</Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {socialAccounts.map((account, index) => (
+                  <div key={account.id || index} className="p-4 border rounded-lg space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium">Social Account {index + 1}</h4>
+                      <Button type="button" variant="outline" size="sm" onClick={() => removeSocialAccount(index)}><Trash2 className="h-3 w-3 mr-1" />Remove</Button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>New Password</Label>
-                        <Input type="password" onChange={(e) => updateSocialAccount(index, "newPassword", e.target.value)} placeholder="Enter new password" />
+                        <Label htmlFor={`social-platform-${index}`}>Platform</Label>
+                        <Select value={account.platform} onValueChange={(value) => updateSocialAccount(index, "platform", value)}>
+                          <SelectTrigger id={`social-platform-${index}`}><SelectValue placeholder="Select platform" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Instagram">Instagram</SelectItem>
+                            <SelectItem value="Twitter">Twitter</SelectItem>
+                            <SelectItem value="YouTube">YouTube</SelectItem>
+                            <SelectItem value="TikTok">TikTok</SelectItem>
+                            <SelectItem value="Facebook">Facebook</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Distribution Accounts</CardTitle>
-                <Button type="button" variant="outline" onClick={addDistributionAccount}><Plus className="h-4 w-4 mr-2" />Add Account</Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {distributionAccounts.map((account, index) => (
-                <div key={account.id || index} className="p-4 border rounded-lg space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium">Distribution Account {index + 1}</h4>
-                    <Button type="button" variant="outline" size="sm" onClick={() => removeDistributionAccount(index)}><Trash2 className="h-3 w-3 mr-1" />Remove</Button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Distributor</Label>
-                      <Input value={account.distributor || ''} onChange={(e) => updateDistributionAccount(index, "distributor", e.target.value)} placeholder="Distributor Name" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`distribution-service-${index}`}>Service</Label>
-                      <Select value={account.service} onValueChange={(value) => updateDistributionAccount(index, "service", value)}>
-                        <SelectTrigger id={`distribution-service-${index}`}><SelectValue placeholder="Select service" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Spotify">Spotify</SelectItem>
-                          <SelectItem value="Apple Music">Apple Music</SelectItem>
-                          <SelectItem value="YouTube Music">YouTube Music</SelectItem>
-                          <SelectItem value="Amazon Music">Amazon Music</SelectItem>
-                          <SelectItem value="Bandcamp">Bandcamp</SelectItem>
-                          <SelectItem value="SoundCloud">SoundCloud</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Monthly Listeners</Label>
-                      <Input value={account.monthly_listeners || ''} onChange={(e) => updateDistributionAccount(index, "monthly_listeners", e.target.value)} placeholder="250K" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Username</Label>
-                      <Input value={account.username || ''} onChange={(e) => updateDistributionAccount(index, "username", e.target.value)} placeholder="artist_username" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Email</Label>
-                      <Input type="email" value={account.email || ''} onChange={(e) => updateDistributionAccount(index, "email", e.target.value)} placeholder="contact@distro.com" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>URL</Label>
-                      <Input value={account.url || ''} onChange={(e) => updateDistributionAccount(index, "url", e.target.value)} placeholder="https://..." />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Account ID</Label>
-                      <Input value={account.account_id || ''} onChange={(e) => updateDistributionAccount(index, "account_id", e.target.value)} placeholder="Account ID" />
-                    </div>
-                    <div className="space-y-2 md:col-span-2">
-                      <Label>Notes</Label>
-                      <Textarea value={account.notes || ''} onChange={(e) => updateDistributionAccount(index, "notes", e.target.value)} placeholder="Add any relevant notes..." />
-                    </div>
-                  </div>
-                  <Separator className="my-4" />
-                  <div>
-                    <Label className="text-sm font-medium">Password Management</Label>
-                    <p className="text-xs text-muted-foreground mb-2">Save or view the password for this account.</p>
-                    {account.id && currentUserId ? (
-                      <CredentialManager
-                        accountId={account.id}
-                        tableName="distribution_accounts"
-                        onPasswordSave={(password) => updateDistributionAccount(index, "password", password)}
-                      />
-                    ) : (
                       <div className="space-y-2">
-                        <Label>New Password</Label>
-                        <Input type="password" onChange={(e) => updateDistributionAccount(index, "newPassword", e.target.value)} placeholder="Enter new password" />
+                        <Label>Username</Label>
+                        <Input value={account.username || ''} onChange={(e) => updateSocialAccount(index, "username", e.target.value)} placeholder="@username" />
                       </div>
-                    )}
+                      <div className="space-y-2">
+                        <Label>Handle</Label>
+                        <Input value={account.handle || ''} onChange={(e) => updateSocialAccount(index, "handle", e.target.value)} placeholder="@handle" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Followers</Label>
+                        <Input value={account.followers || ''} onChange={(e) => updateSocialAccount(index, "followers", e.target.value)} placeholder="125K" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Profile URL</Label>
+                        <Input value={account.url || ''} onChange={(e) => updateSocialAccount(index, "url", e.target.value)} placeholder="https://..." />
+                      </div>
+                    </div>
+                    <Separator className="my-4" />
+                    <div>
+                      <Label className="text-sm font-medium">Password Management</Label>
+                      <p className="text-xs text-muted-foreground mb-2">Save or view the password for this account.</p>
+                      {account.id && currentUserId ? (
+                        <CredentialManager 
+                          accountId={account.id}
+                          tableName="social_accounts"
+                          onPasswordSave={(password) => updateSocialAccount(index, "password", password)}
+                        />
+                      ) : (
+                        <div className="space-y-2">
+                          <Label>New Password</Label>
+                          <Input type="password" onChange={(e) => updateSocialAccount(index, "newPassword", e.target.value)} placeholder="Enter new password" />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+                ))}
+              </CardContent>
+            </Card>
 
-          <div className="flex items-center justify-end gap-4">
-            <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
-            <Button type="submit" disabled={isLoading}>{isLoading ? "Updating..." : "Update Artist"}</Button>
-          </div>
-        </form>
-      </main>
-    </div>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Distribution Accounts</CardTitle>
+                  <Button type="button" variant="outline" onClick={addDistributionAccount}><Plus className="h-4 w-4 mr-2" />Add Account</Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {distributionAccounts.map((account, index) => (
+                  <div key={account.id || index} className="p-4 border rounded-lg space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium">Distribution Account {index + 1}</h4>
+                      <Button type="button" variant="outline" size="sm" onClick={() => removeDistributionAccount(index)}><Trash2 className="h-3 w-3 mr-1" />Remove</Button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Distributor</Label>
+                        <Input value={account.distributor || ''} onChange={(e) => updateDistributionAccount(index, "distributor", e.target.value)} placeholder="Distributor Name" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`distribution-service-${index}`}>Service</Label>
+                        <Select value={account.service} onValueChange={(value) => updateDistributionAccount(index, "service", value)}>
+                          <SelectTrigger id={`distribution-service-${index}`}><SelectValue placeholder="Select service" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Spotify">Spotify</SelectItem>
+                            <SelectItem value="Apple Music">Apple Music</SelectItem>
+                            <SelectItem value="YouTube Music">YouTube Music</SelectItem>
+                            <SelectItem value="Amazon Music">Amazon Music</SelectItem>
+                            <SelectItem value="Bandcamp">Bandcamp</SelectItem>
+                            <SelectItem value="SoundCloud">SoundCloud</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Monthly Listeners</Label>
+                        <Input value={account.monthly_listeners || ''} onChange={(e) => updateDistributionAccount(index, "monthly_listeners", e.target.value)} placeholder="250K" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Username</Label>
+                        <Input value={account.username || ''} onChange={(e) => updateDistributionAccount(index, "username", e.target.value)} placeholder="artist_username" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Email</Label>
+                        <Input type="email" value={account.email || ''} onChange={(e) => updateDistributionAccount(index, "email", e.target.value)} placeholder="contact@distro.com" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>URL</Label>
+                        <Input value={account.url || ''} onChange={(e) => updateDistributionAccount(index, "url", e.target.value)} placeholder="https://..." />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Account ID</Label>
+                        <Input value={account.account_id || ''} onChange={(e) => updateDistributionAccount(index, "account_id", e.target.value)} placeholder="Account ID" />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label>Notes</Label>
+                        <Textarea value={account.notes || ''} onChange={(e) => updateDistributionAccount(index, "notes", e.target.value)} placeholder="Add any relevant notes..." />
+                      </div>
+                    </div>
+                    <Separator className="my-4" />
+                    <div>
+                      <Label className="text-sm font-medium">Password Management</Label>
+                      <p className="text-xs text-muted-foreground mb-2">Save or view the password for this account.</p>
+                      {account.id && currentUserId ? (
+                        <CredentialManager
+                          accountId={account.id}
+                          tableName="distribution_accounts"
+                          onPasswordSave={(password) => updateDistributionAccount(index, "password", password)}
+                        />
+                      ) : (
+                        <div className="space-y-2">
+                          <Label>New Password</Label>
+                          <Input type="password" onChange={(e) => updateDistributionAccount(index, "newPassword", e.target.value)} placeholder="Enter new password" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <div className="flex items-center justify-end gap-4">
+              <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
+              <Button type="submit" disabled={isLoading}>{isLoading ? "Updating..." : "Update Artist"}</Button>
+            </div>
+          </form>
+        </>
+      )}
+    </DashboardLayout>
   )
 }

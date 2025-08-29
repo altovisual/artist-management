@@ -1,11 +1,11 @@
 -- Enable Row Level Security on the artists table
 ALTER TABLE public.artists ENABLE ROW LEVEL SECURITY;
 
--- Create a policy to allow authenticated users to SELECT their own artist profile
-CREATE POLICY "Artists can view their own profile."
+-- Create a policy to allow admins to view all profiles, and artists to view their own.
+CREATE POLICY "Artists can view their own profile, and admins can view all."
 ON public.artists FOR SELECT
 TO authenticated
-USING (auth.uid() = user_id);
+USING ((get_my_role() = 'admin') OR (auth.uid() = user_id));
 
 -- Create a policy to allow authenticated users to INSERT their own artist profile
 CREATE POLICY "Artists can create their own profile."

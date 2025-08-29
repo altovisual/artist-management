@@ -38,20 +38,33 @@ export default function Dashboard() {
       // Simulate loading delay
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser()
+      const { data: { user } } = await supabase.auth.getUser();
 
-      if (error || !user) {
-        router.push("/auth/login")
-        return
+      if (!user) {
+        router.push("/auth/login");
+        return;
       }
-      setUserEmail(user.email ?? null)
+      setUserEmail(user.email ?? null);
 
-      const { data: artists, error: artistsError } = await supabase
-        .from("artists")
-        .select("*, social_accounts(*), distribution_accounts(*), projects(name, release_date, assets(id))")
+      const isAdmin = user.app_metadata?.role === 'admin';
+      
+      let artists: any[] | null = [];
+      let artistsError: any = null;
+
+      if (isAdmin) {
+        // Admins fetch all artists via RPC to bypass RLS complexities on JOINs
+        const { data, error } = await supabase.rpc('get_all_artists_for_admin');
+        artists = data;
+        artistsError = error;
+      } else {
+        // Non-admins fetch only their own profile, RLS will enforce this
+        const { data, error } = await supabase
+          .from("artists")
+          .select("*, social_accounts(*), distribution_accounts(*), projects(name, release_date, assets(id))")
+          .eq('user_id', user.id);
+        artists = data;
+        artistsError = error;
+      }
 
       if (artistsError) {
         console.error("Error fetching artists:", artistsError)

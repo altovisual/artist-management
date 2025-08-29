@@ -1,15 +1,12 @@
-"use client"
+'use client'
 
 import { useState, useEffect } from "react"
-
-
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { useSearchParams } from 'next/navigation'
-
 import { ReleaseCalendar } from "@/components/release-calendar"
+import { DashboardLayout } from "@/components/dashboard-layout"
 
-/** Fila real de la tabla projects (ajusta si tu esquema difiere) */
 type ProjectRow = {
   id: string | number
   name: string
@@ -90,11 +87,13 @@ export default function ReleasesPage() {
   }, [supabase, toast])
 
   return (
-    <ReleaseCalendar
-      initialEvents={events}
-      initialArtists={artists}
-      initialArtistId={initialArtistId}
-      isLoading={isLoading}
-    />
+    <DashboardLayout>
+      <ReleaseCalendar
+        initialEvents={events}
+        initialArtists={artists}
+        initialArtistId={initialArtistId}
+        isLoading={isLoading}
+      />
+    </DashboardLayout>
   )
 }

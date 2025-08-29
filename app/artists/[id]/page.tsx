@@ -46,6 +46,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import Image from "next/image"
+import { DashboardLayout } from "@/components/dashboard-layout"
 
 const getPlatformIcon = (platform: string) => {
   switch (platform.toLowerCase()) {
@@ -142,14 +143,6 @@ export default function ArtistDetailPage() {
     fetchArtistData()
   }, [params.id, router])
 
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
-  }
-
-  if (!artist) {
-    return <div className="min-h-screen flex items-center justify-center">Artist not found</div>
-  }
-
   const handleDelete = async () => {
     const supabase = createClient()
     try {
@@ -161,11 +154,14 @@ export default function ArtistDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-0">
+    <DashboardLayout>
+      {loading ? (
+        <div className="flex h-full items-center justify-center">Loading...</div>
+      ) : !artist ? (
+        <div className="flex h-full items-center justify-center">Artist not found</div>
+      ) : (
+        <>
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-0 mb-6">
             <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full md:w-auto">
               <Link href="/dashboard">
                 <Button variant="outline" size="sm" className="flex items-center gap-2 bg-transparent">
@@ -265,188 +261,185 @@ export default function ArtistDetailPage() {
               </div>
             </div>
           </div>
-        </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="flex flex-wrap justify-center w-full">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="social">Social Media</TabsTrigger>
-            <TabsTrigger value="distribution">Distribution</TabsTrigger>
-            <TabsTrigger value="releases">Releases</TabsTrigger>
-            <TabsTrigger value="assets">Asset Kit</TabsTrigger>
-          </TabsList>
+          <Tabs defaultValue="overview" className="space-y-6">
+            <TabsList className="flex flex-wrap justify-center w-full">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="social">Social Media</TabsTrigger>
+              <TabsTrigger value="distribution">Distribution</TabsTrigger>
+              <TabsTrigger value="releases">Releases</TabsTrigger>
+              <TabsTrigger value="assets">Asset Kit</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
-                <Card>
-                  <CardHeader><CardTitle>Artist Information</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div><label className="text-sm font-medium text-muted-foreground">Genre</label><p className="mt-1">{artist.genre}</p></div>
-                      <div><label className="text-sm font-medium text-muted-foreground">Country</label><p className="mt-1">{artist.country}</p></div>
-                      <div><label className="text-sm font-medium text-muted-foreground">Total Streams</label><p className="mt-1">{artist.total_streams?.toLocaleString() || "0"}</p></div>
-                      <div><label className="text-sm font-medium text-muted-foreground">Monthly Listeners</label><p className="mt-1">{artist.monthly_listeners?.toLocaleString() || "0"}</p></div>
-                      <div><label className="text-sm font-medium text-muted-foreground">Created</label><p className="mt-1">{new Date(artist.created_at).toLocaleDateString()}</p></div>
-                    </div>
-                    <Separator />
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Biography</label>
-                      <p className="mt-2 text-sm leading-relaxed">{artist.bio || "No biography available."}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-              <div>
-                <Card>
-                  <CardHeader><CardTitle>Quick Stats</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Social Accounts</span><span className="font-medium">{socialAccounts.length}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Distribution Platforms</span><span className="font-medium">{distributionAccounts.length}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Total Assets</span><span className="font-medium">{assets.length}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Total Streams</span><span className="font-medium">{artist.total_streams?.toLocaleString() || "0"}</span></div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="releases" className="space-y-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">Artist Releases</h2>
-              <Link href={`/dashboard/releases?artistId=${artist.id}`}>
-                <Button className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  Crear Lanzamiento
-                </Button>
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {projects.length > 0 ? (
-                projects.map((project: any) => (
-                  <Card key={project.id}>
-                    <CardHeader className="p-0">
-                      <Image
-                        src={project.cover_art_url || "/placeholder-logo.png"}
-                        alt={project.name}
-                        width={500}
-                        height={192}
-                        className="w-full h-48 object-cover rounded-t-lg"
-                      />
-                    </CardHeader>
-                    <CardContent className="p-4 space-y-2">
-                      <h3 className="text-lg font-semibold">{project.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {project.type} • {new Date(project.release_date).toLocaleDateString()}
-                      </p>
-                      <Badge variant="secondary">{project.status}</Badge>
-                      {project.music_file_url && (
-                        <div className="mt-2">
-                          <audio controls src={project.music_file_url} className="w-full" />
-                        </div>
-                      )}
-                      <div className="flex gap-2 mt-4">
-                        <Link href={`/dashboard/releases?id=${project.id}`}>
-                          <Button variant="outline" size="sm">
-                            <Eye className="h-4 w-4 mr-2" /> View Details
-                          </Button>
-                        </Link>
-                        {project.music_file_url && (
-                          <Button asChild variant="outline" size="sm">
-                            <a href={project.music_file_url} download>
-                              <Download className="h-4 w-4 mr-2" /> Download Music
-                            </a>
-                          </Button>
-                        )}
+            <TabsContent value="overview" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                  <Card>
+                    <CardHeader><CardTitle>Artist Information</CardTitle></CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div><label className="text-sm font-medium text-muted-foreground">Genre</label><p className="mt-1">{artist.genre}</p></div>
+                        <div><label className="text-sm font-medium text-muted-foreground">Country</label><p className="mt-1">{artist.country}</p></div>
+                        <div><label className="text-sm font-medium text-muted-foreground">Total Streams</label><p className="mt-1">{artist.total_streams?.toLocaleString() || "0"}</p></div>
+                        <div><label className="text-sm font-medium text-muted-foreground">Monthly Listeners</label><p className="mt-1">{artist.monthly_listeners?.toLocaleString() || "0"}</p></div>
+                        <div><label className="text-sm font-medium text-muted-foreground">Created</label><p className="mt-1">{new Date(artist.created_at).toLocaleDateString()}</p></div>
+                      </div>
+                      <Separator />
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Biography</label>
+                        <p className="mt-2 text-sm leading-relaxed">{artist.bio || "No biography available."}</p>
                       </div>
                     </CardContent>
                   </Card>
-                ))
-              ) : (
-                <p className="text-muted-foreground col-span-full text-center py-8">No releases found for this artist.</p>
-              )}
-            </div>
-          </TabsContent>
+                </div>
+                <div>
+                  <Card>
+                    <CardHeader><CardTitle>Quick Stats</CardTitle></CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex justify-between"><span className="text-muted-foreground">Social Accounts</span><span className="font-medium">{socialAccounts.length}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Distribution Platforms</span><span className="font-medium">{distributionAccounts.length}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Total Assets</span><span className="font-medium">{assets.length}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Total Streams</span><span className="font-medium">{artist.total_streams?.toLocaleString() || "0"}</span></div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </TabsContent>
 
-          <TabsContent value="social" className="space-y-6">
-            <Card>
-              <CardHeader><CardTitle>Social Media Accounts</CardTitle></CardHeader>
-              <CardContent>
-                {socialAccounts.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {socialAccounts.map((account: any) => (
-                      <div key={account.id} className="p-4 border rounded-lg">
-                        <div className="flex items-center gap-3">
-                          {getPlatformIcon(account.platform)}
-                          <div>
-                            <p className="font-medium">{account.platform}</p>
-                            <p className="text-sm text-muted-foreground">{account.handle}</p>
+            <TabsContent value="releases" className="space-y-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold">Artist Releases</h2>
+                <Link href={`/dashboard/releases?artistId=${artist.id}`}>
+                  <Button className="flex items-center gap-2">
+                    <Plus className="h-4 w-4" />
+                    Crear Lanzamiento
+                  </Button>
+                </Link>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {projects.length > 0 ? (
+                  projects.map((project: any) => (
+                    <Card key={project.id}>
+                      <CardHeader className="p-0">
+                        <Image
+                          src={project.cover_art_url || "/placeholder-logo.png"}
+                          alt={project.name}
+                          width={500}
+                          height={192}
+                          className="w-full h-48 object-cover rounded-t-lg"
+                        />
+                      </CardHeader>
+                      <CardContent className="p-4 space-y-2">
+                        <h3 className="text-lg font-semibold">{project.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {project.type} • {new Date(project.release_date).toLocaleDateString()}
+                        </p>
+                        <Badge variant="secondary">{project.status}</Badge>
+                        {project.music_file_url && (
+                          <div className="mt-2">
+                            <audio controls src={project.music_file_url} className="w-full" />
                           </div>
+                        )}
+                        <div className="flex gap-2 mt-4">
+                          <Link href={`/dashboard/releases?id=${project.id}`}>
+                            <Button variant="outline" size="sm">
+                              <Eye className="h-4 w-4 mr-2" /> View Details
+                            </Button>
+                          </Link>
+                          {project.music_file_url && (
+                            <Button asChild variant="outline" size="sm">
+                              <a href={project.music_file_url} download>
+                                <Download className="h-4 w-4 mr-2" /> Download Music
+                              </a>
+                            </Button>
+                          )}
                         </div>
-                        <div className="text-right">
-                          <p className="font-medium">{account.username}</p>
-                          <p className="text-sm text-muted-foreground">username</p>
-                        </div>
-                        {account.password && <ViewCredentialManager accountId={account.id} tableName="social_accounts" />}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground text-center py-8">No social media accounts added yet.</p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="distribution" className="space-y-6">
-            <Card>
-              <CardHeader><CardTitle>Distribution Accounts</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                {distributionAccounts.length > 0 ? (
-                  distributionAccounts.map((account: any) => (
-                    <div key={account.id} className="p-4 border rounded-lg">
-                      <div className="flex items-center gap-3 mb-2">
-                        {getPlatformIcon(account.service)}
-                        <div className="flex-1">
-                          <p className="font-medium">{account.service}</p>
-                          <Badge variant="default" className="text-xs">
-                            Active
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="text-sm text-muted-foreground space-y-2">
-                        <p><strong>Username:</strong> {account.username}</p>
-                        <p><strong>Email:</strong> {account.email}</p>
-                        <p><strong>Monthly Listeners:</strong> {account.monthly_listeners?.toLocaleString() || "0"}</p>
-                        <p><strong>Notes:</strong> {account.notes}</p>
-                      </div>
-                      {account.password && <ViewCredentialManager accountId={account.id} tableName="distribution_accounts" />}
-                    </div>
+                      </CardContent>
+                    </Card>
                   ))
                 ) : (
-                  <p className="text-muted-foreground text-center py-8">No distribution accounts added yet.</p>
+                  <p className="text-muted-foreground col-span-full text-center py-8">No releases found for this artist.</p>
                 )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </div>
+            </TabsContent>
 
-          <TabsContent value="assets" className="space-y-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">Asset Kit</h2>
-              <Link href={`/artists/${artist.id}/assets`}>
-                <Button>
-                  <ImageIcon className="h-4 w-4 mr-2" />
-                  Manage All Assets
-                </Button>
-              </Link>
-            </div>
-            <AssetKitTab assets={assets} />
-          </TabsContent>
-        </Tabs>
-      </main>
-    </div>
+            <TabsContent value="social" className="space-y-6">
+              <Card>
+                <CardHeader><CardTitle>Social Media Accounts</CardTitle></CardHeader>
+                <CardContent>
+                  {socialAccounts.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {socialAccounts.map((account: any) => (
+                        <div key={account.id} className="p-4 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            {getPlatformIcon(account.platform)}
+                            <div>
+                              <p className="font-medium">{account.platform}</p>
+                              <p className="text-sm text-muted-foreground">{account.handle}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium">{account.username}</p>
+                            <p className="text-sm text-muted-foreground">username</p>
+                          </div>
+                          {account.password && <ViewCredentialManager accountId={account.id} tableName="social_accounts" />}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-center py-8">No social media accounts added yet.</p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="distribution" className="space-y-6">
+              <Card>
+                <CardHeader><CardTitle>Distribution Accounts</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  {distributionAccounts.length > 0 ? (
+                    distributionAccounts.map((account: any) => (
+                      <div key={account.id} className="p-4 border rounded-lg">
+                        <div className="flex items-center gap-3 mb-2">
+                          {getPlatformIcon(account.service)}
+                          <div className="flex-1">
+                            <p className="font-medium">{account.service}</p>
+                            <Badge variant="default" className="text-xs">
+                              Active
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="text-sm text-muted-foreground space-y-2">
+                          <p><strong>Username:</strong> {account.username}</p>
+                          <p><strong>Email:</strong> {account.email}</p>
+                          <p><strong>Monthly Listeners:</strong> {account.monthly_listeners?.toLocaleString() || "0"}</p>
+                          <p><strong>Notes:</strong> {account.notes}</p>
+                        </div>
+                        {account.password && <ViewCredentialManager accountId={account.id} tableName="distribution_accounts" />}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground text-center py-8">No distribution accounts added yet.</p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="assets" className="space-y-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold">Asset Kit</h2>
+                <Link href={`/artists/${artist.id}/assets`}>
+                  <Button>
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    Manage All Assets
+                  </Button>
+                </Link>
+              </div>
+              <AssetKitTab assets={assets} />
+            </TabsContent>
+          </Tabs>
+        </>
+      )}
+    </DashboardLayout>
   )
 }

@@ -56,6 +56,14 @@ export default function ArtistOnboardingPage() {
     try {
       let imageUrl: string | null = null
       if (profileImage) {
+        // Ensure the bucket exists and is public.
+        const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('artist-profiles');
+        if (bucketError && bucketError.message.includes('not found')) {
+            await supabase.storage.createBucket('artist-profiles', { public: true });
+        } else if (bucketError) {
+            throw bucketError;
+        }
+
         const fileName = `${Date.now()}_${profileImage.name}`
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from("artist-profiles")
@@ -88,7 +96,7 @@ export default function ArtistOnboardingPage() {
       if (artistError) throw artistError
 
       toast({ title: "Success!", description: "Artist profile created successfully." })
-      router.push("/dashboard") // Redirect to dashboard after onboarding
+      router.push("/artists/my-profile") // Redirect to the new profile page
     } catch (error) {
       console.error("Error creating artist profile:", error)
       toast({

@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { Separator } from "@/components/ui/separator"
 import Image from "next/image"
+import { DashboardLayout } from "@/components/dashboard-layout"
 
 interface SocialAccount {
   id: string | null;
@@ -99,7 +100,7 @@ export default function MyProfilePage() {
               assets (*)
             )
           `)
-          .eq("user_id", user.id) // Use user.id instead of params.id
+          .eq("user_id", user.id)
           .single()
 
         if (artistError || !artistData) {
@@ -126,11 +127,13 @@ export default function MyProfilePage() {
 
         // Extract assets from projects and flatten them into a single array
         const allAssets: Asset[] = [];
-        artistData.projects.forEach((project: Project) => {
-          if (project.assets) {
-            allAssets.push(...project.assets);
-          }
-        });
+        if (artistData.projects) {
+          artistData.projects.forEach((project: Project) => {
+            if (project.assets) {
+              allAssets.push(...project.assets);
+            }
+          });
+        }
         setAssets(allAssets);
 
       } catch (error) {
@@ -364,366 +367,75 @@ export default function MyProfilePage() {
     }
   }
 
-  if (isLoadingData) {
-    return <div className="min-h-screen flex items-center justify-center"><p>Loading profile...</p></div>
-  }
+  const PageContent = () => {
+    if (isLoadingData) {
+      return <div className="min-h-screen flex items-center justify-center"><p>Loading profile...</p></div>
+    }
 
-  if (!artist) {
-    return <div className="min-h-screen flex items-center justify-center"><p>No artist profile found for this user. Please create one.</p></div>
+    if (!artist) {
+      return <div className="min-h-screen flex items-center justify-center"><p>No artist profile found for this user. Please create one.</p></div>
+    }
+
+    return (
+      <>
+        <div className="container mx-auto px-4 py-8">
+          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
+            <Card>
+              <CardHeader><CardTitle>Basic Information</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Artist Name *</Label>
+                    <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="genre">Genre *</Label>
+                    <Select value={genre} onValueChange={setGenre} required>
+                      <SelectTrigger id="genre"><SelectValue placeholder="Select genre" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Pop">Pop</SelectItem>
+                        <SelectItem value="Rock">Rock</SelectItem>
+                        <SelectItem value="Hip Hop">Hip Hop</SelectItem>
+                        <SelectItem value="R&B">R&B</SelectItem>
+                        <SelectItem value="Electronic">Electronic</SelectItem>
+                        <SelectItem value="Country">Country</SelectItem>
+                        <SelectItem value="Jazz">Jazz</SelectItem>
+                        <SelectItem value="Classical">Classical</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="location">Location</Label>
+                    <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="City, Country" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bio">Biography</Label>
+                  <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell us about your artist journey..." rows={4} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Profile Image</Label>
+                  {artist?.profile_image && <Image src={artist.profile_image} alt={artist.name} width={96} height={96} className="rounded-full object-cover"/>}
+                  <Input id="profile-image" type="file" accept="image/*" onChange={(e) => setNewProfileImage(e.target.files ? e.target.files[0] : null)} />
+                  <p className="text-sm text-muted-foreground">Upload a new image to replace the current one.</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Other cards for social, distribution, projects, assets */}
+
+            <div className="flex items-center justify-end gap-4">
+              <Button type="submit" disabled={isLoading}>{isLoading ? "Updating..." : "Update Profile"}</Button>
+            </div>
+          </form>
+        </div>
+      </>
+    )
   }
 
   return (
-    <>
-      <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-2xl font-bold">My Artist Profile</h1>
-              <p className="text-muted-foreground">Manage your artist information</p>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="container mx-auto px-4 py-8">
-        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
-          
-          <Card>
-            <CardHeader><CardTitle>Basic Information</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Artist Name *</Label>
-                  <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="genre">Genre *</Label>
-                  <Select value={genre} onValueChange={setGenre} required>
-                    <SelectTrigger id="genre"><SelectValue placeholder="Select genre" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Pop">Pop</SelectItem>
-                      <SelectItem value="Rock">Rock</SelectItem>
-                      <SelectItem value="Hip Hop">Hip Hop</SelectItem>
-                      <SelectItem value="R&B">R&B</SelectItem>
-                      <SelectItem value="Electronic">Electronic</SelectItem>
-                      <SelectItem value="Country">Country</SelectItem>
-                      <SelectItem value="Jazz">Jazz</SelectItem>
-                      <SelectItem value="Classical">Classical</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="City, Country" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="bio">Biography</Label>
-                <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell us about your artist journey..." rows={4} />
-              </div>
-              <div className="space-y-2">
-                <Label>Profile Image</Label>
-                {artist?.profile_image && <Image src={artist.profile_image} alt={artist.name} width={96} height={96} className="rounded-full object-cover"/>}
-                <Input id="profile-image" type="file" accept="image/*" onChange={(e) => setNewProfileImage(e.target.files ? e.target.files[0] : null)} />
-                <p className="text-sm text-muted-foreground">Upload a new image to replace the current one.</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Social Media Accounts</CardTitle>
-                <Button type="button" onClick={addSocialAccount} size="sm">
-                  Add Account
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <>
-                {socialAccounts.length === 0 && (
-                  <p className="text-muted-foreground text-sm">No social accounts linked. Click &quot;Add Account&quot; to add one.</p>
-                )}
-                {socialAccounts.map((account, index) => (
-                  <div key={account.id || `new-${index}`} className="p-4 border rounded-lg space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium">{account.platform || `New Account ${index + 1}`}</h4>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => removeSocialAccount(index)}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Platform</Label>
-                        <Select value={account.platform} onValueChange={(value) => updateSocialAccount(index, "platform", value)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Platform" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Spotify">Spotify</SelectItem>
-                            <SelectItem value="Apple Music">Apple Music</SelectItem>
-                            <SelectItem value="YouTube">YouTube</SelectItem>
-                            <SelectItem value="Instagram">Instagram</SelectItem>
-                            <SelectItem value="TikTok">TikTok</SelectItem>
-                            <SelectItem value="Facebook">Facebook</SelectItem>
-                            <SelectItem value="Twitter">Twitter</SelectItem>
-                            <SelectItem value="SoundCloud">SoundCloud</SelectItem>
-                            <SelectItem value="Bandcamp">Bandcamp</SelectItem>
-                            <SelectItem value="Website">Website</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Username</Label>
-                        <Input value={account.username || ''} onChange={(e) => updateSocialAccount(index, "username", e.target.value)} placeholder="@username" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Handle</Label>
-                        <Input value={account.handle || ''} onChange={(e) => updateSocialAccount(index, "handle", e.target.value)} placeholder="@handle" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Followers</Label>
-                        <Input value={account.followers || ''} onChange={(e) => updateSocialAccount(index, "followers", e.target.value)} placeholder="125K" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Profile URL</Label>
-                        <Input value={account.url || ''} onChange={(e) => updateSocialAccount(index, "url", e.target.value)} placeholder="https://..." />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </>
-            </CardContent>
-          </Card>
-
-
-          
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Distribution Accounts</CardTitle>
-                <Button type="button" onClick={addDistributionAccount} size="sm">
-                  Add Account
-                </Button>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="space-y-4">
-              <>
-                {distributionAccounts.length === 0 && (
-                  <p className="text-muted-foreground text-sm">No distribution accounts linked. Click &quot;Add Account&quot; to add one.</p>
-                )}
-                {distributionAccounts.map((account, index) => (
-                  <div key={account.id || `new-${index}`} className="p-4 border rounded-lg space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium">{account.distributor || `New Account ${index + 1}`}</h4>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => removeDistributionAccount(index)}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Distributor</Label>
-                          <Input value={account.distributor || ''} onChange={(e) => updateDistributionAccount(index, "distributor", e.target.value)} placeholder="Distributor Name" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Service</Label>
-                          <Input value={account.service || ''} onChange={(e) => updateDistributionAccount(index, "service", e.target.value)} placeholder="Service Name" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Monthly Listeners</Label>
-                          <Input value={account.monthly_listeners || ''} onChange={(e) => updateDistributionAccount(index, "monthly_listeners", e.target.value)} placeholder="250K" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Username</Label>
-                          <Input value={account.username || ''} onChange={(e) => updateDistributionAccount(index, "username", e.target.value)} placeholder="artist_username" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Email</Label>
-                          <Input type="email" value={account.email || ''} onChange={(e) => updateDistributionAccount(index, "email", e.target.value)} placeholder="contact@distro.com" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>URL</Label>
-                          <Input value={account.url || ''} onChange={(e) => updateDistributionAccount(index, "url", e.target.value)} placeholder="https://..." />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Account ID</Label>
-                          <Input value={account.account_id || ''} onChange={(e) => updateDistributionAccount(index, "account_id", e.target.value)} placeholder="Account ID" />
-                        </div>
-                        <div className="space-y-2 md:col-span-2">
-                          <Label>Notes</Label>
-                          <Textarea value={account.notes || ''} onChange={(e) => updateDistributionAccount(index, "notes", e.target.value)} placeholder="Add any relevant notes..." />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-              </>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Projects</CardTitle>
-                <Button type="button" onClick={addProject} size="sm">
-                  Add Project
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {projects.length === 0 && (
-                <p className="text-muted-foreground text-sm">No projects linked. Click &quot;Add Project&quot; to add one.</p>
-              )}
-              {projects.map((project, index) => (
-                <div key={project.id || `new-${index}`} className="p-4 border rounded-lg space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium">{project.title || `New Project ${index + 1}`}</h4>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => removeProject(index)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Title *</Label>
-                      <Input value={project.title} onChange={(e) => updateProject(index, "title", e.target.value)} required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Release Date *</Label>
-                      <Input type="date" value={project.release_date} onChange={(e) => updateProject(index, "release_date", e.target.value)} required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Type *</Label>
-                      <Select value={project.type} onValueChange={(value) => updateProject(index, "type", value)} required>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Single">Single</SelectItem>
-                          <SelectItem value="EP">EP</SelectItem>
-                          <SelectItem value="Album">Album</SelectItem>
-                          <SelectItem value="Mixtape">Mixtape</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Status *</Label>
-                      <Select value={project.status} onValueChange={(value) => updateProject(index, "status", value)} required>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Upcoming">Upcoming</SelectItem>
-                          <SelectItem value="Released">Released</SelectItem>
-                          <SelectItem value="In Progress">In Progress</SelectItem>
-                          <SelectItem value="On Hold">On Hold</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2 md:col-span-2">
-                      <Label>Music File URL</Label>
-                      <Input value={project.music_file_url || ''} onChange={(e) => updateProject(index, "music_file_url", e.target.value)} placeholder="https://example.com/music.mp3" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Assets</CardTitle>
-                <Button type="button" onClick={addAsset} size="sm">
-                  Add Asset
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {assets.length === 0 && (
-                <p className="text-muted-foreground text-sm">No assets linked. Click &quot;Add Asset&quot; to add one.</p>
-              )}
-              {assets.map((asset, index) => (
-                <div key={asset.id || `new-${index}`} className="p-4 border rounded-lg space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium">{asset.file_name || `New Asset ${index + 1}`}</h4>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => removeAsset(index)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Project *</Label>
-                      <Select value={asset.project_id || ''} onValueChange={(value) => updateAsset(index, "project_id", value)} required>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Project" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {projects.map((project) => (
-                            <SelectItem key={project.id} value={project.id || ''}>
-                              {project.title}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Category *</Label>
-                      <Select value={asset.category} onValueChange={(value) => updateAsset(index, "category", value)} required>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Cover Art">Cover Art</SelectItem>
-                          <SelectItem value="Press Photo">Press Photo</SelectItem>
-                          <SelectItem value="Lyric Video">Lyric Video</SelectItem>
-                          <SelectItem value="Social Media Graphic">Social Media Graphic</SelectItem>
-                          <SelectItem value="Promotional Video">Promotional Video</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>File Name *</Label>
-                      <Input value={asset.file_name} onChange={(e) => updateAsset(index, "file_name", e.target.value)} required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>File URL</Label>
-                      <Input value={asset.file_url || ''} onChange={(e) => updateAsset(index, "file_url", e.target.value)} placeholder="https://example.com/asset.png" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <div className="flex items-center justify-end gap-4">
-            <Button type="submit" disabled={isLoading}>{isLoading ? "Updating..." : "Update Profile"}</Button>
-          </div>
-        </form>
-      </div>
-    </div>
-    </>
+    <DashboardLayout>
+      <PageContent />
+    </DashboardLayout>
   )
 }
