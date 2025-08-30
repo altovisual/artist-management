@@ -40,21 +40,40 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="w-full min-h-screen flex flex-col lg:grid lg:grid-cols-2 xl:min-h-screen">
-      <div className="flex flex-col items-center justify-center flex-grow relative">
-        <div className="absolute top-4 left-4">
-          <Image src="/mi-logo.svg" alt="Logo" width={100} height={32} />
+    <div className="flex h-screen w-screen">
+      {/* Left Panel with Video Background and Overlay */}
+      <div className="relative flex-1 hidden lg:flex flex-col justify-between p-10 text-white overflow-hidden">
+        <video
+          src="/intro-video.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black opacity-80"></div> {/* Overlay */}
+        
+        <div className="relative z-10">
+          <Image src="/mi-logo-blanco.svg" alt="MVPX Logo" width={150} height={40} />
         </div>
-        <div className="mx-auto grid w-[350px] gap-6">
-          <div className="grid gap-2 text-center">
-            <h1 className="text-3xl font-bold">Login</h1>
-            <p className="text-balance text-muted-foreground">
-              Enter your email below to login to your account
-            </p>
+        <div className="relative z-10 text-2xl font-semibold">
+          Your Artist Management Solution
+        </div>
+      </div>
+
+      {/* Right Panel - Login Form */}
+      <div className="flex-1 flex justify-center items-center bg-white p-8">
+        <div className="w-full max-w-md text-center">
+          <div className="flex justify-center items-center mb-6">
+            <Image src="/icono-x.svg" alt="X Icon" width={40} height={40} className="mr-3" />
+            <h1 className="text-4xl font-bold text-zinc-800">Login</h1>
           </div>
-          <form onSubmit={handleLogin} className="grid gap-4">
+          <p className="text-zinc-600 mb-8 text-lg">
+            Enter your email below to login to your account
+          </p>
+          <form onSubmit={handleLogin} className="grid gap-5">
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-left text-zinc-800 font-semibold text-base">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -62,48 +81,31 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                className="w-full p-3 border border-zinc-300 rounded-lg text-base focus:ring-2 focus:ring-[#e1348f] focus:border-transparent"
               />
             </div>
             <div className="grid gap-2">
-              <div className="flex items-center">
-                <Label htmlFor="password">Password</Label>
-                {/* <Link
-                  href="/forgot-password"
-                  className="ml-auto inline-block text-sm underline"
-                >
-                  Forgot your password?
-                </Link> */}
-              </div>
+              <Label htmlFor="password" className="text-left text-zinc-800 font-semibold text-base">Password</Label>
               <Input 
                 id="password" 
                 type="password" 
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className="w-full p-3 border border-zinc-300 rounded-lg text-base focus:ring-2 focus:ring-[#e1348f] focus:border-transparent"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full p-3 border-none rounded-lg bg-[#e1348f] text-white text-lg font-semibold cursor-pointer hover:bg-[#c72d7a] transition-colors duration-200" disabled={isLoading}>
               {isLoading ? 'Logging in...' : 'Login'}
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm">
+          <div className="mt-6 text-zinc-600 text-base">
             Don&apos;t have an account?{" "}
-            <Link href="/auth/sign-up" className="underline">
+            <Link href="/auth/sign-up" className="text-[#e1348f] font-bold hover:underline">
               Sign up
             </Link>
           </div>
         </div>
-      </div>
-      <div className="hidden bg-muted lg:block relative">
-        <video
-          src="/intro-video.mp4"
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.8]"
-        />
-        
       </div>
     </div>
   )

@@ -1,5 +1,13 @@
 ## Plan de Implementación: Gestión de Perfiles de Artistas por los Propios Artistas
 
+### Actualizaciones Recientes y Nuevas Funcionalidades
+
+Desde la última actualización, se han implementado las siguientes mejoras y funcionalidades:
+
+-   **Interruptor de Modo Oscuro/Claro:** Se ha añadido un selector de tema en la barra de navegación superior, permitiendo a los usuarios alternar entre el modo claro y oscuro en toda la aplicación. El logo de la aplicación también cambia dinámicamente para adaptarse al tema seleccionado (logo negro para modo claro, logo blanco para modo oscuro).
+-   **Posicionamiento del Logo en Páginas de Autenticación:** El logo en las páginas de inicio de sesión, registro y registro de artista ahora se posiciona en la esquina superior izquierda, con un padding adecuado, para un efecto de "logo mosca" más discreto y moderno.
+-   **Actualización Detallada del README.md:** El archivo `README.md` ha sido extensamente actualizado para incluir una descripción más detallada del proyecto, una lista exhaustiva de características (incluyendo las nuevas funcionalidades de administrador y el sistema de clave de cifrado global), y una "Guía de Inicio Rápido para Usuarios (Onboarding)" completa para facilitar la comprensión y el uso del sistema.
+
 ### I. Conceptos Clave y Arquitectura:
 
 *   **Seguridad a Nivel de Fila (RLS) de Supabase:** Crucial para asegurar que los artistas solo accedan a sus propios datos. Supabase permite definir políticas en las tablas (ej. `artists`, `social_accounts`, `distribution_accounts`, `projects`, `assets`) que restringen el acceso de lectura/escritura basado en el `user.id` autenticado.
