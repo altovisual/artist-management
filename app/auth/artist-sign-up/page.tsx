@@ -177,3 +177,5 @@ export default function ArtistSignUpPage() {
       </div>
     </div>
   )
+}
+}
