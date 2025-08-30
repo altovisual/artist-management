@@ -24,6 +24,7 @@ interface SocialAccount {
   handle: string;
   url: string;
   followers: string;
+  email?: string;
   password?: string;
   newPassword?: string;
 }
@@ -67,7 +68,7 @@ export default function EditArtistPage() {
 
 
   const addSocialAccount = () => {
-    setSocialAccounts([...socialAccounts, { id: null, platform: "", username: "", handle: "", url: "", followers: "" }]);
+    setSocialAccounts([...socialAccounts, { id: null, platform: "", username: "", handle: "", url: "", followers: "", email: "" }]);
   };
 
   const removeSocialAccount = (indexToRemove: number) => {
@@ -191,6 +192,7 @@ export default function EditArtistPage() {
             handle: a.handle || null,
             url: a.url || null,
             followers: followersCount,
+            email: a.email || null,
             password: password
           };
       
