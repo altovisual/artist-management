@@ -356,6 +356,10 @@ export default function EditArtistPage() {
                         <Input value={account.username || ''} onChange={(e) => updateSocialAccount(index, "username", e.target.value)} placeholder="@username" />
                       </div>
                       <div className="space-y-2">
+                        <Label>Email</Label>
+                        <Input type="email" value={account.email || ''} onChange={(e) => updateSocialAccount(index, "email", e.target.value)} placeholder="contact@example.com" />
+                      </div>
+                      <div className="space-y-2">
                         <Label>Handle</Label>
                         <Input value={account.handle || ''} onChange={(e) => updateSocialAccount(index, "handle", e.target.value)} placeholder="@handle" />
                       </div>

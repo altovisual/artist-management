@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Eye, Edit, ImageIcon } from "lucide-react"
+import { Eye, Edit, ImageIcon, Users, Music } from "lucide-react"
 
 type Artist = {
   id: string | number
@@ -13,8 +13,8 @@ type Artist = {
   genre?: string
   country?: string
   profile_image?: string | null
-  socialAccountsCount?: number
-  distributionAccountsCount?: number
+  social_accounts?: any[]
+  distribution_accounts?: any[]
   assetCount?: number
   created_at?: string
 }
@@ -25,6 +25,9 @@ export function ArtistMobileCard({ artist }: { artist: Artist }) {
       .split(" ")
       .map((n) => n[0])
       .join("") || "AR"
+
+  const socialAccountsCount = artist.social_accounts?.length ?? 0
+  const distributionAccountsCount = artist.distribution_accounts?.length ?? 0
 
   return (
     <Card>
@@ -42,18 +45,27 @@ export function ArtistMobileCard({ artist }: { artist: Artist }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 text-sm">
-          <div>
-            <div className="text-muted-foreground">Social</div>
-            <div className="font-medium">{artist.socialAccountsCount ?? 0}</div>
+        <div className="grid grid-cols-3 gap-2 text-sm text-center">
+          <div className="flex flex-col items-center">
+            <dt className="text-sm font-medium text-muted-foreground">Social</dt>
+            <dd className="flex items-center gap-1 font-semibold mt-1">
+              <Users className="h-4 w-4 text-primary" />
+              {socialAccountsCount}
+            </dd>
           </div>
-          <div>
-            <div className="text-muted-foreground">Distrib.</div>
-            <div className="font-medium">{artist.distributionAccountsCount ?? 0}</div>
+          <div className="flex flex-col items-center">
+            <dt className="text-sm font-medium text-muted-foreground">Distrib.</dt>
+            <dd className="flex items-center gap-1 font-semibold mt-1">
+              <Music className="h-4 w-4 text-primary" />
+              {distributionAccountsCount}
+            </dd>
           </div>
-          <div className="flex items-center gap-1">
-            <ImageIcon className="h-4 w-4" />
-            <div className="font-medium">{artist.assetCount ?? 0}</div>
+          <div className="flex flex-col items-center">
+            <dt className="text-sm font-medium text-muted-foreground">Assets</dt>
+            <dd className="flex items-center gap-1 font-semibold mt-1">
+              <ImageIcon className="h-4 w-4 text-primary" />
+              {artist.assetCount ?? 0}
+            </dd>
           </div>
         </div>
 
