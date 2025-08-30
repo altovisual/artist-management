@@ -8,12 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Plus, Search, Upload, Eye, Download, Music, Instagram, ImageIcon, FileText, Video } from "lucide-react"
+import { ArrowLeft, Plus, Search, Upload, Eye, Download, Music, Instagram, ImageIcon, FileText, Video, Files } from "lucide-react"
 import Link from "next/link"
 import { AssetsSkeleton } from "./assets-skeleton"
 import Image from "next/image"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { useToast } from "@/components/ui/use-toast"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 // --- Helper Functions ---
 
@@ -116,6 +117,7 @@ export default function ArtistAssetsPage() {
   const router = useRouter()
   const supabase = createClient()
   const { toast } = useToast()
+  const isMobile = useIsMobile()
 
   const [artist, setArtist] = useState<any>(null)
   const [assets, setAssets] = useState<any[]>([])
@@ -239,6 +241,76 @@ export default function ArtistAssetsPage() {
   const categories = ["Musical Releases", "Social Media", "Press & Promotion"]
   const types = [...new Set(assets.map((asset) => asset.type))].filter(Boolean)
 
+  const renderStats = () => {
+    const imagesCount = assets.filter((a) => a.format?.startsWith("image/")).length;
+    const videosCount = assets.filter((a) => a.format?.startsWith("video/")).length;
+    const docsCount = assets.filter((a) => a.format === "application/pdf").length;
+
+    if (isMobile) {
+      return (
+        <Card>
+          <CardContent className="p-4">
+            <div className="grid grid-cols-4 gap-2 text-center">
+              <div className="space-y-1">
+                <p className="text-2xl font-bold">{assets.length}</p>
+                <p className="text-xs text-muted-foreground">Total</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-2xl font-bold">{imagesCount}</p>
+                <p className="text-xs text-muted-foreground">Images</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-2xl font-bold">{videosCount}</p>
+                <p className="text-xs text-muted-foreground">Videos</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-2xl font-bold">{docsCount}</p>
+                <p className="text-xs text-muted-foreground">Docs</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )
+    }
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Assets</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{assets.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Images</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{imagesCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Videos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{videosCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Documents</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{docsCount}</div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <DashboardLayout>
       <main className="container mx-auto px-4 py-8">
@@ -267,43 +339,7 @@ export default function ArtistAssetsPage() {
           <AssetsSkeleton />
         ) : (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Assets</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{assets.length}</div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Images</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{assets.filter((a) => a.format?.startsWith("image/")).length}</div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Videos</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{assets.filter((a) => a.format?.startsWith("video/")).length}</div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Documents</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{assets.filter((a) => a.format === "application/pdf").length}</div>
-                </CardContent>
-              </Card>
-            </div>
+            {renderStats()}
 
             <Card>
               <CardContent className="pt-6">
