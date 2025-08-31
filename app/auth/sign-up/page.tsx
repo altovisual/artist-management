@@ -49,7 +49,7 @@ export default function SignUpPage() {
   return (
     <div className="flex h-screen w-screen">
       {/* Left Panel with Video Background and Overlay */}
-      <div className="relative flex-1 hidden lg:flex flex-col justify-between p-10 text-white overflow-hidden">
+      <div className="relative flex-1 lg:flex flex-col justify-between p-10 text-white overflow-hidden">
         <video
           src="/intro-video.mp4"
           autoPlay
