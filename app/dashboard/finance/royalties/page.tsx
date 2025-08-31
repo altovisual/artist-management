@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RoyaltyReportUploader } from "@/components/royalty-report-uploader";
@@ -31,7 +31,7 @@ export default function RoyaltiesPage() {
   const [loading, setLoading] = useState(true);
   const [loadingRoyalties, setLoadingRoyalties] = useState(true);
 
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('royalty_reports')
@@ -44,9 +44,9 @@ export default function RoyaltiesPage() {
       setReports(data || []);
     }
     setLoading(false);
-  };
+  }, [supabase]);
 
-  const fetchRoyalties = async () => {
+  const fetchRoyalties = useCallback(async () => {
     setLoadingRoyalties(true);
     const { data, error } = await supabase
       .from('royalties')
@@ -58,12 +58,12 @@ export default function RoyaltiesPage() {
       setRoyalties(data || []);
     }
     setLoadingRoyalties(false);
-  };
+  }, [supabase]);
 
   useEffect(() => {
     fetchReports();
     fetchRoyalties();
-  }, []);
+  }, [fetchReports, fetchRoyalties]);
 
   const handleUploadSuccess = () => {
     // Automatically refresh the list of reports after a successful upload

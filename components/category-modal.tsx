@@ -40,7 +40,7 @@ export function CategoryModal({ isOpen, onClose, onSave }: CategoryModalProps) {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     const { data, error } = await supabase.from('transaction_categories').select('id, name, type').order('name', { ascending: true })
     if (error) {
       console.error("Error fetching categories:", error)
@@ -48,7 +48,7 @@ export function CategoryModal({ isOpen, onClose, onSave }: CategoryModalProps) {
     } else {
       setCategories(data || [])
     }
-  }
+  }, [supabase, toast])
 
   useEffect(() => {
     if (isOpen) {
@@ -57,7 +57,7 @@ export function CategoryModal({ isOpen, onClose, onSave }: CategoryModalProps) {
       setNewCategoryType('')
       setEditingCategory(null)
     }
-  }, [isOpen])
+  }, [isOpen, fetchCategories])
 
   const handleSaveCategory = async () => {
     if (!newCategoryName || !newCategoryType) {

@@ -195,7 +195,7 @@ export default function FinancePage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Finance Overview</h1>
-            <p className="text-muted-foreground">Track your artist's income and expenses.</p>
+            <p className="text-muted-foreground">Track your artist&apos;s income and expenses.</p>
           </div>
           <div className="flex gap-2">
             <Button onClick={() => setIsCategoryModalOpen(true)}>Manage Categories</Button>
