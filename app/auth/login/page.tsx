@@ -4,11 +4,12 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
+import LogoBlanco from '@/public/mi-logo-blanco.svg'
+import IconoX from '@/public/icono-x.svg'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -42,9 +43,9 @@ export default function LoginPage() {
   return (
     <div className="flex h-screen w-screen">
       {/* Left Panel with Video Background and Overlay */}
-      <div className="relative flex-1 lg:flex flex-col justify-between p-10 text-white overflow-hidden">
+      <div className="relative flex-1 hidden lg:flex flex-col justify-between p-10 text-white overflow-hidden">
         <video
-          src="/intro-video.mp4"
+          src="/video-home.mp4"
           autoPlay
           loop
           muted
@@ -54,7 +55,7 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-black opacity-80"></div> {/* Overlay */}
         
         <div className="relative z-10">
-          <Image src="/mi-logo-blanco.svg" alt="MVPX Logo" width={150} height={40} />
+          <LogoBlanco width={150} height={40} />
         </div>
         <div className="relative z-10 text-2xl font-semibold">
           Your Artist Management Solution
@@ -65,7 +66,7 @@ export default function LoginPage() {
       <div className="flex-1 flex justify-center items-center bg-white p-8">
         <div className="w-full max-w-md text-center">
           <div className="flex justify-center items-center mb-6">
-            <Image src="/icono-x.svg" alt="X Icon" width={40} height={40} className="mr-3" />
+            <IconoX width={40} height={40} className="mr-3" />
             <h1 className="text-4xl font-bold text-zinc-800">Login</h1>
           </div>
           <p className="text-zinc-600 mb-8 text-lg">

@@ -70,6 +70,7 @@
     "zod": "3.25.67"
   },
   "devDependencies": {
+    "@svgr/webpack": "^8.1.0",
     "@tailwindcss/postcss": "^4.1.9",
     "@types/moment": "^2.13.0",
     "@types/node": "^22",
