@@ -281,7 +281,7 @@ export default function FinancePage() {
                     </SelectContent>
                   </Select>
 
-                  <Select value={pendingTransactionTypeFilter} onValueChange={setPendingTransactionTypeFilter}>
+                  <Select value={pendingTransactionTypeFilter} onValueChange={(value) => setPendingTransactionTypeFilter(value as 'all' | 'income' | 'expense')}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filter by Type" />
                     </SelectTrigger>
