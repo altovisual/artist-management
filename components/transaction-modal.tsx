@@ -131,7 +131,7 @@ export function TransactionModal({ isOpen, onClose, onSave, transaction, artists
 
             <div className="space-y-2">
               <Label htmlFor="type">Type</Label>
-              <Select value={type} onValueChange={setType}>
+              <Select value={type} onValueChange={(value) => setType(value as '' | 'income' | 'expense')}>
                 <SelectTrigger id="type">
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
