@@ -25,7 +25,7 @@ interface EventModalProps {
   onClose: () => void
   onSave: () => void
   event?: any // Full event object for editing
-  initialDate?: Date // For creating a new event on a specific day
+  initialDate?: Date | null // For creating a new event on a specific day
 }
 
 export function EventModal({ isOpen, onClose, onSave, event, initialDate }: EventModalProps) {
