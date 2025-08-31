@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Calendar, dateFnsLocalizer, Views } from 'react-big-calendar'
+import { Calendar, dateFnsLocalizer, Views, View } from 'react-big-calendar'
 import { format, parse, startOfWeek, getDay } from 'date-fns'
 import { enUS } from 'date-fns/locale/en-US'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
@@ -45,7 +45,7 @@ export default function CalendarPage() {
   const [initialSlot, setInitialSlot] = useState<Date | null>(null)
 
   // State for calendar view and date
-  const [currentView, setCurrentView] = useState<typeof Views>(Views.MONTH);
+  const [currentView, setCurrentView] = useState<View>(Views.MONTH);
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const fetchEvents = useCallback(async () => {
