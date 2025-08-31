@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
@@ -13,49 +13,57 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll()
+        get(name: string) {
+          return request.cookies.get(name)?.value
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            request.cookies.set(name, value)
-          )
+        set(name: string, value: string, options: CookieOptions) {
+          request.cookies.set({ name, value, ...options })
           response = NextResponse.next({
             request: {
               headers: request.headers,
             },
           })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          )
+          response.cookies.set({ name, value, ...options })
+        },
+        remove(name: string, options: CookieOptions) {
+          request.cookies.set({ name, value: '', ...options })
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          })
+          response.cookies.set({ name, value: '', ...options })
         },
       },
     }
   )
 
-  const { data: { session } } = await supabase.auth.getSession()
-  const { data: user } = await supabase.auth.getUser();
+  // Refresh session if expired - required for Server Components
+  const { data: { user } } = await supabase.auth.getUser()
 
-  // If user is logged in and doesn't have an artist profile, redirect to onboarding
+  // Redirect to login if user is not authenticated and not on an auth page
+  if (!user && !request.nextUrl.pathname.startsWith('/auth')) {
+    return NextResponse.redirect(new URL('/auth/login', request.url))
+  }
+
+  // Redirect to onboarding if user is logged in but has no artist profile
   if (
-    user && user.user &&
+    user &&
     !request.nextUrl.pathname.startsWith('/artists/onboarding') &&
     !request.nextUrl.pathname.startsWith('/auth')
   ) {
-    const { data: artist, error } = await supabase
+    const { data: artist } = await supabase
       .from('artists')
       .select('id')
-      .eq('user_id', user.user.id)
-      .single();
+      .eq('user_id', user.id)
+      .single()
 
-    // If no artist profile is found for the user, redirect to onboarding.
-    // A null artist and a PGRST116 error from .single() is the expected outcome for a new user.
     if (!artist) {
       return NextResponse.redirect(new URL('/artists/onboarding', request.url))
     }
   }
 
-  // --- Content Security Policy (CSP) ---
+  // Add CSP headers
   const cspHeader = `
     default-src 'self';
     script-src 'self' 'unsafe-inline' 'unsafe-eval';

@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { CalendarToolbar } from "./calendar-toolbar";
+import { ReleaseCalendarSkeleton } from "./release-calendar-skeleton";
 
 const localizer = momentLocalizer(moment)
 
@@ -237,20 +238,40 @@ export function ReleaseCalendar({
       <div className="min-h-screen bg-background">
         <header className="border-b bg-card">
           <div className="container mx-auto px-4 py-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex justify-between items-center w-full sm:w-auto">
                 <Link href="/dashboard">
                   <Button variant="outline" size="sm">
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Dashboard
                   </Button>
                 </Link>
-                <div>
-                  <h1 className="text-2xl font-bold">Release Calendar</h1>
-                  <p className="text-muted-foreground">Manage upcoming music releases</p>
-                </div>
+                <Button className="flex items-center gap-2 sm:hidden" onClick={() => {
+                  setShowAddReleaseModal(true);
+                  setNewReleaseTitle("");
+                  setNewReleaseDate("");
+                  setNewReleaseType("");
+                  setNewReleaseStatus("planned");
+                  setNewReleaseCoverArtUrl("");
+                  setNewReleaseNotes("");
+                  setNewReleaseMusicFileUrl("");
+                  if (initialArtistId) {
+                    setSelectedArtistId(initialArtistId);
+                  } else if (artists.length > 0) {
+                    setSelectedArtistId(artists[0].id);
+                  } else {
+                    setSelectedArtistId(null);
+                  }
+                }}>
+                  <Plus className="h-4 w-4" />
+                  Add Release
+                </Button>
               </div>
-              <Button className="flex items-center gap-2 w-full sm:w-auto" onClick={() => {
+              <div className="flex-grow text-center sm:text-left">
+                <h1 className="text-2xl font-bold">Release Calendar</h1>
+                <p className="text-muted-foreground">Manage upcoming music releases</p>
+              </div>
+              <Button className="hidden sm:flex items-center gap-2" onClick={() => {
                 setShowAddReleaseModal(true);
                 setNewReleaseTitle("");
                 setNewReleaseDate("");
@@ -262,10 +283,10 @@ export function ReleaseCalendar({
                 if (initialArtistId) {
                   setSelectedArtistId(initialArtistId);
                 } else if (artists.length > 0) {
-                  setSelectedArtistId(artists[0].id);
-                } else {
-                  setSelectedArtistId(null);
-                }
+                    setSelectedArtistId(artists[0].id);
+                  } else {
+                    setSelectedArtistId(null);
+                  }
               }}>
                 <Plus className="h-4 w-4" />
                 Add Release
@@ -276,9 +297,7 @@ export function ReleaseCalendar({
 
         <main className="container mx-auto px-4 py-8">
           {isLoading ? (
-            <div className="text-center text-muted-foreground">
-              <p>Loading calendar...</p>
-            </div>
+            <ReleaseCalendarSkeleton />
           ) : (
             <div className="h-[600px] overflow-y-auto"> {/* Fixed height and scrollable */}
               <Calendar

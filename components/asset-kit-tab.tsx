@@ -41,12 +41,12 @@ export function AssetKitTab({ assets }: { assets: any[] }) {
       }
       const blob = await response.blob();
       const objectUrl = window.URL.createObjectURL(blob);
+      
       const a = document.createElement('a');
       a.href = objectUrl;
       a.download = filename || 'download';
-      document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
+      
       window.URL.revokeObjectURL(objectUrl);
     } catch (error) {
       console.error("Download failed:", error);

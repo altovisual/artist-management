@@ -18,16 +18,16 @@ INSERT INTO public.social_accounts (artist_id, platform, username, followers, ur
 ('550e8400-e29b-41d4-a716-446655440004', 'YouTube', 'Diego Ruiz Hip Hop', 54000, 'https://youtube.com/@diegoruizhiphop');
 
 -- Insert distribution accounts
-INSERT INTO public.distribution_accounts (artist_id, platform, monthly_listeners, url, distributor, service) VALUES
-('550e8400-e29b-41d4-a716-446655440001', 'Spotify', 125000, 'https://open.spotify.com/artist/anagarcia', 'Spotify', 'Spotify'),
-('550e8400-e29b-41d4-a716-446655440001', 'Apple Music', 89000, 'https://music.apple.com/artist/anagarcia', 'Apple Music', 'Apple Music'),
-('550e8400-e29b-41d4-a716-446655440001', 'YouTube Music', 67000, 'https://music.youtube.com/channel/anagarcia', 'YouTube Music', 'YouTube Music'),
-('550e8400-e29b-41d4-a716-446655440002', 'Spotify', 89000, 'https://open.spotify.com/artist/carlosmendoza', 'Spotify', 'Spotify'),
-('550e8400-e29b-41d4-a716-446655440002', 'Apple Music', 45000, 'https://music.apple.com/artist/carlosmendoza', 'Apple Music', 'Apple Music'),
-('550e8400-e29b-41d4-a716-446655440003', 'Spotify', 156000, 'https://open.spotify.com/artist/marialopez', 'Spotify', 'Spotify'),
-('550e8400-e29b-41d4-a716-446655440003', 'Apple Music', 123000, 'https://music.apple.com/artist/marialopez', 'Apple Music', 'Apple Music'),
-('550e8400-e29b-41d4-a716-446655440004', 'Spotify', 203000, 'https://open.spotify.com/artist/diegoruiz', 'Spotify', 'Spotify'),
-('550e8400-e29b-41d4-a716-446655440004', 'Apple Music', 167000, 'https://music.apple.com/artist/diegoruiz', 'Apple Music', 'Apple Music');
+INSERT INTO public.distribution_accounts (artist_id, platform, monthly_listeners, url, account_id) VALUES
+('550e8400-e29b-41d4-a716-446655440001', 'Spotify', 125000, 'https://open.spotify.com/artist/anagarcia', 'ana-spotify-1'),
+('550e8400-e29b-41d4-a716-446655440001', 'Apple Music', 89000, 'https://music.apple.com/artist/anagarcia', 'ana-apple-1'),
+('550e8400-e29b-41d4-a716-446655440001', 'YouTube Music', 67000, 'https://music.youtube.com/channel/anagarcia', 'ana-youtube-1'),
+('550e8400-e29b-41d4-a716-446655440002', 'Spotify', 89000, 'https://open.spotify.com/artist/carlosmendoza', 'carlos-spotify-1'),
+('550e8400-e29b-41d4-a716-446655440002', 'Apple Music', 45000, 'https://music.apple.com/artist/carlosmendoza', 'carlos-apple-1'),
+('550e8400-e29b-41d4-a716-446655440003', 'Spotify', 156000, 'https://open.spotify.com/artist/marialopez', 'maria-spotify-1'),
+('550e8400-e29b-41d4-a716-446655440003', 'Apple Music', 123000, 'https://music.apple.com/artist/marialopez', 'maria-apple-1'),
+('550e8400-e29b-41d4-a716-446655440004', 'Spotify', 203000, 'https://open.spotify.com/artist/diegoruiz', 'diego-spotify-1'),
+('550e8400-e29b-41d4-a716-446655440004', 'Apple Music', 167000, 'https://music.apple.com/artist/diegoruiz', 'diego-apple-1');
 
 -- Insert sample projects
 INSERT INTO public.projects (id, artist_id, name, type, status, release_date, description) VALUES

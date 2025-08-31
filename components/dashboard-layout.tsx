@@ -15,7 +15,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LayoutDashboard, Calendar, Shield, User, LogOut } from "lucide-react"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
+import { LayoutDashboard, Calendar, Music, Shield, User, LogOut, DollarSign, Menu } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useTheme } from "next-themes"
 
@@ -24,6 +31,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [userEmail, setUserEmail] = React.useState<string | null>(null);
+  const [isSheetOpen, setIsSheetOpen] = React.useState(false); // State for mobile sheet
 
   const supabase = createClient();
   const { theme } = useTheme();
@@ -48,22 +56,68 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     router.push("/auth/login");
   };
 
+  const navLinks = [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
+    { href: "/dashboard/finance", label: "Finance", icon: DollarSign },
+    { href: "/dashboard/releases", label: "Releases", icon: Music },
+  ];
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <header className="sticky top-0 z-50 w-full border-b bg-card text-card-foreground">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-6">
+            {/* Mobile Menu Trigger */}
+            <div className="md:hidden">
+              <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Menu className="h-6 w-6" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-64 p-4">
+                  <div className="flex flex-col items-start gap-2 px-4 pt-4 pb-2">
+                    <Image src={theme === "dark" ? "/mi-logo-blanco.svg" : "/mi-logo.svg"} width={120} height={32} alt="Logo" />
+                    <span className="text-xs text-muted-foreground">Navigation</span>
+                  </div>
+                  <SheetHeader>
+                    <SheetTitle className="sr-only">Navigation</SheetTitle>
+                  </SheetHeader>
+                  <nav className="flex flex-col gap-4 mt-6">
+                    {navLinks.map((link) => (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        className={`flex items-center gap-2 text-lg transition-colors hover:text-foreground ${pathname === link.href ? 'text-foreground' : 'text-muted-foreground'}`}
+                        onClick={() => setIsSheetOpen(false)} // Close sheet on click
+                      >
+                        <link.icon className="h-5 w-5" />
+                        {link.label}
+                      </Link>
+                    ))}
+                  </nav>
+                </SheetContent>
+              </Sheet>
+            </div>
+
             <Link href="/dashboard" className="flex items-center gap-2 font-bold">
               <Image src={theme === "dark" ? "/mi-logo-blanco.svg" : "/mi-logo.svg"} width={120} height={32} alt="Logo" />
               <span className="text-sm text-muted-foreground hidden sm:block">Your Artist Management Solution</span>
             </Link>
+            
+            {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-4 text-sm font-medium">
-              <Link href="/dashboard" className={`transition-colors hover:!text-primary-accent ${pathname === '/dashboard' ? 'text-foreground' : 'text-muted-foreground'}`}>
-                Dashboard
-              </Link>
-              <Link href="/dashboard/releases" className={`transition-colors hover:!text-primary-accent ${pathname === '/dashboard/releases' ? 'text-foreground' : 'text-muted-foreground'}`}>
-                Releases
-              </Link>
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`flex items-center gap-2 transition-colors hover:text-foreground ${pathname === link.href ? 'text-foreground' : 'text-muted-foreground'}`}
+                >
+                  <link.icon className="h-4 w-4" />
+                  {link.label}
+                </Link>
+              ))}
             </nav>
           </div>
 

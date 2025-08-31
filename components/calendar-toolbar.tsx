@@ -16,6 +16,9 @@ export function CalendarToolbar({ label, onNavigate, view, onView }: CalendarToo
   return (
     <div className="rbc-toolbar flex items-center justify-between p-2 sm:p-4 bg-card rounded-t-lg">
       <span className="rbc-btn-group flex gap-2">
+        <Button variant="outline" size="sm" onClick={() => onNavigate('TODAY')}>
+          Today
+        </Button>
         <Button variant="outline" size="icon" onClick={() => onNavigate('PREV')}>
           <ChevronLeft className="h-4 w-4" />
         </Button>

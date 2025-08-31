@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -142,12 +142,12 @@ export default function ArtistAssetsPage() {
       }
       const blob = await response.blob();
       const objectUrl = window.URL.createObjectURL(blob);
+      
       const a = document.createElement('a');
       a.href = objectUrl;
       a.download = filename || 'download';
-      document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
+      
       window.URL.revokeObjectURL(objectUrl);
     } catch (error) {
       console.error("Download failed:", error);
