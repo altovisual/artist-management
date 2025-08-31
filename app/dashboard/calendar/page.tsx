@@ -45,7 +45,7 @@ export default function CalendarPage() {
   const [initialSlot, setInitialSlot] = useState<Date | null>(null)
 
   // State for calendar view and date
-  const [currentView, setCurrentView] = useState<Views>(Views.MONTH);
+  const [currentView, setCurrentView] = useState<typeof Views>(Views.MONTH);
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const fetchEvents = useCallback(async () => {
