@@ -136,7 +136,7 @@ export function CategoryModal({ isOpen, onClose, onSave }: CategoryModalProps) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="categoryType">Type</Label>
-                <Select value={newCategoryType} onValueChange={setNewCategoryType}>
+                <Select value={newCategoryType} onValueChange={(value) => setNewCategoryType(value as '' | 'income' | 'expense')}>
                   <SelectTrigger id="categoryType">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
