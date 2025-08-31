@@ -1,6 +1,4 @@
-'use client'
-
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -38,6 +36,8 @@ export function TransactionModal({ isOpen, onClose, onSave, transaction, artists
   const [transactionDate, setTransactionDate] = useState<string>('')
   const [description, setDescription] = useState<string>('')
   const [isSaving, setIsSaving] = useState(false)
+
+  const dialogContentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -96,9 +96,24 @@ export function TransactionModal({ isOpen, onClose, onSave, transaction, artists
       if (navigator.vibrate) { // Check if vibration API is supported
         navigator.vibrate(200); // Vibrate for 200ms
       } else {
-        // Fallback for browsers that don't support vibration
         console.log("Vibration API not supported.");
       }
+
+      // Apply animation to DialogContent
+      if (dialogContentRef.current) {
+        if (type === 'income') {
+          dialogContentRef.current.classList.add('animate-income');
+        } else if (type === 'expense') {
+          dialogContentRef.current.classList.add('animate-expense');
+        }
+        setTimeout(() => {
+          if (dialogContentRef.current) {
+            dialogContentRef.current.classList.remove('animate-income');
+            dialogContentRef.current.classList.remove('animate-expense');
+          }
+        }, 500); // Animation duration
+      }
+
       onSave(); // Refetch transactions on the finance page
       onClose(); // Close the modal
     }
@@ -109,7 +124,7 @@ export function TransactionModal({ isOpen, onClose, onSave, transaction, artists
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent ref={dialogContentRef} className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{transaction ? 'Edit Transaction' : 'Add New Transaction'}</DialogTitle>
         </DialogHeader>
