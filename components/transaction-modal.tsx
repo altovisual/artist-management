@@ -92,9 +92,15 @@ export function TransactionModal({ isOpen, onClose, onSave, transaction, artists
       console.error("Error saving transaction:", error)
       toast({ title: "Error", description: "Failed to save transaction.", variant: "destructive" })
     } else {
-      toast({ title: "Success", description: "Transaction saved successfully." })
-      onSave() // Refetch transactions on the finance page
-      onClose() // Close the modal
+      toast({ title: "Success", description: "Transaction saved successfully." });
+      if (navigator.vibrate) { // Check if vibration API is supported
+        navigator.vibrate(200); // Vibrate for 200ms
+      } else {
+        // Fallback for browsers that don't support vibration
+        console.log("Vibration API not supported.");
+      }
+      onSave(); // Refetch transactions on the finance page
+      onClose(); // Close the modal
     }
     setIsSaving(false);
   }
