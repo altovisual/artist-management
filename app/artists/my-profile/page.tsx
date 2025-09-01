@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Save } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 import { Separator } from "@/components/ui/separator"
 import Image from "next/image"
 import { DashboardLayout } from "@/components/dashboard-layout"

@@ -23,7 +23,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { LayoutDashboard, Calendar, Music, Shield, User, LogOut, DollarSign, Menu } from "lucide-react"
-import { ThemeToggle } from "@/components/theme-toggle"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { useTheme } from "next-themes"
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {

@@ -8,13 +8,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Plus, Search, Upload, Eye, Download, Music, Instagram, ImageIcon, FileText, Video, Files } from "lucide-react"
+import { ArrowLeft, Plus, Search, Upload, Eye, Download, Music, Instagram, ImageIcon, FileText, Video, Files, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { AssetsSkeleton } from "./assets-skeleton"
 import Image from "next/image"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { useToast } from "@/components/ui/use-toast"
-import { useIsMobile } from "@/hooks/use-mobile"
+import { useIsMobile } from "@/components/ui/use-mobile"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 // --- Helper Functions ---
 
@@ -70,7 +80,7 @@ const AssetPreview = ({ asset }: { asset: any }) => {
 
   if (fmt.startsWith("image/")) {
     return (
-      <div className="relative w-full h-full bg-gray-200 animate-pulse">
+      <div className={`relative w-full h-full bg-gray-200 ${!imageLoaded ? 'animate-pulse' : ''}`}>
         <Image
           src={url}
           alt={asset.name}
@@ -123,6 +133,7 @@ export default function ArtistAssetsPage() {
   const [assets, setAssets] = useState<any[]>([])
   const [filteredAssets, setFilteredAssets] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [assetToDelete, setAssetToDelete] = useState<any>(null)
 
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
@@ -156,6 +167,34 @@ export default function ArtistAssetsPage() {
         description: "Could not download the file. The link may be invalid or blocked.",
         variant: "destructive",
       })
+    }
+  };
+
+  const handleDeleteAsset = async () => {
+    if (!assetToDelete) return;
+
+    try {
+      const url = assetToDelete.file_url || assetToDelete.url;
+      const filePath = url.split('/storage/v1/object/public/assets/').pop();
+      if (filePath) {
+        const { error: storageError } = await supabase.storage.from('assets').remove([filePath]);
+        if (storageError) throw storageError;
+      }
+
+      const { error: dbError } = await supabase.from('assets').delete().eq('id', assetToDelete.id);
+      if (dbError) throw dbError;
+
+      const newAssets = assets.filter(a => a.id !== assetToDelete.id);
+      setAssets(newAssets);
+      setFilteredAssets(newAssets);
+
+      toast({ title: "Success", description: `Asset "${assetToDelete.name}" deleted.` });
+
+    } catch (error: any) {
+      console.error("Error deleting asset:", error);
+      toast({ title: "Error", description: error.message || "Failed to delete asset.", variant: "destructive" });
+    } finally {
+      setAssetToDelete(null);
     }
   };
 
@@ -427,6 +466,10 @@ export default function ArtistAssetsPage() {
                           <Download className="h-3 w-3 mr-1" />
                           Download
                         </Button>
+                        <Button variant="destructive" size="sm" className="flex-1" onClick={() => setAssetToDelete(asset)}>
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Delete
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -458,6 +501,24 @@ export default function ArtistAssetsPage() {
           </div>
         )}
       </main>
+
+      <AlertDialog open={!!assetToDelete} onOpenChange={(isOpen) => !isOpen && setAssetToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the asset &quot;{assetToDelete?.name}&quot;.
+              </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button variant="destructive" onClick={handleDeleteAsset}>Delete</Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </DashboardLayout>
   )
 }

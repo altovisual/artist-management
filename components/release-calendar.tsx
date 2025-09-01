@@ -9,7 +9,7 @@ import moment from "moment"
 import "react-big-calendar/lib/css/react-big-calendar.css"
 import "@/styles/calendar.css"
 import { createClient } from "@/lib/supabase/client"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 import { useSearchParams } from 'next/navigation'
 import { View } from 'react-big-calendar';
 import {

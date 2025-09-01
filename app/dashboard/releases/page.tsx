@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 import { useSearchParams } from 'next/navigation'
 import { ReleaseCalendar } from "@/components/release-calendar"
 import { DashboardLayout } from "@/components/dashboard-layout"

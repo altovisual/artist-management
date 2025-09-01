@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { decrypt } from '@/lib/crypto';
 import { createClient } from '@/lib/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Eye, EyeOff } from 'lucide-react';

@@ -50,7 +50,42 @@ import {
 } from "@/components/ui/dropdown-menu"
 import Image from "next/image"
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { useIsMobile } from "@/hooks/use-mobile"
+import { useIsMobile } from "@/components/ui/use-mobile"
+import { useToast } from "@/components/ui/use-toast"
+import ArtistDetailPageSkeleton from "./artist-detail-skeleton"
+
+// --- Helper Functions ---
+const getExt = (url?: string) => {
+  if (!url) return ""
+  try {
+    const clean = url.split("?")[0]
+    const dot = clean.lastIndexOf(".")
+    if (dot === -1) return ""
+    return clean.substring(dot + 1).toLowerCase()
+  } catch {
+    return ""
+  }
+}
+
+const guessFormatFromExt = (ext: string) => {
+  if (!ext) return "application/octet-stream"
+  if (["jpg","jpeg","png","webp","gif","avif"].includes(ext)) return `image/${ext === "jpg" ? "jpeg" : ext}`
+  if (ext === "svg") return "image/svg+xml"
+  if (["mp4","webm","mov","m4v","ogv"].includes(ext)) return `video/${ext === "mov" ? "quicktime" : ext}`
+  if (["ogg"].includes(ext)) return "audio/ogg"
+  if (["mp3","wav","m4a","aac","flac"].includes(ext)) {
+    if (ext === "mp3") return "audio/mpeg"
+    return `audio/${ext}`
+  }
+  if (ext === "pdf") return "application/pdf"
+  return "application/octet-stream"
+}
+
+const normalizeAsset = (a: any) => {
+  const file_url = a?.file_url ?? a?.url ?? ""
+  const format = a?.format ?? guessFormatFromExt(getExt(file_url))
+  return { ...a, file_url, format }
+}
 
 const getPlatformIcon = (platform: string) => {
   switch (platform.toLowerCase()) {
@@ -73,6 +108,8 @@ export default function ArtistDetailPage() {
   const params = useParams()
   const router = useRouter()
   const isMobile = useIsMobile()
+  const { toast } = useToast()
+  const supabase = createClient()
   const [artist, setArtist] = useState<any>(null)
   const [socialAccounts, setSocialAccounts] = useState<any[]>([])
   const [distributionAccounts, setDistributionAccounts] = useState<any[]>([])
@@ -82,8 +119,7 @@ export default function ArtistDetailPage() {
 
   useEffect(() => {
     const fetchArtistData = async () => {
-      setLoading(true);
-      const supabase = createClient()
+      setLoading(true)
       const artistId = params.id as string
 
       if (artistId === "new") {
@@ -133,7 +169,8 @@ export default function ArtistDetailPage() {
             if (assetsError) {
               setAssets([])
             } else {
-              setAssets(assetsData || [])
+              const normalizedAssets = (assetsData || []).map(normalizeAsset);
+              setAssets(normalizedAssets)
             }
           } else {
             setAssets([])
@@ -147,16 +184,48 @@ export default function ArtistDetailPage() {
     }
 
     fetchArtistData()
-  }, [params.id, router])
+  }, [params.id, router, supabase])
 
-  const handleDelete = async () => {
-    const supabase = createClient()
+  const handleDeleteArtist = async () => {
     try {
       await supabase.from("artists").delete().eq("id", artist.id)
+      toast({ title: "Success", description: "Artist deleted successfully." })
       router.push("/dashboard")
     } catch (error) {
       console.error("Error deleting artist:", error)
+      toast({ title: "Error", description: "Failed to delete artist.", variant: "destructive" })
     }
+  }
+
+  const handleDeleteAsset = async (assetId: string) => {
+    const assetToDelete = assets.find(a => a.id === assetId);
+    if (!assetToDelete) return;
+
+    try {
+      // 1. Delete file from storage
+      const url = assetToDelete.file_url || assetToDelete.url;
+      const filePath = url.split('/storage/v1/object/public/assets/').pop();
+      if (filePath) {
+        const { error: storageError } = await supabase.storage.from('assets').remove([filePath]);
+        if (storageError) throw storageError;
+      }
+
+      // 2. Delete from database
+      const { error: dbError } = await supabase.from('assets').delete().eq('id', assetId);
+      if (dbError) throw dbError;
+
+      // 3. Update state
+      setAssets(assets.filter(a => a.id !== assetId));
+      toast({ title: "Success", description: `Asset "${assetToDelete.name}" deleted.` });
+
+    } catch (error: any) {
+      console.error("Error deleting asset:", error);
+      toast({ title: "Error", description: error.message || "Failed to delete asset.", variant: "destructive" });
+    }
+  };
+
+  if (loading) {
+    return <ArtistDetailPageSkeleton />;
   }
 
   const renderTabContent = (tab: string) => {
@@ -327,7 +396,7 @@ export default function ArtistDetailPage() {
                 </Button>
               </Link>
             </div>
-            <AssetKitTab assets={assets} />
+            <AssetKitTab assets={assets} onDelete={handleDeleteAsset} />
           </div>
         );
       default:
@@ -360,7 +429,7 @@ export default function ArtistDetailPage() {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                  <AlertDialogAction onClick={handleDeleteArtist}>Delete</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
@@ -444,7 +513,7 @@ export default function ArtistDetailPage() {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                <AlertDialogAction onClick={handleDeleteArtist}>Delete</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -470,13 +539,7 @@ export default function ArtistDetailPage() {
 
   return (
     <DashboardLayout>
-      {loading ? (
-        <div className="flex h-full items-center justify-center">Loading...</div>
-      ) : !artist ? (
-        <div className="flex h-full items-center justify-center">Artist not found</div>
-      ) : (
-        isMobile ? renderMobileView() : renderDesktopView()
-      )}
+      {isMobile ? renderMobileView() : renderDesktopView()}
     </DashboardLayout>
   )
 }

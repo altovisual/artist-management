@@ -1,1 +1,0 @@
-ALTER TABLE public.assets ADD COLUMN category TEXT;
