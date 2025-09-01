@@ -455,18 +455,18 @@ export default function ArtistAssetsPage() {
                           <p>Uploaded: {asset.created_at ? new Date(asset.created_at).toLocaleDateString() : "—"}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 pt-3">
-                        <Button asChild variant="outline" size="sm" className="flex-1 bg-transparent">
+                      <div className="flex flex-col gap-2 pt-3 sm:flex-row sm:gap-1">
+                        <Button asChild variant="outline" size="sm" className="w-full sm:flex-1 bg-transparent">
                            <a href={url} target="_blank" rel="noopener noreferrer">
                             <Eye className="h-3 w-3 mr-1" />
                             Preview
                           </a>
                         </Button>
-                        <Button variant="outline" size="sm" className="flex-1 bg-transparent" onClick={() => handleDownload(url, asset.name)}>
+                        <Button variant="outline" size="sm" className="w-full sm:flex-1 bg-transparent" onClick={() => handleDownload(url, asset.name)}>
                           <Download className="h-3 w-3 mr-1" />
                           Download
                         </Button>
-                        <Button variant="destructive" size="sm" className="flex-1" onClick={() => setAssetToDelete(asset)}>
+                        <Button variant="destructive" size="sm" className="w-full sm:flex-1" onClick={() => setAssetToDelete(asset)}>
                           <Trash2 className="h-3 w-3 mr-1" />
                           Delete
                         </Button>
