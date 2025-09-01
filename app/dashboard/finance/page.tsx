@@ -192,19 +192,23 @@ export default function FinancePage() {
   return (
     <DashboardLayout>
       <div className="h-full flex flex-col gap-6 p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Finance Overview</h1>
-            <p className="text-muted-foreground">Track your artist&apos;s income and expenses.</p>
+        <header className="border-b bg-card">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">Finance Overview</h1>
+                <p className="text-muted-foreground">Track your artist&apos;s income and expenses.</p>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={() => setIsCategoryModalOpen(true)}>Manage Categories</Button>
+                <Button onClick={handleAddTransactionClick}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Transaction
+                </Button>
+              </div>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setIsCategoryModalOpen(true)}>Manage Categories</Button>
-            <Button onClick={handleAddTransactionClick}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Transaction
-            </Button>
-          </div>
-        </div>
+        </header>
 
         {loading ? (
           <FinanceSkeleton />

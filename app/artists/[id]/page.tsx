@@ -481,9 +481,7 @@ export default function ArtistDetailPage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-0 mb-6">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full md:w-auto">
-          <Link href="/dashboard">
-            <Button variant="outline" size="sm" className="flex items-center gap-2 bg-transparent"><ArrowLeft className="h-4 w-4" />Back to Dashboard</Button>
-          </Link>
+          
           <div className="flex items-center gap-3">
             <Avatar className="h-12 w-12">
               <AvatarImage src={artist.profile_image || "/placeholder.svg"} alt={artist.name} />

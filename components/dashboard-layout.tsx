@@ -79,7 +79,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 <SheetContent side="left" className="w-64 p-4">
                   <div className="flex flex-col items-start gap-2 px-4 pt-4 pb-2">
                     <Image src={theme === "dark" ? "/mi-logo-blanco.svg" : "/mi-logo.svg"} width={120} height={32} alt="Logo" />
-                    <span className="text-xs text-muted-foreground">Navigation</span>
+                    <span className="text-xs text-muted-foreground">Your Artist Management Solution</span>
                   </div>
                   <SheetHeader>
                     <SheetTitle className="sr-only">Navigation</SheetTitle>
@@ -103,7 +103,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
             <Link href="/dashboard" className="flex items-center gap-2 font-bold">
               <Image src={theme === "dark" ? "/mi-logo-blanco.svg" : "/mi-logo.svg"} width={120} height={32} alt="Logo" />
-              <span className="text-sm text-muted-foreground hidden sm:block">Your Artist Management Solution</span>
+              
             </Link>
             
             {/* Desktop Navigation */}

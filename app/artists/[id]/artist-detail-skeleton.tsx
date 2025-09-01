@@ -8,7 +8,7 @@ export default function ArtistDetailPageSkeleton() {
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-0 mb-6">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full md:w-auto">
-            <Skeleton className="h-9 w-40" />
+            
             <div className="flex items-center gap-3">
               <Skeleton className="h-12 w-12 rounded-full" />
               <div>

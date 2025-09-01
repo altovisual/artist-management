@@ -78,7 +78,16 @@ export default function AdminUsersPage() {
 
     return (
       <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-4">User Management</h1>
+        <header className="border-b bg-card">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex-grow text-center sm:text-left">
+                <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
+                <p className="text-muted-foreground">Manage user roles and permissions.</p>
+              </div>
+            </div>
+          </div>
+        </header>
         <div className="overflow-x-auto">
           <table className="min-w-full bg-white border">
             <thead>

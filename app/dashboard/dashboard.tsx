@@ -148,24 +148,28 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Artists</h1>
-          <p className="text-muted-foreground">
-            {userRole === 'admin' 
-              ? 'Viewing all artists as an administrator.' 
-              : 'Manage your artists and their profiles.'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          {!isMobile && <ArtistViewSwitcher view={view} setView={setView} />}
-          <Button asChild className="w-full md:w-auto">
-            <Link href="/artists/new">
-              <PlusCircle className="mr-2 h-4 w-4" /> New Artist
-            </Link>
-          </Button>
+      <header className="border-b bg-card">
+      <div className="container mx-auto px-4 py-4">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Artists</h1>
+            <p className="text-muted-foreground">
+              {userRole === 'admin' 
+                ? 'Viewing all artists as an administrator.' 
+                : 'Manage your artists and their profiles.'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            {!isMobile && <ArtistViewSwitcher view={view} setView={setView} />}
+            <Button asChild className="w-full md:w-auto">
+              <Link href="/artists/new">
+                <PlusCircle className="mr-2 h-4 w-4" /> New Artist
+              </Link>
+            </Button>
+          </div>
         </div>
       </div>
+    </header>
 
       {userRole === 'admin' && <DbSizeCard />}
 

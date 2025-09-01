@@ -99,20 +99,24 @@ export default function CalendarPage() {
   return (
     <DashboardLayout>
       <div className="h-full flex flex-col gap-6 p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex-grow text-center sm:text-left">
-                <h1 className="text-2xl font-bold tracking-tight">Calendar</h1>
-                <p className="text-muted-foreground">View and manage all artist-related events.</p>
+        <header className="border-b bg-card">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex-grow text-center sm:text-left">
+                    <h1 className="text-2xl font-bold tracking-tight">Calendar</h1>
+                    <p className="text-muted-foreground">View and manage all artist-related events.</p>
+                </div>
+                <Button className="flex items-center gap-2 w-full sm:w-auto" onClick={() => {
+                  setSelectedEvent(null)
+                  setInitialSlot(new Date())
+                  setIsModalOpen(true)
+                }}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Event
+                </Button>
             </div>
-            <Button className="flex items-center gap-2 w-full sm:w-auto" onClick={() => {
-              setSelectedEvent(null)
-              setInitialSlot(new Date())
-              setIsModalOpen(true)
-            }}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Event
-            </Button>
-        </div>
+          </div>
+        </header>
         <div className="flex-grow h-[75vh]">
             {loading ? (
                 <CalendarSkeleton /> // Use the skeleton component

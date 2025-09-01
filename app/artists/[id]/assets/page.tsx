@@ -352,8 +352,8 @@ export default function ArtistAssetsPage() {
 
   return (
     <DashboardLayout>
-      <main className="container mx-auto px-4 py-8">
-        <div className="h-full flex flex-col gap-6 p-4 sm:p-6">
+      <header className="border-b bg-card mb-6">
+        <div className="container mx-auto px-4 py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex-grow text-center sm:text-left">
                   <h1 className="text-2xl font-bold tracking-tight">Asset Management</h1>
@@ -367,6 +367,8 @@ export default function ArtistAssetsPage() {
               </Link>
           </div>
         </div>
+      </header>
+      <main className="container mx-auto px-4 py-2">
 
         {isLoading ? (
           <AssetsSkeleton />
