@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Plus, Search, Upload, Eye, Download, Music, Instagram, ImageIcon, FileText, Video, Files, Trash2 } from "lucide-react"
+import { Music, Instagram, ImageIcon, Eye, Download, Video, FileText, Trash2, PlusCircle, Search, Upload } from "lucide-react"
 import Link from "next/link"
 import { AssetsSkeleton } from "./assets-skeleton"
 import Image from "next/image"
@@ -353,25 +353,19 @@ export default function ArtistAssetsPage() {
   return (
     <DashboardLayout>
       <main className="container mx-auto px-4 py-8">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-4">
-            <Link href={`/artists/${params.id}`}>
-              <Button variant="outline" size="sm" className="flex items-center gap-2">
-                <ArrowLeft className="h-4 w-4" />
-                Back
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold">Asset Management</h1>
-              <p className="text-muted-foreground">For {artist?.name || "..."}</p>
-            </div>
+        <div className="h-full flex flex-col gap-6 p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex-grow text-center sm:text-left">
+                  <h1 className="text-2xl font-bold tracking-tight">Asset Management</h1>
+                  <p className="text-muted-foreground">For {artist?.name || "..."}</p>
+              </div>
+              <Link href={`/artists/${params.id}/assets/new`} className="w-full sm:w-auto">
+                <Button className="flex items-center gap-2 w-full sm:w-auto">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Upload Asset
+                </Button>
+              </Link>
           </div>
-          <Link href={`/artists/${params.id}/assets/new`} className="w-full sm:w-auto">
-            <Button className="flex items-center gap-2 w-full">
-              <Plus className="h-4 w-4" />
-              Upload Asset
-            </Button>
-          </Link>
         </div>
 
         {isLoading ? (
