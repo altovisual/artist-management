@@ -10,7 +10,7 @@ interface AnimatedTitleProps extends HTMLAttributes<HTMLHeadingElement> {
 
 export function AnimatedTitle({ text, level = 1, className, ...props }: AnimatedTitleProps) {
   const titleRef = useRef<HTMLHeadingElement>(null)
-  const HeadingTag = `h${level}` as keyof React.JSX.IntrinsicElements
+  const HeadingTag = `h${level}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
 
   useEffect(() => {
     const anime = (window as any).anime;
