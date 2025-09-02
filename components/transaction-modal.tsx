@@ -15,7 +15,6 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
-import { format } from 'date-fns'
 
 interface TransactionModalProps {
   isOpen: boolean
@@ -46,7 +45,7 @@ export function TransactionModal({ isOpen, onClose, onSave, transaction, artists
         setType(transaction.type || '')
         setSelectedCategoryId(transaction.category_id || null)
         setAmount(transaction.amount?.toString() || '')
-        setTransactionDate(transaction.transaction_date || '')
+        setTransactionDate(transaction.transaction_date ? new Date(transaction.transaction_date).toISOString().split('T')[0] : '')
         setDescription(transaction.description || '')
       } else {
         // Reset form for new transaction
@@ -54,7 +53,7 @@ export function TransactionModal({ isOpen, onClose, onSave, transaction, artists
         setType('')
         setSelectedCategoryId(null)
         setAmount('')
-        setTransactionDate(format(new Date(), 'yyyy-MM-dd')) // Default to today
+        setTransactionDate(new Date().toISOString().split('T')[0]) // Default to today in UTC
         setDescription('')
       }
     }

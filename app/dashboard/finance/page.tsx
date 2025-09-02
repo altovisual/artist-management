@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { DashboardLayout } from '@/components/dashboard-layout'
@@ -15,6 +15,7 @@ import { TransactionModal } from '@/components/transaction-modal'
 import { CategoryModal } from '@/components/category-modal'
 import { FinanceSkeleton } from './finance-skeleton' // Import the skeleton
 import { AnimatedTitle } from '@/components/animated-title'
+import { FinanceChart } from './finance-chart'
 
 interface Transaction {
   id: string
@@ -116,7 +117,7 @@ export default function FinancePage() {
       query = query.eq('category_id', appliedSelectedCategoryId)
     }
     if (appliedSearchTerm) {
-      query = query.ilike('description', `%{appliedSearchTerm}%`)
+      query = query.ilike('description', `%${appliedSearchTerm}%`)
     }
     if (appliedStartDate) {
       query = query.gte('transaction_date', appliedStartDate)
@@ -172,6 +173,24 @@ export default function FinancePage() {
     .toFixed(2)
 
   const netBalance = (parseFloat(totalIncome) - parseFloat(totalExpenses)).toFixed(2)
+
+  const chartData = useMemo(() => {
+    const monthlyData: { [key: string]: { month: string, income: number, expenses: number } } = {};
+
+    transactions.forEach(t => {
+      const month = new Date(t.transaction_date).toLocaleString('default', { month: 'long' });
+      if (!monthlyData[month]) {
+        monthlyData[month] = { month, income: 0, expenses: 0 };
+      }
+      if (t.type === 'income') {
+        monthlyData[month].income += t.amount;
+      } else {
+        monthlyData[month].expenses += t.amount;
+      }
+    });
+
+    return Object.values(monthlyData);
+  }, [transactions]);
 
   const handleAddTransactionClick = () => {
     setSelectedTransaction(null);
@@ -267,6 +286,8 @@ export default function FinancePage() {
               </Card>
             </div>
 
+            <FinanceChart data={chartData} />
+
             {/* Filters */}
             <Card>
               <CardHeader><CardTitle>Filter Transactions</CardTitle></CardHeader>
@@ -358,7 +379,7 @@ export default function FinancePage() {
                       <TableBody>
                         {transactions.map((transaction) => (
                           <TableRow key={transaction.id} onClick={() => handleEditTransactionClick(transaction)} className="cursor-pointer hover:bg-muted/50">
-                            <TableCell>{new Date(transaction.transaction_date).toLocaleDateString()}</TableCell>
+                            <TableCell>{new Date(transaction.transaction_date + 'T00:00:00').toLocaleDateString('es-ES', { timeZone: 'UTC' })}</TableCell>
                             <TableCell>{transaction.artists?.name || 'N/A'}</TableCell>
                             <TableCell>{transaction.transaction_categories?.name || 'N/A'}</TableCell>
                             <TableCell>{transaction.description || '—'}</TableCell>
