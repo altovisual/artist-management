@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Save } from "lucide-react" // Only Save icon needed
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
+import { AnimatedTitle } from '@/components/animated-title';
 
 export default function ArtistOnboardingPage() {
   const router = useRouter()
