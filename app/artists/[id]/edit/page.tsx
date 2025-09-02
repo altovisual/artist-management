@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator"
 import { encrypt } from "@/lib/crypto"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { AnimatedTitle } from "@/components/animated-title"
+import { EditArtistSkeleton } from "./edit-artist-skeleton"
 
 interface SocialAccount {
   id: string | null;
@@ -268,7 +269,7 @@ export default function EditArtistPage() {
   return (
     <DashboardLayout>
       {isLoadingData ? (
-        <div className="flex h-full items-center justify-center"><p>Loading...</p></div>
+        <EditArtistSkeleton />
       ) : !artist ? (
         <div className="flex h-full items-center justify-center"><p>Artist not found.</p></div>
       ) : (

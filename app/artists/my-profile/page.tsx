@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { Separator } from "@/components/ui/separator"
 import Image from "next/image"
 import { DashboardLayout } from "@/components/dashboard-layout"
+import { ProfileSkeleton } from "./profile-skeleton"
 
 interface SocialAccount {
   id: string | null;
@@ -369,7 +370,7 @@ export default function MyProfilePage() {
 
   const PageContent = () => {
     if (isLoadingData) {
-      return <div className="min-h-screen flex items-center justify-center"><p>Loading profile...</p></div>
+      return <ProfileSkeleton />
     }
 
     if (!artist) {
