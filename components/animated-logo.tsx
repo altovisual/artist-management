@@ -50,7 +50,7 @@ export function AnimatedLogo({ variant, width = 120, height = 32 }: { variant?: 
         strokeDashoffset: [anime.setDashoffset, 0],
         easing: 'easeInOutSine',
         duration: 300,
-        delay: (el, i) => i * 150,
+        delay: (el: SVGPathElement, i: number) => i * 150,
         direction: 'normal',
         loop: false,
         complete: () => {
