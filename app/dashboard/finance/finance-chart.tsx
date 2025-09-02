@@ -14,6 +14,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart'
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 
 const chartConfig = {
   income: {
@@ -27,7 +28,9 @@ const chartConfig = {
 }
 
 interface FinanceChartProps {
-  data: { month: string; income: number; expenses: number }[];
+  data: { label: string; income: number; expenses: number }[];
+  view: 'daily' | 'monthly';
+  setView: (view: 'daily' | 'monthly') => void;
 }
 
 const MonospaceBar = (props: any) => {
@@ -57,23 +60,36 @@ const MonospaceBar = (props: any) => {
   );
 };
 
-export function FinanceChart({ data }: FinanceChartProps) {
+export function FinanceChart({ data, view, setView }: FinanceChartProps) {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Income vs. Expenses</CardTitle>
-        <CardDescription>Monthly Summary</CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Income vs. Expenses</CardTitle>
+          <CardDescription>{view === 'daily' ? 'Daily' : 'Monthly'} Summary</CardDescription>
+        </div>
+        <ToggleGroup type="single" value={view} onValueChange={setView} defaultValue="monthly">
+          <ToggleGroupItem value="monthly">Monthly</ToggleGroupItem>
+          <ToggleGroupItem value="daily">Daily</ToggleGroupItem>
+        </ToggleGroup>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-[250px] w-full">
           <BarChart data={data} accessibilityLayer>
             <CartesianGrid vertical={false} />
             <XAxis
-              dataKey="month"
+              dataKey="label"
               tickLine={false}
               tickMargin={10}
               axisLine={false}
-              tickFormatter={(value) => value.slice(0, 3)}
+              tickFormatter={(value) => {
+                if (view === 'daily') {
+                  const date = new Date(value + 'T00:00:00');
+                  return `${date.getDate()}/${date.getMonth() + 1}`;
+                } else {
+                  return value.slice(0, 3);
+                }
+              }}
             />
             <YAxis />
             <ChartTooltip

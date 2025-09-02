@@ -16,6 +16,7 @@ import { CategoryModal } from '@/components/category-modal'
 import { FinanceSkeleton } from './finance-skeleton' // Import the skeleton
 import { AnimatedTitle } from '@/components/animated-title'
 import { FinanceChart } from './finance-chart'
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 
 interface Transaction {
   id: string
@@ -49,6 +50,7 @@ export default function FinancePage() {
   const [artists, setArtists] = useState<Artist[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
+  const [chartView, setChartView] = useState<'daily' | 'monthly'>('monthly');
 
   // Filter states (pending changes)
   const [pendingSelectedArtistId, setPendingSelectedArtistId] = useState<string | 'all'>('all')
@@ -175,22 +177,40 @@ export default function FinancePage() {
   const netBalance = (parseFloat(totalIncome) - parseFloat(totalExpenses)).toFixed(2)
 
   const chartData = useMemo(() => {
-    const monthlyData: { [key: string]: { month: string, income: number, expenses: number } } = {};
+    if (chartView === 'monthly') {
+      const monthlyData: { [key: string]: { label: string, income: number, expenses: number } } = {};
 
-    transactions.forEach(t => {
-      const month = new Date(t.transaction_date).toLocaleString('default', { month: 'long' });
-      if (!monthlyData[month]) {
-        monthlyData[month] = { month, income: 0, expenses: 0 };
-      }
-      if (t.type === 'income') {
-        monthlyData[month].income += t.amount;
-      } else {
-        monthlyData[month].expenses += t.amount;
-      }
-    });
+      transactions.forEach(t => {
+        const month = new Date(t.transaction_date + 'T00:00:00').toLocaleString('default', { month: 'long' });
+        if (!monthlyData[month]) {
+          monthlyData[month] = { label: month, income: 0, expenses: 0 };
+        }
+        if (t.type === 'income') {
+          monthlyData[month].income += t.amount;
+        } else {
+          monthlyData[month].expenses += t.amount;
+        }
+      });
 
-    return Object.values(monthlyData);
-  }, [transactions]);
+      return Object.values(monthlyData);
+    } else {
+      const dailyData: { [key: string]: { label: string, income: number, expenses: number } } = {};
+
+      transactions.forEach(t => {
+        const date = new Date(t.transaction_date + 'T00:00:00').toISOString().split('T')[0];
+        if (!dailyData[date]) {
+          dailyData[date] = { label: date, income: 0, expenses: 0 };
+        }
+        if (t.type === 'income') {
+          dailyData[date].income += t.amount;
+        } else {
+          dailyData[date].expenses += t.amount;
+        }
+      });
+
+      return Object.values(dailyData).sort((a, b) => new Date(a.label).getTime() - new Date(b.label).getTime());
+    }
+  }, [transactions, chartView]);
 
   const handleAddTransactionClick = () => {
     setSelectedTransaction(null);
@@ -286,7 +306,7 @@ export default function FinancePage() {
               </Card>
             </div>
 
-            <FinanceChart data={chartData} />
+            <FinanceChart data={chartData} view={chartView} setView={setChartView} />
 
             {/* Filters */}
             <Card>
