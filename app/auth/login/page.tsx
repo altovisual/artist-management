@@ -11,6 +11,8 @@ import { useToast } from '@/components/ui/use-toast'
 import dynamic from 'next/dynamic'
 import IconoX from '@/public/icono-x.svg'
 
+import { AnimatedTitle } from '@/components/animated-title';
+
 const AnimatedLogo = dynamic(() => import('@/components/animated-logo').then(mod => mod.AnimatedLogo), {
   ssr: false,
 })
