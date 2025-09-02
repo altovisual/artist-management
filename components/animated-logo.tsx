@@ -34,7 +34,7 @@ LightLogo.displayName = 'LightLogo'
 
 export function AnimatedLogo({ variant, width = 120, height = 32 }: { variant?: 'light' | 'dark', width?: number, height?: number }) {
   const { theme } = useTheme()
-  const logoRef = useRef(null)
+  const logoRef = useRef<SVGSVGElement>(null)
   const effectiveTheme = variant || theme
 
   useEffect(() => {
