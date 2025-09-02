@@ -17,6 +17,7 @@ import { useToast } from "@/components/ui/use-toast"
 
 import { Separator } from "@/components/ui/separator";
 import { DashboardLayout } from "@/components/dashboard-layout"
+import { AnimatedTitle } from "@/components/animated-title"
 
 interface SocialAccount {
   platform: string
@@ -204,7 +205,7 @@ export default function NewArtistPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold">Add New Artist</h1>
+            <AnimatedTitle text="Add New Artist" level={1} className="text-2xl font-bold" />
             <p className="text-muted-foreground">Create a new artist profile</p>
           </div>
         </div>

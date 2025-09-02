@@ -116,7 +116,7 @@ export default function ArtistOnboardingPage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <div>
-              <h1 className="text-2xl font-bold">Create Your Artist Profile</h1>
+              <AnimatedTitle text="Create Your Artist Profile" level={1} className="text-2xl font-bold" />
               <p className="text-muted-foreground">Tell us about yourself</p>
             </div>
           </div>

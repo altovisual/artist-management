@@ -8,8 +8,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
-import LogoBlanco from '@/public/mi-logo-blanco.svg'
+import dynamic from 'next/dynamic'
 import IconoX from '@/public/icono-x.svg'
+
+const AnimatedLogo = dynamic(() => import('@/components/animated-logo').then(mod => mod.AnimatedLogo), {
+  ssr: false,
+})
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -55,7 +59,7 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-black opacity-80"></div> {/* Overlay */}
         
         <div className="relative z-10">
-          <LogoBlanco width={150} height={40} />
+          <AnimatedLogo variant="dark" width={150} height={40} />
         </div>
         <div className="relative z-10 text-2xl font-semibold">
           Your Artist Management Solution
@@ -67,7 +71,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md text-center">
           <div className="flex justify-center items-center mb-6">
             <IconoX width={40} height={40} className="mr-3" />
-            <h1 className="text-4xl font-bold text-zinc-800">Login</h1>
+            <AnimatedTitle text="Login" level={1} className="text-4xl font-bold text-zinc-800" />
           </div>
           <p className="text-zinc-600 mb-8 text-lg">
             Enter your email below to login to your account

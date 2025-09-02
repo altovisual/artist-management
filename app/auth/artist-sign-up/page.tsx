@@ -4,7 +4,12 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
+import dynamic from 'next/dynamic'
+import IconoX from '@/public/icono-x.svg'
+
+const AnimatedLogo = dynamic(() => import('@/components/animated-logo').then(mod => mod.AnimatedLogo), {
+  ssr: false,
+})
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -87,7 +92,7 @@ export default function ArtistSignUpPage() {
         <div className="absolute inset-0 bg-black opacity-80"></div> {/* Overlay */}
         
         <div className="relative z-10">
-          <Image src="/mi-logo-blanco.svg" alt="MVPX Logo" width={150} height={40} />
+          <AnimatedLogo variant="dark" width={150} height={40} />
         </div>
         <div className="relative z-10 text-2xl font-semibold">
           Your Artist Management Solution
@@ -98,8 +103,8 @@ export default function ArtistSignUpPage() {
       <div className="flex-1 flex justify-center items-center bg-white p-8">
         <div className="w-full max-w-md text-center">
           <div className="flex justify-center items-center mb-6">
-            <Image src="/icono-x.svg" alt="X Icon" width={40} height={40} className="mr-3" />
-            <h1 className="text-4xl font-bold text-zinc-800">Artist Sign Up</h1>
+            <IconoX width={40} height={40} className="mr-3" />
+            <AnimatedTitle text="Artist Sign Up" level={1} className="text-4xl font-bold text-zinc-800" />
           </div>
           <p className="text-zinc-600 mb-8 text-lg">
             Create your artist account and profile

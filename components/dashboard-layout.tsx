@@ -2,7 +2,11 @@
 
 import * as React from "react"
 import Link from "next/link"
-import Image from "next/image"
+import dynamic from 'next/dynamic'
+
+const AnimatedLogo = dynamic(() => import('@/components/animated-logo').then(mod => mod.AnimatedLogo), {
+  ssr: false,
+})
 import { usePathname, useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -78,7 +82,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 </SheetTrigger>
                 <SheetContent side="left" className="w-64 p-4">
                   <div className="flex flex-col items-start gap-2 px-4 pt-4 pb-2">
-                    <Image src={theme === "dark" ? "/mi-logo-blanco.svg" : "/mi-logo.svg"} width={120} height={32} alt="Logo" />
+                                  <AnimatedLogo />
                     <span className="text-xs text-muted-foreground">Your Artist Management Solution</span>
                   </div>
                   <SheetHeader>
@@ -102,7 +106,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             </div>
 
             <Link href="/dashboard" className="flex items-center gap-2 font-bold">
-              <Image src={theme === "dark" ? "/mi-logo-blanco.svg" : "/mi-logo.svg"} width={120} height={32} alt="Logo" />
+                            <AnimatedLogo />
               
             </Link>
             

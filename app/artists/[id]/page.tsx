@@ -53,6 +53,7 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { useIsMobile } from "@/components/ui/use-mobile"
 import { useToast } from "@/components/ui/use-toast"
 import ArtistDetailPageSkeleton from "./artist-detail-skeleton"
+import { AnimatedTitle } from "@/components/animated-title"
 
 // --- Helper Functions ---
 const getExt = (url?: string) => {
@@ -488,7 +489,7 @@ export default function ArtistDetailPage() {
               <AvatarFallback>{artist.name.split(" ").map((n: string) => n[0]).join("")}</AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="text-2xl font-bold">{artist.name}</h1>
+              <AnimatedTitle text={artist.name} level={1} className="text-2xl font-bold" />
               <p className="text-muted-foreground">{artist.genre} Artist</p>
             </div>
           </div>

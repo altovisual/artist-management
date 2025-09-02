@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { AnimatedTitle } from "@/components/animated-title";
 import { ArrowLeft, Upload, Save, X } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -245,7 +246,7 @@ export default function NewAssetPage() {
                 </Button>
               </Link>
               <div>
-                <h1 className="text-2xl font-bold">Upload New Asset</h1>
+                <AnimatedTitle text="Upload New Asset" level={1} className="text-2xl font-bold" />
                 <p className="text-muted-foreground">Add a new visual asset to the artist&apos;s kit</p>
               </div>
             </div>

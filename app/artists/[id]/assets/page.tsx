@@ -25,6 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { AnimatedTitle } from "@/components/animated-title"
 
 // --- Helper Functions ---
 
@@ -356,7 +357,7 @@ export default function ArtistAssetsPage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex-grow text-center sm:text-left">
-                  <h1 className="text-2xl font-bold tracking-tight">Asset Management</h1>
+                  <AnimatedTitle text="Asset Management" level={1} className="text-2xl font-bold tracking-tight" />
                   <p className="text-muted-foreground">For {artist?.name || "..."}</p>
               </div>
               <Link href={`/artists/${params.id}/assets/new`} className="w-full sm:w-auto">

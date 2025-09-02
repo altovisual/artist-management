@@ -63,7 +63,7 @@ export default function LoginPage() {
       <div className="relative z-10 flex h-full w-1/2 items-center justify-center"> {/* New container for right side */}
         <div className="w-full max-w-md space-y-6 rounded-lg bg-white p-8 shadow-lg dark:bg-gray-900">
           <div className="text-center">
-            <h1 className="text-3xl font-bold tracking-tight">Login</h1>
+            <AnimatedTitle text="Login" level={1} className="text-3xl font-bold tracking-tight" />
             <p className="mt-2 text-gray-500 dark:text-gray-400">
               Enter your email below to login to your account
             </p>

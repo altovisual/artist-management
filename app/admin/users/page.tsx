@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
+import { AnimatedTitle } from '@/components/animated-title';
 import { DashboardLayout } from '@/components/dashboard-layout'
 
 interface User {
@@ -82,7 +83,7 @@ export default function AdminUsersPage() {
           <div className="container mx-auto px-4 py-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex-grow text-center sm:text-left">
-                <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
+                <AnimatedTitle text="User Management" level={1} className="text-2xl font-bold tracking-tight" />
                 <p className="text-muted-foreground">Manage user roles and permissions.</p>
               </div>
             </div>

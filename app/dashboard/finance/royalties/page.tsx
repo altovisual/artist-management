@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
+import { AnimatedTitle } from '@/components/animated-title';
 
 interface RoyaltyReport {
   id: string;
@@ -89,7 +90,7 @@ export default function RoyaltiesPage() {
         <Button variant="outline" size="icon" onClick={() => router.back()}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight">Royalty Management</h1>
+        <AnimatedTitle text="Royalty Management" level={1} className="text-2xl font-bold tracking-tight" />
       </div>
 
       <Card>

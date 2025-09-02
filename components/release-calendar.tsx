@@ -33,6 +33,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { CalendarToolbar } from "./calendar-toolbar";
 import { ReleaseCalendarSkeleton } from "./release-calendar-skeleton";
+import { AnimatedTitle } from "./animated-title";
 
 const localizer = momentLocalizer(moment)
 
@@ -240,7 +241,7 @@ export function ReleaseCalendar({
           <div className="container mx-auto px-4 py-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex-grow text-center sm:text-left">
-                    <h1 className="text-2xl font-bold tracking-tight">Release Calendar</h1>
+                    <AnimatedTitle text="Release Calendar" level={1} className="text-2xl font-bold tracking-tight" />
                     <p className="text-muted-foreground">View and manage all upcoming music releases.</p>
                 </div>
                 <Button className="flex items-center gap-2 w-full sm:w-auto" onClick={() => {

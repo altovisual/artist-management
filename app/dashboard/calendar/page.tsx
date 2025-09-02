@@ -14,6 +14,7 @@ import { PlusCircle } from 'lucide-react'
 import { EventModal } from '@/components/event-modal'
 import { CalendarToolbar } from '@/components/calendar-toolbar' // Import the custom toolbar
 import { CalendarSkeleton } from './calendar-skeleton' // Import the skeleton
+import { AnimatedTitle } from '@/components/animated-title'
 
 const locales = {
   'en-US': enUS,
@@ -103,7 +104,7 @@ export default function CalendarPage() {
           <div className="container mx-auto px-4 py-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex-grow text-center sm:text-left">
-                    <h1 className="text-2xl font-bold tracking-tight">Calendar</h1>
+                    <AnimatedTitle text="Calendar" level={1} className="text-2xl font-bold tracking-tight" />
                     <p className="text-muted-foreground">View and manage all artist-related events.</p>
                 </div>
                 <Button className="flex items-center gap-2 w-full sm:w-auto" onClick={() => {

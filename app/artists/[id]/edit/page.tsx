@@ -16,6 +16,7 @@ import { CredentialManager } from "@/components/credential-manager"
 import { Separator } from "@/components/ui/separator"
 import { encrypt } from "@/lib/crypto"
 import { DashboardLayout } from "@/components/dashboard-layout"
+import { AnimatedTitle } from "@/components/animated-title"
 
 interface SocialAccount {
   id: string | null;
@@ -278,7 +279,7 @@ export default function EditArtistPage() {
               Back
             </Button>
             <div>
-              <h1 className="text-xl font-semibold">Edit Artist</h1>
+              <AnimatedTitle text="Edit Artist" level={1} className="text-xl font-semibold" />
               <p className="text-muted-foreground">{artist.name}</p>
             </div>
           </div>

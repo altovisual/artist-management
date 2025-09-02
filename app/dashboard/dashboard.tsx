@@ -11,6 +11,7 @@ import { useIsMobile } from '@/components/ui/use-mobile';
 import { PlusCircle, Eye, Edit, ImageIcon } from 'lucide-react';
 import { DashboardSkeleton } from './dashboard-skeleton';
 import { DbSizeCard } from '@/components/db-size-card';
+import { AnimatedTitle } from '@/components/animated-title';
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -152,7 +153,7 @@ export function Dashboard() {
       <div className="container mx-auto px-4 py-4">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Artists</h1>
+            <AnimatedTitle text="Artists" level={1} className="text-2xl font-bold tracking-tight" />
             <p className="text-muted-foreground">
               {userRole === 'admin' 
                 ? 'Viewing all artists as an administrator.' 

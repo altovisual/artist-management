@@ -14,6 +14,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { TransactionModal } from '@/components/transaction-modal'
 import { CategoryModal } from '@/components/category-modal'
 import { FinanceSkeleton } from './finance-skeleton' // Import the skeleton
+import { AnimatedTitle } from '@/components/animated-title'
 
 interface Transaction {
   id: string
@@ -196,7 +197,7 @@ export default function FinancePage() {
           <div className="container mx-auto px-4 py-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <div className="text-center sm:text-left">
-                <h1 className="text-2xl font-bold tracking-tight">Finance Overview</h1>
+                <AnimatedTitle text="Finance Overview" level={1} className="text-2xl font-bold tracking-tight" />
                 <p className="text-muted-foreground">Track your artist&apos;s income and expenses.</p>
               </div>
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
