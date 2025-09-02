@@ -195,13 +195,13 @@ export default function FinancePage() {
         <header className="border-b bg-card">
           <div className="container mx-auto px-4 py-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-              <div>
+              <div className="text-center sm:text-left">
                 <h1 className="text-2xl font-bold tracking-tight">Finance Overview</h1>
                 <p className="text-muted-foreground">Track your artist&apos;s income and expenses.</p>
               </div>
-              <div className="flex gap-2">
-                <Button onClick={() => setIsCategoryModalOpen(true)}>Manage Categories</Button>
-                <Button onClick={handleAddTransactionClick}>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <Button onClick={() => setIsCategoryModalOpen(true)} className="w-full sm:w-auto">Manage Categories</Button>
+                <Button onClick={handleAddTransactionClick} className="w-full sm:w-auto">
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add Transaction
                 </Button>
