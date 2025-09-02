@@ -1,5 +1,6 @@
 'use client'
 
+import type React from 'react';
 import { useEffect, useRef, HTMLAttributes } from 'react'
 
 interface AnimatedTitleProps extends HTMLAttributes<HTMLHeadingElement> {
@@ -25,7 +26,7 @@ export function AnimatedTitle({ text, level = 1, className, ...props }: Animated
           translateZ: 0,
           easing: "easeOutExpo",
           duration: 950,
-          delay: (el, i) => 70 * i
+          delay: (el: HTMLElement, i: number) => 70 * i
         });
     }
   }, [text])
