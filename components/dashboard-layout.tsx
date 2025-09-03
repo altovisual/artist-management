@@ -143,7 +143,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 <Link
                   key={link.href}
                   href={link.href}
-                  ref={el => navRefs.current[index] = el} // Assign ref
+                  ref={el => { navRefs.current[index] = el; }} // Assign ref
                   className={`flex items-center gap-2 transition-colors hover:text-foreground ${pathname === link.href ? 'text-foreground' : 'text-muted-foreground'}`}
                 >
                   <link.icon className="h-4 w-4" />
