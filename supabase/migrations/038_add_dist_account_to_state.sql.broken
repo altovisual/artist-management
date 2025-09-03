@@ -1,0 +1,7 @@
+-- MIGRATION: 038_add_dist_account_to_state
+-- DESCRIPTION: Adds the distribution_account_id to the oauth_state table to link the OAuth flow to a specific account record.
+
+ALTER TABLE public.oauth_state
+ADD COLUMN distribution_account_id UUID NOT NULL REFERENCES public.distribution_accounts(id) ON DELETE CASCADE;
+
+COMMENT ON COLUMN public.oauth_state.distribution_account_id IS 'The ID of the distribution account being connected during the OAuth flow.';

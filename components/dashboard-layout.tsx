@@ -26,7 +26,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { LayoutDashboard, Calendar, Music, Shield, User, LogOut, DollarSign, Menu } from "lucide-react"
+import { LayoutDashboard, Calendar, Music, Shield, User, LogOut, DollarSign, Menu, BarChart } from "lucide-react"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { useTheme } from "next-themes"
 
@@ -89,6 +89,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   const navLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/dashboard/analytics", label: "Analytics", icon: BarChart },
     { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
     { href: "/dashboard/finance", label: "Finance", icon: DollarSign },
     { href: "/dashboard/releases", label: "Releases", icon: Music },

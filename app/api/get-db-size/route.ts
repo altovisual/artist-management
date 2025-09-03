@@ -3,8 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(req: NextRequest) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (!supabaseUrl) {
-      throw new Error('NEXT_PUBLIC_SUPABASE_URL is not defined');
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error('Supabase URL or Anon Key is not defined');
     }
 
     const edgeFunctionUrl = `${supabaseUrl}/functions/v1/get-db-size`;
@@ -14,6 +16,7 @@ export async function GET(req: NextRequest) {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': req.headers.get('Authorization') || '',
+        'apikey': supabaseAnonKey,
       },
     });
 

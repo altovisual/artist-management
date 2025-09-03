@@ -19,6 +19,26 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { AnimatedTitle } from "@/components/animated-title"
 import { EditArtistSkeleton } from "./edit-artist-skeleton"
 
+// Helper function to extract Spotify ID from URL
+const extractSpotifyId = (urlOrId: string): string => {
+  if (!urlOrId) return '';
+  try {
+    if (urlOrId.includes('spotify.com')) {
+      const url = new URL(urlOrId);
+      const pathParts = url.pathname.split('/');
+      const artistId = pathParts.find(part => part.length === 22); // Spotify IDs are 22 chars
+      return artistId || '';
+    }
+    if (urlOrId.startsWith('spotify:artist:')) {
+        return urlOrId.split(':')[2];
+    }
+    return urlOrId;
+  } catch (error) {
+    console.error("Invalid Spotify URL, returning original value", error);
+    return urlOrId;
+  }
+};
+
 interface SocialAccount {
   id: string | null;
   platform: string;
@@ -60,11 +80,11 @@ export default function EditArtistPage() {
   const [genre, setGenre] = useState("")
   const [location, setLocation] = useState("")
   const [bio, setBio] = useState("")
+  const [spotifyInput, setSpotifyInput] = useState("") // New state for input
   const [newProfileImage, setNewProfileImage] = useState<File | null>(null)
   const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([])
   const [distributionAccounts, setDistributionAccounts] = useState<DistributionAccount[]>([])
   
-  // Track original account IDs for deletion
   const [initialSocialAccountIds, setInitialSocialAccountIds] = useState<string[]>([]);
   const [initialDistributionAccountIds, setInitialDistributionAccountIds] = useState<string[]>([]);
 
@@ -126,6 +146,7 @@ export default function EditArtistPage() {
         setGenre(artistData.genre || "")
         setLocation(artistData.country || "")
         setBio(artistData.bio || "")
+        setSpotifyInput(artistData.spotify_artist_id || "") // Set state
         
         const loadedSocialAccounts = artistData.social_accounts || [];
         setSocialAccounts(loadedSocialAccounts);
@@ -150,9 +171,11 @@ export default function EditArtistPage() {
     e.preventDefault()
     setIsLoading(true)
 
+    const finalSpotifyId = extractSpotifyId(spotifyInput);
+
     try {
       const artistId = params.id as string
-      let imageUrl: string | undefined = undefined
+      let imageUrl: string | undefined = artist.profile_image;
 
       if (newProfileImage) {
         const fileName = `${Date.now()}_${newProfileImage.name}`
@@ -162,8 +185,7 @@ export default function EditArtistPage() {
         imageUrl = urlData.publicUrl
       }
 
-      const updateData: any = { name, genre, country: location, bio }
-      if (imageUrl) updateData.profile_image = imageUrl
+      const updateData: any = { name, genre, country: location, bio, profile_image: imageUrl, spotify_artist_id: finalSpotifyId }
 
       const { error: artistError } = await supabase.from("artists").update(updateData).eq("id", artistId);
       if (artistError) throw new Error(`Error updating artist details: ${artistError.message}`);
@@ -175,7 +197,7 @@ export default function EditArtistPage() {
         const { error: deleteError } = await supabase.from('social_accounts').delete().in('id', socialAccountIdsToDelete);
         if (deleteError) throw new Error(`Error deleting social accounts: ${deleteError.message}`);
       }
-
+      
       const socialAccountsToUpsert = await Promise.all(
         socialAccounts.map(async a => {
           let password = a.password;
@@ -312,6 +334,13 @@ export default function EditArtistPage() {
                   <div className="space-y-2">
                     <Label htmlFor="location">Location</Label>
                     <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="City, Country" />
+                  </div>
+                   <div className="space-y-2">
+                    <Label htmlFor="spotify-id">Spotify Artist URL or ID</Label>
+                    <Input id="spotify-id" value={spotifyInput} onChange={(e) => setSpotifyInput(e.target.value)} placeholder="Paste Spotify URL, URI, or ID" />
+                    <p className="text-sm text-muted-foreground">
+                      You can paste the full URL from the share button on your Spotify artist profile.
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-2">

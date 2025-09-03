@@ -27,8 +27,15 @@ interface SocialAccount {
 }
 
 interface DistributionAccount {
-  platform: string    // <- en DB se guarda como service
-  monthlyListeners: string // <- se mantiene en UI, pero NO se envía al DB
+  id: string | null;
+  distributor: string;
+  service: string;
+  monthly_listeners: string;
+  username: string;
+  email: string;
+  notes: string;
+  url: string;
+  account_id: string;
 }
 
 export default function NewArtistPage() {
@@ -51,7 +58,7 @@ export default function NewArtistPage() {
 
   // Distribution accounts
   const [distributionAccounts, setDistributionAccounts] = useState<DistributionAccount[]>([
-    { platform: "", monthlyListeners: "" },
+    { id: null, distributor: "", service: "", monthly_listeners: "", username: "", email: "", notes: "", url: "", account_id: "" },
   ])
 
   const addSocialAccount = () => {
@@ -69,7 +76,7 @@ export default function NewArtistPage() {
   }
 
   const addDistributionAccount = () => {
-    setDistributionAccounts([...distributionAccounts, { platform: "", monthlyListeners: "" }])
+    setDistributionAccounts([...distributionAccounts, { id: null, distributor: "", service: "", monthly_listeners: "", username: "", email: "", notes: "", url: "", account_id: "" }]);
   }
 
   const removeDistributionAccount = (index: number) => {
@@ -152,12 +159,19 @@ export default function NewArtistPage() {
       }
 
       // 3) Insert distribution_accounts (schema: artist_id, service, account_id?, email?)
-      const validDistributionAccounts = distributionAccounts.filter((acc) => acc.platform)
+      const validDistributionAccounts = distributionAccounts.filter((acc) => acc.distributor && acc.service) // Filter by distributor and service
       if (validDistributionAccounts.length > 0) {
         const distributionAccountsData = validDistributionAccounts.map((acc) => ({
+          ...(acc.id && { id: acc.id }), // Conditionally add id only if it exists
           artist_id: artistId,
-          service: acc.platform, // <- en DB es service, no platform
-          // monthly_listeners NO existe; si lo quieres, agrega la columna vía SQL
+          distributor: acc.distributor,
+          service: acc.service,
+          monthly_listeners: Number.parseInt(acc.monthly_listeners || '0'),
+          username: acc.username || null,
+          email: acc.email || null,
+          notes: acc.notes || null,
+          url: acc.url || null,
+          account_id: acc.account_id || null,
         }))
 
         const { error: distributionError } = await supabase
@@ -404,13 +418,22 @@ export default function NewArtistPage() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor={`distribution-platform-${index}`}>Platform</Label>
+                      <Label htmlFor={`distribution-distributor-${index}`}>Distributor</Label>
+                      <Input
+                        id={`distribution-distributor-${index}`}
+                        value={account.distributor || ''}
+                        onChange={(e) => updateDistributionAccount(index, "distributor", e.target.value)}
+                        placeholder="e.g., DistroKid"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`distribution-service-${index}`}>Service</Label>
                       <Select
-                        value={account.platform}
-                        onValueChange={(value) => updateDistributionAccount(index, "platform", value)}
+                        value={account.service || ''}
+                        onValueChange={(value) => updateDistributionAccount(index, "service", value)}
                       >
-                        <SelectTrigger id={`distribution-platform-${index}`}>
-                          <SelectValue placeholder="Select platform" />
+                        <SelectTrigger id={`distribution-service-${index}`}>
+                          <SelectValue placeholder="Select service" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Spotify">Spotify</SelectItem>
@@ -423,11 +446,59 @@ export default function NewArtistPage() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Monthly Listeners (UI only)</Label>
+                      <Label htmlFor={`distribution-username-${index}`}>Username</Label>
                       <Input
-                        value={account.monthlyListeners}
-                        onChange={(e) => updateDistributionAccount(index, "monthlyListeners", e.target.value)}
+                        id={`distribution-username-${index}`}
+                        value={account.username || ''}
+                        onChange={(e) => updateDistributionAccount(index, "username", e.target.value)}
+                        placeholder="artist_username"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`distribution-email-${index}`}>Email</Label>
+                      <Input
+                        id={`distribution-email-${index}`}
+                        type="email"
+                        value={account.email || ''}
+                        onChange={(e) => updateDistributionAccount(index, "email", e.target.value)}
+                        placeholder="contact@distro.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`distribution-url-${index}`}>URL</Label>
+                      <Input
+                        id={`distribution-url-${index}`}
+                        value={account.url || ''}
+                        onChange={(e) => updateDistributionAccount(index, "url", e.target.value)}
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`distribution-account-id-${index}`}>Account ID</Label>
+                      <Input
+                        id={`distribution-account-id-${index}`}
+                        value={account.account_id || ''}
+                        onChange={(e) => updateDistributionAccount(index, "account_id", e.target.value)}
+                        placeholder="Account ID"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`distribution-monthly-listeners-${index}`}>Monthly Listeners</Label>
+                      <Input
+                        id={`distribution-monthly-listeners-${index}`}
+                        value={account.monthly_listeners || ''}
+                        onChange={(e) => updateDistributionAccount(index, "monthly_listeners", e.target.value)}
                         placeholder="250K"
+                      />
+                    </div>
+                    <div className="space-y-2 col-span-full">
+                      <Label htmlFor={`distribution-notes-${index}`}>Notes</Label>
+                      <Textarea
+                        id={`distribution-notes-${index}`}
+                        value={account.notes || ''}
+                        onChange={(e) => updateDistributionAccount(index, "notes", e.target.value)}
+                        placeholder="Add any relevant notes..."
+                        rows={3}
                       />
                     </div>
                   </div>
