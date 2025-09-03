@@ -5,13 +5,14 @@ import { useSearchParams } from 'next/navigation'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { CheckCircle, XCircle, Loader2, Users, Music, Disc, Bug } from 'lucide-react'
+import { CheckCircle, XCircle, Loader2, Users, Music, Disc, Bug, Star, ChevronDown, ChevronUp } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import Image from 'next/image'
 import { Badge } from '@/components/ui/badge'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
+
 
 // --- Interfaces for the new data structure ---
 interface ArtistProfile {
@@ -44,7 +45,11 @@ interface AnalyticsData {
   albums: Album[];
 }
 
-const AnalyticsContent = () => {
+interface AnalyticsContentProps {
+  artistId?: string; // Make artistId optional
+}
+
+export const AnalyticsContent = ({ artistId }: AnalyticsContentProps) => {
   const searchParams = useSearchParams()
   const status = searchParams.get('status')
   const message = searchParams.get('message')
@@ -54,6 +59,8 @@ const AnalyticsContent = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [rawError, setRawError] = useState<any>(null)
+  const [showAllTracks, setShowAllTracks] = useState(false);
+
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -61,30 +68,65 @@ const AnalyticsContent = () => {
       setError(null)
       setRawError(null)
       try {
-        const { data, error: invokeError } = await supabase.functions.invoke('fetch-spotify-analytics')
-
-        if (invokeError) {
-          setRawError(invokeError)
-          throw new Error(invokeError.message)
+        let invokeData: any;
+        if (artistId) {
+          // If artistId is provided, fetch analytics for that specific artist
+          const { data, error: invokeError } = await supabase.functions.invoke('fetch-spotify-analytics', {
+            body: { artist_id: artistId },
+          });
+          invokeData = data;
+          if (invokeError) throw new Error(invokeError.message);
+        } else {
+          // Otherwise, fetch for the logged-in user (original behavior)
+          const { data, error: invokeError } = await supabase.functions.invoke('fetch-spotify-analytics');
+          invokeData = data;
+          if (invokeError) throw new Error(invokeError.message);
         }
-        
-        if (data.error) {
-          setRawError(data.error)
-          throw new Error(data.error)
+
+        if (invokeData.error) {
+          setRawError(invokeData.error)
+          throw new Error(invokeData.error)
         }
 
-        setAnalyticsData(data)
+        setAnalyticsData(invokeData)
       } catch (err: any) {
         setError(err.message || 'An unknown error occurred.')
+        setRawError(err) // Set rawError here
       } finally {
         setIsLoading(false)
       }
     }
 
     fetchAnalytics()
-  }, [supabase])
+  }, [supabase, artistId]) // Add artistId to dependency array
 
-  // ... renderStatusAlert function ...
+  const renderStatusAlert = () => {
+    if (status === 'success') {
+      return (
+        <Alert variant="default" className="mb-6 bg-green-100 dark:bg-green-900/20 border-green-200 dark:border-800">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <AlertTitle>Connection Successful!</AlertTitle>
+          <AlertDescription>
+            Your Spotify account has been connected successfully. Your analytics will start syncing soon.
+          </AlertDescription>
+        </Alert>
+      )
+    }
+
+    if (status === 'error') {
+      return (
+        <Alert variant="destructive" className="mb-6">
+          <XCircle className="h-4 w-4" />
+          <AlertTitle>Connection Failed</AlertTitle>
+          <AlertDescription>
+            {message || 'An unknown error occurred. Please try connecting your account again.'}
+          </AlertDescription>
+        </Alert>
+      )
+    }
+
+    return null
+  }
 
   if (isLoading) {
     return (
@@ -95,7 +137,6 @@ const AnalyticsContent = () => {
     )
   }
 
-  // Always render the debug section if there is an error
   if (error) {
     return (
         <div className="space-y-6">
@@ -117,73 +158,130 @@ const AnalyticsContent = () => {
   }
 
   const { artist, topTracks, albums } = analyticsData;
+  const visibleTracks = showAllTracks ? topTracks : topTracks.slice(0, 10);
+
 
   return (
     <div className="space-y-6">
-      {/* ... status alert ... */}
+      {/* Only render status alert if not embedded */}
+      {!artistId && renderStatusAlert()}
       
       <Card>
-        <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center gap-4 space-y-0">
           <Image 
             src={artist.imageUrl || '/placeholder.svg'} 
             alt={artist.name} 
-            width={80} 
-            height={80} 
-            className="rounded-full"
+            width={100} 
+            height={100} 
+            className="rounded-full border-4 border-background shadow-lg"
           />
-          <div>
-            <CardTitle className="text-2xl font-bold">{artist.name}</CardTitle>
-            <div className="flex items-center gap-4 text-muted-foreground mt-1">
+          <div className="flex-grow">
+            <CardTitle className="text-3xl font-bold tracking-tight">{artist.name}</CardTitle>
+            <div className="flex items-center gap-6 text-muted-foreground mt-2">
                 <div className="flex items-center gap-1.5">
-                    <Users className="h-4 w-4" />
-                    <span>{artist.followers.toLocaleString()} Followers</span>
+                    <Users className="h-5 w-5" />
+                    <span className="font-semibold">{artist.followers.toLocaleString()}</span>
+                    <span className="text-sm">Followers</span>
                 </div>
             </div>
-             <div className="flex flex-wrap gap-2 mt-2">
-              {artist.genres.map(genre => <Badge key={genre} variant="secondary" className="capitalize">{genre}</Badge>)}
+             <div className="flex flex-wrap gap-2 mt-3">
+              {artist.genres.map(genre => <Badge key={genre} variant="secondary" className="capitalize text-sm">{genre}</Badge>)}
             </div>
           </div>
         </CardHeader>
       </Card>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6">
         {(topTracks && topTracks.length > 0) && (
-            <Card className="lg:col-span-2">
-                <CardHeader><CardTitle className="flex items-center gap-2"><Music className="h-5 w-5"/> Top Tracks</CardTitle></CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader><TableRow><TableHead className="w-[20px]">#</TableHead><TableHead>Track</TableHead><TableHead>Album</TableHead></TableRow></TableHeader>
-                        <TableBody>
-                            {topTracks.map((track, index) => (
-                            <TableRow key={track.id}>
-                                <TableCell className="font-medium">{index + 1}</TableCell>
-                                <TableCell><a href={track.external_urls.spotify} target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline">{track.name}</a></TableCell>
-                                <TableCell className="text-muted-foreground">{track.album.name}</TableCell>
-                            </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-        )}
-
-        {(albums && albums.length > 0) && (
             <Card>
-                <CardHeader><CardTitle className="flex items-center gap-2"><Disc className="h-5 w-5"/> Latest Releases</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                    {albums.map(album => (
-                    <a key={album.id} href={album.external_urls.spotify} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-2 rounded-md hover:bg-muted/50 transition-colors">
-                        <Image src={album.images[0]?.url || '/placeholder.svg'} alt={album.name} width={48} height={48} className="rounded-md"/>
-                        <div>
-                        <p className="font-semibold leading-tight">{album.name}</p>
-                        <p className="text-sm text-muted-foreground capitalize">{album.album_type} &middot; {new Date(album.release_date).getFullYear()}</p>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Music className="h-5 w-5"/> Top Tracks
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-2">
+                        {visibleTracks.map((track, index) => (
+                           <a 
+                            key={track.id} 
+                            href={track.external_urls.spotify} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="flex items-center gap-4 p-2 rounded-lg hover:bg-muted/50 transition-colors group"
+                          >
+                            <div className="flex-shrink-0 w-12 h-12 text-muted-foreground font-bold flex items-center justify-center text-lg">
+                                {index + 1}
+                            </div>
+                            <Image 
+                                src={track.album.images[0]?.url || '/placeholder.svg'} 
+                                alt={track.album.name} 
+                                width={48} 
+                                height={48} 
+                                className="w-12 h-12 object-cover rounded-md"
+                            />
+                            <div className="flex-grow overflow-hidden">
+                                <p className="font-semibold truncate group-hover:underline">{track.name}</p>
+                                <p className="text-sm text-muted-foreground truncate">{track.album.name}</p>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground w-24 justify-end">
+                                <Star className="h-4 w-4 text-yellow-400"/>
+                                <span>{track.popularity}</span>
+                                <Progress value={track.popularity} className="w-12 h-1.5" />
+                            </div>
+                          </a>
+                        ))}
+                    </div>
+                    {topTracks.length > 10 && (
+                        <div className="text-center mt-4">
+                            <Button variant="ghost" onClick={() => setShowAllTracks(!showAllTracks)}>
+                                {showAllTracks ? (
+                                    <><ChevronUp className="h-4 w-4 mr-2"/> Show Less</>
+                                ) : (
+                                    <><ChevronDown className="h-4 w-4 mr-2"/> Show All {topTracks.length} Tracks</>
+                                )}
+                            </Button>
                         </div>
-                    </a>
-                    ))}
+                    )}
                 </CardContent>
             </Card>
         )}
       </div>
+
+        {(albums && albums.length > 0) && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Disc className="h-5 w-5" /> Latest Releases
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {albums.map(album => (
+                  <a 
+                    key={album.id} 
+                    href={album.external_urls.spotify} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="group"
+                  >
+                    <div className="aspect-square overflow-hidden rounded-lg">
+                      <Image 
+                        src={album.images[0]?.url || '/placeholder.svg'} 
+                        alt={album.name} 
+                        width={200} 
+                        height={200} 
+                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                      />
+                    </div>
+                    <p className="font-semibold text-sm mt-2 truncate group-hover:underline">{album.name}</p>
+                  </a>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
       <DebugSection error={rawError} data={analyticsData} />
     </div>
