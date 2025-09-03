@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import Papa from 'https://esm.sh/papaparse@5.3.2'
 
 // Log function for debugging
 const log = (message, data = null) => {
@@ -36,37 +37,21 @@ function determineReportType(headers) {
 
 serve(async (req) => {
   log("Function invoked.");
-  const { record } = await req.json();
-  log("Request payload:", { record });
+  const { record: storageRecord } = await req.json();
+  log("Request payload:", { storageRecord });
 
-  if (!record || !record.id) {
+  if (!storageRecord || !storageRecord.id) {
     log("Invalid payload received.");
     return new Response(JSON.stringify({ error: 'Invalid payload' }), { status: 400 });
   }
 
-  const filePath = record.name;
-  const userId = record.owner;
+  const filePath = storageRecord.name;
+  const userId = storageRecord.owner;
   log("Processing file:", { filePath, userId });
 
-  const { data: fileData, error: fileError } = await supabase.storage
-    .from('royalty-reports')
-    .download(filePath);
+  let reportId;
 
-  if (fileError) {
-    log("Error downloading file:", fileError);
-    return new Response(JSON.stringify({ error: 'Failed to download file' }), { status: 500 });
-  }
-  log("File downloaded successfully.");
-
-  const fileContent = await fileData.text();
-  const lines = fileContent.split('\n').filter(line => line.trim() !== '');
-  const headers = lines.shift()?.trim().split(/,|	| /) || [];
-  log("Parsed headers:", headers);
-
-  const reportType = determineReportType(headers);
-  log("Determined report type:", reportType);
-
-  if (reportType === 'royalty') {
+  try {
     const { data: artist, error: artistError } = await supabase
       .from('artists')
       .select('id')
@@ -74,76 +59,99 @@ serve(async (req) => {
       .single();
 
     if (artistError || !artist) {
-      log("Error fetching artist for user:", { userId, artistError });
-      return new Response(JSON.stringify({ error: 'Failed to find artist for user' }), { status: 500 });
+      throw new Error(`Failed to find artist for user: ${userId}`);
     }
     log("Artist found:", artist);
 
-    const royaltyData = lines.map(line => {
-      const values = line.split(/, |\t| /);
-      const report = {
+    // Create royalty report record
+    const { data: report, error: reportError } = await supabase
+      .from('royalty_reports')
+      .insert({
         artist_id: artist.id,
-        report_id: record.id,
-        song_title: values[headers.indexOf('song_title')],
-        platform: values[headers.indexOf('platform')],
-        country: values[headers.indexOf('country')],
-        revenue: parseFloat(values[headers.indexOf('revenue')])
-      };
-      return report;
-    });
-    log("Parsed royalty data:", royaltyData);
-
-    const { error: royaltyError } = await supabase.from('royalties').insert(royaltyData);
-
-    if (royaltyError) {
-      log("Error inserting royalty data:", royaltyError);
-      return new Response(JSON.stringify({ error: 'Failed to insert royalty data' }), { status: 500 });
-    }
-    log("Royalty data inserted successfully.");
-
-  } else if (reportType === 'audience') {
-    log("Executing audience report logic.");
-    const { data: artist, error: artistError } = await supabase
-      .from('artists')
+        file_name: filePath,
+        user_id: userId,
+        status: 'processing'
+      })
       .select('id')
-      .eq('user_id', userId)
       .single();
 
-    if (artistError || !artist) {
-      log("Error fetching artist for user:", { userId, artistError });
-      return new Response(JSON.stringify({ error: 'Failed to find artist for user' }), { status: 500 });
+    if (reportError || !report) {
+      throw new Error(`Failed to create royalty report: ${reportError?.message}`);
     }
-    log("Artist found:", artist);
+    reportId = report.id;
+    log("Royalty report created:", { reportId });
 
-    const audienceData = lines.map(line => {
-      const values = line.split(/, |\t| /);
-      const report = {
-        artist_id: artist.id,
-      };
-      headers.forEach((header, index) => {
-        const key = header.trim().toLowerCase().replace(/\s+/g, '_');
-        if (key === 'date') {
-          report['report_date'] = values[index];
-        } else {
-          report[key] = values[index] ? parseInt(values[index], 10) || 0 : 0;
-        }
-      });
-      return report;
+
+    const { data: fileData, error: fileError } = await supabase.storage
+      .from('royalty-reports')
+      .download(filePath);
+
+    if (fileError) {
+      throw new Error(`Failed to download file: ${fileError.message}`);
+    }
+    log("File downloaded successfully.");
+
+    const fileContent = await fileData.text();
+    
+    const { data: parsedData, errors } = Papa.parse(fileContent, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: header => header.toLowerCase().trim().replace(/\s+/g, '_')
     });
-    log("Parsed audience data:", audienceData);
 
-    const { error: audienceError } = await supabase.from('audience_reports').insert(audienceData);
-
-    if (audienceError) {
-      log("Error inserting audience data:", audienceError);
-      return new Response(JSON.stringify({ error: 'Failed to insert audience data' }), { status: 500 });
+    if (errors.length > 0) {
+      log("Parsing errors:", errors);
+      throw new Error('Failed to parse CSV file');
     }
-    log("Audience data inserted successfully.");
 
-  } else {
-    log("Unknown report format.");
-    return new Response(JSON.stringify({ error: 'Unknown or invalid report format' }), { status: 400 });
+    const headers = Object.keys(parsedData[0] || {});
+    const reportType = determineReportType(headers);
+    log("Determined report type:", reportType);
+
+    if (reportType === 'royalty') {
+      const royaltyData = parsedData.map(row => ({
+        artist_id: artist.id,
+        report_id: reportId,
+        song_title: row.song_title,
+        platform: row.platform,
+        country: row.country,
+        revenue: parseFloat(row.revenue)
+      }));
+      log("Parsed royalty data:", royaltyData);
+
+      const { error: royaltyError } = await supabase.from('royalties').insert(royaltyData);
+      if (royaltyError) throw new Error(`Failed to insert royalty data: ${royaltyError.message}`);
+      log("Royalty data inserted successfully.");
+
+    } else if (reportType === 'audience') {
+      const audienceData = parsedData.map(row => ({
+        artist_id: artist.id,
+        report_id: reportId, // Assuming audience reports also have a report_id
+        report_date: row.date,
+        listeners: parseInt(row.listeners, 10) || 0,
+        streams: parseInt(row.streams, 10) || 0,
+        followers: parseInt(row.followers, 10) || 0,
+      }));
+      log("Parsed audience data:", audienceData);
+
+      const { error: audienceError } = await supabase.from('audience_reports').insert(audienceData);
+      if (audienceError) throw new Error(`Failed to insert audience data: ${audienceError.message}`);
+      log("Audience data inserted successfully.");
+
+    } else {
+      throw new Error('Unknown or invalid report format');
+    }
+
+    await supabase.from('royalty_reports').update({ status: 'processed' }).eq('id', reportId);
+    log("Report status updated to processed.");
+
+    return new Response(JSON.stringify({ success: true }), { status: 200 });
+
+  } catch (error) {
+    log("Error processing report:", { message: error.message });
+    if (reportId) {
+      await supabase.from('royalty_reports').update({ status: 'failed', error_message: error.message }).eq('id', reportId);
+    }
+    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
-
-  return new Response(JSON.stringify({ success: true }), { status: 200 });
 });

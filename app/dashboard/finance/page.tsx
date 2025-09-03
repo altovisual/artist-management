@@ -286,24 +286,7 @@ export default function FinancePage() {
                   <p className="text-xs text-muted-foreground">Income - Expenses</p>
                 </CardContent>
               </Card>
-              <Card className="md:col-span-3 lg:col-span-1">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Royalty Management</CardTitle>
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <CardDescription>
-                    Import and analyze royalty reports from your distributors.
-                  </CardDescription>
-                </CardContent>
-                <CardFooter>
-                  <Link href="/dashboard/finance/royalties" className="w-full">
-                    <Button className="w-full">
-                      Go to Royalties
-                    </Button>
-                  </Link>
-                </CardFooter>
-              </Card>
+              
             </div>
 
             <FinanceChart data={chartData} view={chartView} setView={setChartView} />
