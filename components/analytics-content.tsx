@@ -4,13 +4,15 @@ import React, { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { CheckCircle, XCircle, Loader2, Users, Music, Disc, Bug, Star, ChevronDown, ChevronUp } from 'lucide-react'
+import { CheckCircle, XCircle, Loader2, Users, Music, Disc, Bug, Star, ChevronDown, ChevronUp, SproutIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import Image from 'next/image'
 import { Badge } from '@/components/ui/badge'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
+import { SpotifyConnectModal } from './spotify-connect-modal'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 
 // --- Interfaces for the new data structure ---
@@ -137,6 +139,24 @@ export const AnalyticsContent = ({ artistId }: AnalyticsContentProps) => {
   }
 
   if (error) {
+    if (error.includes("Edge Function returned a non-2xx status code")) {
+      return (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <SproutIcon className="h-5 w-5 text-green-500"/>
+              Connect your Spotify Account
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              To see your Spotify analytics, you need to connect your account. This will allow us to fetch your data and display it here.
+            </p>
+            <SpotifyConnectModal />
+          </CardContent>
+        </Card>
+      )
+    }
     return (
         <div className="space-y-6">
             <div className="text-center py-16">
@@ -190,97 +210,105 @@ export const AnalyticsContent = ({ artistId }: AnalyticsContentProps) => {
         </CardHeader>
       </Card>
 
-      <div className="grid gap-6">
-        {(topTracks && topTracks.length > 0) && (
-            <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:items-start">
+        <div className="lg:col-span-2">
+            {(topTracks && topTracks.length > 0) && (
+                <Card className="h-full">
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Music className="h-5 w-5"/> Top Tracks
+                        </div>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ScrollArea className="h-[400px]">
+                            <div className="space-y-2 pr-4">
+                                {visibleTracks.map((track, index) => (
+                                   <a 
+                                    key={track.id} 
+                                    href={track.external_urls.spotify} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors group"
+                                  >
+                                    <div className="flex-shrink-0 w-10 h-10 text-muted-foreground font-bold flex items-center justify-center text-base sm:w-12 sm:h-12 sm:text-lg">
+                                        {index + 1}
+                                    </div>
+                                    <Image 
+                                        src={track.album.images[0]?.url || '/placeholder.svg'} 
+                                        alt={track.album.name} 
+                                        width={48} 
+                                        height={48} 
+                                        className="w-12 h-12 object-cover rounded-md"
+                                    />
+                                    <div className="flex-grow overflow-hidden">
+                                        <p className="font-semibold whitespace-nowrap truncate group-hover:underline text-sm sm:text-base">{track.name}</p>
+                                        <p className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap truncate">{track.album.name}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground w-20 sm:w-24 justify-end">
+                                        <Star className="h-4 w-4 text-yellow-400"/>
+                                        <span>{track.popularity}</span>
+                                        <Progress value={track.popularity} className="w-8 sm:w-12 h-1.5" />
+                                    </div>
+                                  </a>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                        {topTracks.length > 10 && (
+                            <div className="text-center mt-4">
+                                <Button variant="ghost" onClick={() => setShowAllTracks(!showAllTracks)}>
+                                    {showAllTracks ? (
+                                        <><ChevronUp className="h-4 w-4 mr-2"/> Show Less</>
+                                    ) : (
+                                        <><ChevronDown className="h-4 w-4 mr-2"/> Show All {topTracks.length} Tracks</>
+                                    )}
+                                </Button>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
+        </div>
+
+        <div className="lg:col-span-1">
+            {(albums && albums.length > 0) && (
+              <Card className="h-full">
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Music className="h-5 w-5"/> Top Tracks
-                    </div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Disc className="h-5 w-5" /> Latest Releases
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-2">
-                        {visibleTracks.map((track, index) => (
-                           <a 
-                            key={track.id} 
-                            href={track.external_urls.spotify} 
+                  <ScrollArea className="h-[400px]">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-2 gap-4 pr-4">
+                        {albums.map(album => (
+                          <a 
+                            key={album.id} 
+                            href={album.external_urls.spotify} 
                             target="_blank" 
                             rel="noopener noreferrer" 
-                            className="flex items-center gap-4 p-2 rounded-lg hover:bg-muted/50 transition-colors group"
+                            className="group"
                           >
-                            <div className="flex-shrink-0 w-12 h-12 text-muted-foreground font-bold flex items-center justify-center text-lg">
-                                {index + 1}
+                            <div className="aspect-square overflow-hidden rounded-lg">
+                              <Image 
+                                src={album.images[0]?.url || '/placeholder.svg'} 
+                                alt={album.name} 
+                                width={200} 
+                                height={200} 
+                                className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                              />
                             </div>
-                            <Image 
-                                src={track.album.images[0]?.url || '/placeholder.svg'} 
-                                alt={track.album.name} 
-                                width={48} 
-                                height={48} 
-                                className="w-12 h-12 object-cover rounded-md"
-                            />
-                            <div className="flex-grow overflow-hidden">
-                                <p className="font-semibold truncate group-hover:underline">{track.name}</p>
-                                <p className="text-sm text-muted-foreground truncate">{track.album.name}</p>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground w-24 justify-end">
-                                <Star className="h-4 w-4 text-yellow-400"/>
-                                <span>{track.popularity}</span>
-                                <Progress value={track.popularity} className="w-12 h-1.5" />
-                            </div>
+                            <p className="font-semibold text-sm mt-2 truncate group-hover:underline">{album.name}</p>
                           </a>
                         ))}
-                    </div>
-                    {topTracks.length > 10 && (
-                        <div className="text-center mt-4">
-                            <Button variant="ghost" onClick={() => setShowAllTracks(!showAllTracks)}>
-                                {showAllTracks ? (
-                                    <><ChevronUp className="h-4 w-4 mr-2"/> Show Less</>
-                                ) : (
-                                    <><ChevronDown className="h-4 w-4 mr-2"/> Show All {topTracks.length} Tracks</>
-                                )}
-                            </Button>
-                        </div>
-                    )}
+                      </div>
+                  </ScrollArea>
                 </CardContent>
-            </Card>
-        )}
+              </Card>
+            )}
+        </div>
       </div>
-
-        {(albums && albums.length > 0) && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Disc className="h-5 w-5" /> Latest Releases
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                {albums.map(album => (
-                  <a 
-                    key={album.id} 
-                    href={album.external_urls.spotify} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="group"
-                  >
-                    <div className="aspect-square overflow-hidden rounded-lg">
-                      <Image 
-                        src={album.images[0]?.url || '/placeholder.svg'} 
-                        alt={album.name} 
-                        width={200} 
-                        height={200} 
-                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                      />
-                    </div>
-                    <p className="font-semibold text-sm mt-2 truncate group-hover:underline">{album.name}</p>
-                  </a>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
       <DebugSection error={rawError} data={analyticsData} />
     </div>
