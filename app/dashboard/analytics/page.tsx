@@ -49,7 +49,7 @@ interface AnalyticsContentProps {
   artistId?: string; // Make artistId optional
 }
 
-export const AnalyticsContent = ({ artistId }: AnalyticsContentProps) => {
+const AnalyticsContent = ({ artistId }: AnalyticsContentProps) => {
   const searchParams = useSearchParams()
   const status = searchParams.get('status')
   const message = searchParams.get('message')
