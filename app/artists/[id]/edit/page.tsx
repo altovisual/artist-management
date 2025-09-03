@@ -282,7 +282,11 @@ export default function EditArtistPage() {
       router.push(`/artists/${artistId}`)
     } catch (error: any) {
       console.error("Error updating artist:", error)
-      toast({ title: "Error updating artist", description: error.message || "An unknown error occurred", variant: "destructive" })
+      if (error.code === '23505') {
+        toast({ title: "Error", description: "Spotify Artist ID is already in use by another artist.", variant: "destructive" });
+      } else {
+        toast({ title: "Error updating artist", description: error.message || "An unknown error occurred", variant: "destructive" });
+      }
     } finally {
       setIsLoading(false)
     }

@@ -37,6 +37,7 @@ import {
   Users,
   FolderKanban,
   LayoutGrid,
+  BarChart // Added BarChart import
 } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
@@ -54,6 +55,7 @@ import { useIsMobile } from "@/components/ui/use-mobile"
 import { useToast } from "@/components/ui/use-toast"
 import ArtistDetailPageSkeleton from "./artist-detail-skeleton"
 import { AnimatedTitle } from "@/components/animated-title"
+import { AnalyticsContent } from '@/components/analytics-content' // Import AnalyticsContent
 
 // --- Helper Functions ---
 const getExt = (url?: string) => {
@@ -400,6 +402,12 @@ export default function ArtistDetailPage() {
             <AssetKitTab assets={assets} onDelete={handleDeleteAsset} />
           </div>
         );
+      case 'analytics': // New case for analytics tab
+        return (
+          <div className="space-y-6">
+            <AnalyticsContent artistId={artist.id} />
+          </div>
+        );
       default:
         return null;
     }
@@ -462,18 +470,20 @@ export default function ArtistDetailPage() {
       </div>
 
       <Tabs defaultValue="overview" className="mt-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview"><LayoutGrid className="h-4 w-4" /></TabsTrigger>
           <TabsTrigger value="social"><Users className="h-4 w-4" /></TabsTrigger>
           <TabsTrigger value="distribution"><FolderKanban className="h-4 w-4" /></TabsTrigger>
           <TabsTrigger value="releases"><Music className="h-4 w-4" /></TabsTrigger>
           <TabsTrigger value="assets"><ImageIcon className="h-4 w-4" /></TabsTrigger>
+          <TabsTrigger value="analytics"><BarChart className="h-4 w-4" /></TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="mt-4">{renderTabContent('overview')}</TabsContent>
         <TabsContent value="social" className="mt-4">{renderTabContent('social')}</TabsContent>
         <TabsContent value="distribution" className="mt-4">{renderTabContent('distribution')}</TabsContent>
         <TabsContent value="releases" className="mt-4">{renderTabContent('releases')}</TabsContent>
         <TabsContent value="assets" className="mt-4">{renderTabContent('assets')}</TabsContent>
+        <TabsContent value="analytics" className="mt-4">{renderTabContent('analytics')}</TabsContent>
       </Tabs>
     </div>
   );
@@ -526,12 +536,14 @@ export default function ArtistDetailPage() {
           <TabsTrigger value="distribution">Distribution</TabsTrigger>
           <TabsTrigger value="releases">Releases</TabsTrigger>
           <TabsTrigger value="assets">Asset Kit</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
         <TabsContent value="overview">{renderTabContent('overview')}</TabsContent>
         <TabsContent value="social">{renderTabContent('social')}</TabsContent>
         <TabsContent value="distribution">{renderTabContent('distribution')}</TabsContent>
         <TabsContent value="releases">{renderTabContent('releases')}</TabsContent>
         <TabsContent value="assets">{renderTabContent('assets')}</TabsContent>
+        <TabsContent value="analytics">{renderTabContent('analytics')}</TabsContent>
       </Tabs>
     </div>
   );

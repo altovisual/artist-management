@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
@@ -55,17 +56,43 @@ serve(async (req) => {
     const { data: { user } } = await userSupabaseClient.auth.getUser()
     if (!user) throw new Error('User not found')
 
+    // Get artist_id from request body if provided, otherwise use current user's artist_id
+    let targetArtistId: string;
+    let body;
+    try {
+        body = await req.json();
+    } catch (e) {
+        // If body is not JSON, it's likely a GET request from the original analytics page
+        // In this case, body will be undefined, and we proceed to use the current user's artist_id
+    }
+    const { artist_id: bodyArtistId } = body || {};
+
+    if (bodyArtistId) {
+        targetArtistId = bodyArtistId;
+    } else {
+        // Fetch artist_id for the current user
+        const { data: currentUserArtist, error: currentUserArtistError } = await supabaseAdmin
+            .from('artists')
+            .select('id')
+            .eq('user_id', user.id)
+            .single();
+        if (currentUserArtistError || !currentUserArtist) {
+            throw new Error('Could not find artist profile for the current user.');
+        }
+        targetArtistId = currentUserArtist.id;
+    }
+
     const { data: artistProfile, error: profileError } = await supabaseAdmin
       .from('artists')
       .select('spotify_artist_id')
-      .eq('user_id', user.id)
+      .eq('id', targetArtistId)
       .single();
 
-    if (profileError) throw new Error('Could not fetch your artist profile.');
+    if (profileError) throw new Error('Could not fetch artist profile for the given ID.');
     if (!artistProfile.spotify_artist_id) {
-      throw new Error('Your Spotify Artist ID is not set. Please add it in your profile page.');
+      throw new Error('Spotify Artist ID is not set for this artist. Please add it in their profile page.');
     }
-    const artistId = artistProfile.spotify_artist_id;
+    const spotifyArtistId = artistProfile.spotify_artist_id;
 
     const { data: account, error: accountError } = await supabaseAdmin
       .from('distribution_accounts')
@@ -95,11 +122,10 @@ serve(async (req) => {
     const userData = await fetchFromSpotify('me', access_token!)
     const market = userData.country || 'US';
 
-    // Fetch artist details, top tracks, and ALL releases in parallel.
     const [artistDetails, topTracksData, albumsData] = await Promise.all([
-      fetchFromSpotify(`artists/${artistId}`, access_token!),
-      fetchFromSpotify(`artists/${artistId}/top-tracks?market=${market}`, access_token!),
-      fetchFromSpotify(`artists/${artistId}/albums?include_groups=album,single,appears_on,compilation&limit=50`, access_token!)
+      fetchFromSpotify(`artists/${spotifyArtistId}`, access_token!),
+      fetchFromSpotify(`artists/${spotifyArtistId}/top-tracks?market=${market}`, access_token!),
+      fetchFromSpotify(`artists/${spotifyArtistId}/albums?include_groups=album,single,appears_on,compilation&limit=50`, access_token!)
     ]);
 
     const responsePayload = {
@@ -119,7 +145,9 @@ serve(async (req) => {
     })
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error("Edge Function Error:", error); // Log the full error
+    const errorMessage = (error instanceof Error) ? error.message : String(error);
+    return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     })

@@ -121,8 +121,12 @@ export default function MyProfilePage() {
       router.push('/dashboard');
 
     } catch (error: any) {
-      console.error("Error updating profile:", error)
-      toast({ title: "Error updating profile", description: error.message || "An unknown error occurred", variant: "destructive" })
+      console.error("Error updating profile:", JSON.stringify(error, null, 2))
+      if (error.code === '23505') {
+        toast({ title: "Error", description: "Spotify Artist ID is already in use by another artist.", variant: "destructive" });
+      } else {
+        toast({ title: "Error updating profile", description: error.message || "An unknown error occurred", variant: "destructive" });
+      }
     } finally {
       setIsLoading(false)
     }
