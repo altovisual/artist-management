@@ -40,6 +40,15 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
   const { theme } = useTheme();
 
+  // Refs for desktop navigation links
+  const navRefs = React.useRef<(HTMLAnchorElement | null)[]>([]);
+  const [underlineStyle, setUnderlineStyle] = React.useState({ left: 0, width: 0 });
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   React.useEffect(() => {
     const fetchUser = async () => {
       const { data, error } = await supabase.auth.getUser();
@@ -54,6 +63,24 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     };
     fetchUser();
   }, [supabase]);
+
+  // Effect to update underline position and width
+  React.useEffect(() => {
+    if (isMounted) {
+      const activeLink = navRefs.current.find(ref => ref?.href.endsWith(pathname));
+      if (activeLink) {
+        setUnderlineStyle({
+          left: activeLink.offsetLeft,
+          width: activeLink.offsetWidth,
+        });
+      } else {
+        const firstLink = navRefs.current[0];
+        if (firstLink) {
+          setUnderlineStyle({ left: firstLink.offsetLeft, width: 0 });
+        }
+      }
+    }
+  }, [pathname, isMounted]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -111,17 +138,23 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             </Link>
             
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-4 text-sm font-medium">
-              {navLinks.map((link) => (
+            <nav className="hidden md:flex items-center gap-4 text-sm font-medium relative">
+              {navLinks.map((link, index) => (
                 <Link
                   key={link.href}
                   href={link.href}
+                  ref={el => navRefs.current[index] = el} // Assign ref
                   className={`flex items-center gap-2 transition-colors hover:text-foreground ${pathname === link.href ? 'text-foreground' : 'text-muted-foreground'}`}
                 >
                   <link.icon className="h-4 w-4" />
                   {link.label}
                 </Link>
               ))}
+              {/* Underline element - now inside nav */}
+              <span
+                className="absolute bottom-[-8px] h-[2px] bg-primary/40 transition-all duration-300 ease-out"
+                style={underlineStyle}
+              ></span>
             </nav>
           </div>
 
