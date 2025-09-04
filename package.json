@@ -74,8 +74,8 @@
   },
   "devDependencies": {
     "@svgr/webpack": "^8.1.0",
-    "@tailwindcss/postcss": "^4.1.9",
-    "@types/moment": "^2.13.0",
+    "@tailwindcss/postcss": "^4.1.12",
+    "@types/moment": "2.15.4",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-big-calendar": "^1.16.2",

@@ -199,10 +199,10 @@ importers:
         specifier: ^8.1.0
         version: 8.1.0(typescript@5.9.2)
       '@tailwindcss/postcss':
-        specifier: ^4.1.9
+        specifier: ^4.1.12
         version: 4.1.12
       '@types/moment':
-        specifier: ^2.13.0
+        specifier: 2.15.4
         version: 2.13.0
       '@types/node':
         specifier: ^22
