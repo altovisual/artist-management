@@ -15,6 +15,21 @@ import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 import { AnimatedTitle } from '@/components/animated-title';
 
+// Helper function to extract Spotify Artist ID from URL
+const extractSpotifyArtistId = (url: string): string | null => {
+  try {
+    const urlObj = new URL(url);
+    const pathSegments = urlObj.pathname.split('/');
+    const artistIndex = pathSegments.indexOf('artist');
+    if (artistIndex > -1 && pathSegments.length > artistIndex + 1) {
+      return pathSegments[artistIndex + 1];
+    }
+  } catch (error) {
+    console.error("Invalid Spotify URL:", error);
+  }
+  return null;
+};
+
 export default function ArtistOnboardingPage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -27,6 +42,7 @@ export default function ArtistOnboardingPage() {
   const [location, setLocation] = useState("")
   const [bio, setBio] = useState("")
   const [profileImage, setProfileImage] = useState<File | null>(null)
+  const [spotifyUrl, setSpotifyUrl] = useState("")
 
   // State to hold the authenticated user's ID
   const [userId, setUserId] = useState<string | null>(null);
@@ -79,6 +95,8 @@ export default function ArtistOnboardingPage() {
       }
 
       // Insert artist with user_id
+      const spotifyArtistId = spotifyUrl ? extractSpotifyArtistId(spotifyUrl) : null;
+
       const { data: artistData, error: artistError } = await supabase
         .from("artists")
         .insert({
@@ -90,11 +108,27 @@ export default function ArtistOnboardingPage() {
           profile_image: imageUrl,
           total_streams: 0, // Default values
           monthly_listeners: 0, // Default values
+          spotify_artist_id: spotifyArtistId, // Add Spotify Artist ID
         })
         .select()
         .single()
 
       if (artistError) throw artistError
+
+      // If Spotify URL is provided, save it to social_accounts
+      if (spotifyUrl && artistData) {
+        const { error: socialError } = await supabase
+          .from("social_accounts")
+          .insert({
+            artist_id: artistData.id,
+            platform: "spotify",
+            url: spotifyUrl,
+          });
+        if (socialError) {
+          console.error("Error saving Spotify social account:", socialError);
+          // Decide whether to throw this error or just log it. For now, log.
+        }
+      }
 
       toast({ title: "Success!", description: "Artist profile created successfully." })
       router.push("/artists/my-profile") // Redirect to the new profile page
@@ -169,6 +203,15 @@ export default function ArtistOnboardingPage() {
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     placeholder="City, Country"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="spotify-url">Spotify Profile URL</Label>
+                  <Input
+                    id="spotify-url"
+                    value={spotifyUrl}
+                    onChange={(e) => setSpotifyUrl(e.target.value)}
+                    placeholder="e.g., https://open.spotify.com/artist/..."
                   />
                 </div>
                 <div className="space-y-2">
