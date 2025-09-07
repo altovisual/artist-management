@@ -22,6 +22,8 @@ export default function ArtistSignUpPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [artistName, setArtistName] = useState('')
   const [genre, setGenre] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
@@ -57,6 +59,8 @@ export default function ArtistSignUpPage() {
           name: artistName,
           genre: genre,
           email: email, // Assuming email is also stored in artist profile
+          first_name: firstName,
+          last_name: lastName,
         })
 
         if (artistError) {
@@ -120,6 +124,30 @@ export default function ArtistSignUpPage() {
                 required
                 value={artistName}
                 onChange={(e) => setArtistName(e.target.value)}
+                className="w-full p-3 border border-zinc-300 rounded-lg text-base focus:ring-2 focus:ring-[#e1348f] focus:border-transparent"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="firstName" className="text-left text-zinc-800 font-semibold text-base">First Name</Label>
+              <Input
+                id="firstName"
+                type="text"
+                placeholder="Your First Name"
+                required
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="w-full p-3 border border-zinc-300 rounded-lg text-base focus:ring-2 focus:ring-[#e1348f] focus:border-transparent"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="lastName" className="text-left text-zinc-800 font-semibold text-base">Last Name</Label>
+              <Input
+                id="lastName"
+                type="text"
+                placeholder="Your Last Name"
+                required
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
                 className="w-full p-3 border border-zinc-300 rounded-lg text-base focus:ring-2 focus:ring-[#e1348f] focus:border-transparent"
               />
             </div>

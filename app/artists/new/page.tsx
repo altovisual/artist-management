@@ -49,6 +49,8 @@ export default function NewArtistPage() {
   const [genre, setGenre] = useState("")
   const [location, setLocation] = useState("")
   const [bio, setBio] = useState("")
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
   const [profileImage, setProfileImage] = useState<File | null>(null)
 
   // Social accounts
@@ -129,6 +131,8 @@ export default function NewArtistPage() {
           profile_image: imageUrl,
           total_streams: 0,
           monthly_listeners: 0,
+          first_name: firstName,
+          last_name: lastName,
         })
         .select()
         .single()
@@ -239,6 +243,24 @@ export default function NewArtistPage() {
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Enter artist name"
                     required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="Artist's first name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Artist's last name"
                   />
                 </div>
                 <div className="space-y-2">

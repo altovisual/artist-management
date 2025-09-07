@@ -47,6 +47,8 @@ export default function MyProfilePage() {
   const [genre, setGenre] = useState("")
   const [location, setLocation] = useState("")
   const [bio, setBio] = useState("")
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
   const [spotifyInput, setSpotifyInput] = useState("")
   const [newProfileImage, setNewProfileImage] = useState<File | null>(null)
 
@@ -76,6 +78,8 @@ export default function MyProfilePage() {
         setGenre(artistData.genre || "")
         setLocation(artistData.country || "")
         setBio(artistData.bio || "")
+        setFirstName(artistData.first_name || "")
+        setLastName(artistData.last_name || "")
         setSpotifyInput(artistData.spotify_artist_id || "")
 
       } catch (error) {
@@ -112,7 +116,7 @@ export default function MyProfilePage() {
         imageUrl = urlData.publicUrl
       }
 
-      const updateData: any = { name, genre, country: location, bio, profile_image: imageUrl, spotify_artist_id: finalSpotifyId }
+      const updateData: any = { name, genre, country: location, bio, profile_image: imageUrl, spotify_artist_id: finalSpotifyId, first_name: firstName, last_name: lastName }
 
       const { error: artistError } = await supabase.from("artists").update(updateData).eq("id", artist.id)
       if (artistError) throw artistError
@@ -147,6 +151,14 @@ export default function MyProfilePage() {
                 <div className="space-y-2">
                   <Label htmlFor="name">Artist Name *</Label>
                   <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Your first name" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Your last name" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="genre">Genre *</Label>

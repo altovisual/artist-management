@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,73 +21,79 @@ import { EditArtistSkeleton } from "./edit-artist-skeleton"
 
 // Helper function to extract Spotify ID from URL
 const extractSpotifyId = (urlOrId: string): string => {
-  if (!urlOrId) return '';
+  if (!urlOrId) return ''
   try {
     if (urlOrId.includes('spotify.com')) {
-      const url = new URL(urlOrId);
-      const pathParts = url.pathname.split('/');
-      const artistId = pathParts.find(part => part.length === 22); // Spotify IDs are 22 chars
-      return artistId || '';
+      const url = new URL(urlOrId)
+      const pathParts = url.pathname.split('/')
+      const artistId = pathParts.find(part => part.length === 22) // Spotify IDs are 22 chars
+      return artistId || ''
     }
     if (urlOrId.startsWith('spotify:artist:')) {
-        return urlOrId.split(':')[2];
+      return urlOrId.split(':')[2]
     }
-    return urlOrId;
+    return urlOrId
   } catch (error) {
-    console.error("Invalid Spotify URL, returning original value", error);
-    return urlOrId;
+    console.error("Invalid Spotify URL, returning original value", error)
+    return urlOrId
   }
-};
+}
 
 interface SocialAccount {
-  id: string | null;
-  platform: string;
-  username: string;
-  handle: string;
-  url: string;
-  followers: string;
-  email?: string;
-  password?: string;
-  newPassword?: string;
+  id: string | null
+  platform: string
+  username: string
+  handle: string
+  url: string
+  followers: string
+  email?: string
+  password?: string
+  newPassword?: string
 }
 
 interface DistributionAccount {
-  id: string | null;
-  distributor: string;
-  service: string;
-  monthly_listeners: string;
-  username: string;
-  email: string;
-  notes: string;
-  url: string;
-  account_id: string;
-  password?: string;
-  newPassword?: string;
+  id: string | null
+  distributor: string
+  service: string
+  monthly_listeners: string
+  username: string
+  email: string
+  notes: string
+  url: string
+  account_id: string
+  password?: string
+  newPassword?: string
 }
 
 export default function EditArtistPage() {
-  const params = useParams()
   const router = useRouter()
+  const params = useParams<{ id: string }>()
   const { toast } = useToast()
+  const supabase = createClient()
+
+  // Loading states
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingData, setIsLoadingData] = useState(true)
+
+  // Artist data state
   const [artist, setArtist] = useState<any>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const supabase = createClient()
 
   // Form state
   const [name, setName] = useState("")
   const [genre, setGenre] = useState("")
   const [location, setLocation] = useState("")
   const [bio, setBio] = useState("")
-  const [spotifyInput, setSpotifyInput] = useState("") // New state for input
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
+  const [spotifyInput, setSpotifyInput] = useState("")
   const [newProfileImage, setNewProfileImage] = useState<File | null>(null)
   const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([])
   const [distributionAccounts, setDistributionAccounts] = useState<DistributionAccount[]>([])
-  
+
+  // State to track original IDs for deletion
   const [initialSocialAccountIds, setInitialSocialAccountIds] = useState<string[]>([]);
   const [initialDistributionAccountIds, setInitialDistributionAccountIds] = useState<string[]>([]);
-
 
   const addSocialAccount = () => {
     setSocialAccounts([...socialAccounts, { id: null, platform: "", username: "", handle: "", url: "", followers: "", email: "" }]);
@@ -120,18 +126,21 @@ export default function EditArtistPage() {
   useEffect(() => {
     const fetchArtistData = async () => {
       const artistId = params.id as string
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setCurrentUserId(user.id);
+      if (!artistId) {
+        setIsLoadingData(false)
+        return
       }
 
+      setIsLoadingData(true)
       try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          setCurrentUserId(user.id)
+        }
+
         const { data: artistData, error: artistError } = await supabase
           .from("artists")
-          .select(`*,
-            social_accounts (*),
-            distribution_accounts (*)
-          `)
+          .select(`*, social_accounts (*), distribution_accounts (*)`)
           .eq("id", artistId)
           .single()
 
@@ -146,8 +155,10 @@ export default function EditArtistPage() {
         setGenre(artistData.genre || "")
         setLocation(artistData.country || "")
         setBio(artistData.bio || "")
-        setSpotifyInput(artistData.spotify_artist_id || "") // Set state
-        
+        setFirstName(artistData.first_name || "")
+        setLastName(artistData.last_name || "")
+        setSpotifyInput(artistData.spotify_artist_id || "")
+
         const loadedSocialAccounts = artistData.social_accounts || [];
         setSocialAccounts(loadedSocialAccounts);
         setInitialSocialAccountIds(loadedSocialAccounts.map((a: any) => a.id).filter(Boolean));
@@ -171,11 +182,11 @@ export default function EditArtistPage() {
     e.preventDefault()
     setIsLoading(true)
 
-    const finalSpotifyId = extractSpotifyId(spotifyInput);
+    const finalSpotifyId = extractSpotifyId(spotifyInput)
+    const artistId = params.id as string
 
     try {
-      const artistId = params.id as string
-      let imageUrl: string | undefined = artist.profile_image;
+      let imageUrl: string | undefined = artist.profile_image
 
       if (newProfileImage) {
         const fileName = `${Date.now()}_${newProfileImage.name}`
@@ -185,25 +196,25 @@ export default function EditArtistPage() {
         imageUrl = urlData.publicUrl
       }
 
-      const updateData: any = { name, genre, country: location, bio, profile_image: imageUrl, spotify_artist_id: finalSpotifyId }
+      const updateData: any = { name, genre, country: location, bio, profile_image: imageUrl, spotify_artist_id: finalSpotifyId, first_name: firstName, last_name: lastName }
 
-      const { error: artistError } = await supabase.from("artists").update(updateData).eq("id", artistId);
-      if (artistError) throw new Error(`Error updating artist details: ${artistError.message}`);
+      const { error: artistError } = await supabase.from("artists").update(updateData).eq("id", artistId)
+      if (artistError) throw new Error(`Error updating artist details: ${artistError.message}`)
 
       // Handle social account deletions
-      const finalSocialAccountIds = socialAccounts.map(a => a.id).filter(Boolean);
-      const socialAccountIdsToDelete = initialSocialAccountIds.filter(id => !finalSocialAccountIds.includes(id));
+      const finalSocialAccountIds = socialAccounts.map(a => a.id).filter(Boolean)
+      const socialAccountIdsToDelete = initialSocialAccountIds.filter(id => !finalSocialAccountIds.includes(id))
       if (socialAccountIdsToDelete.length > 0) {
-        const { error: deleteError } = await supabase.from('social_accounts').delete().in('id', socialAccountIdsToDelete);
-        if (deleteError) throw new Error(`Error deleting social accounts: ${deleteError.message}`);
+        const { error: deleteError } = await supabase.from('social_accounts').delete().in('id', socialAccountIdsToDelete)
+        if (deleteError) throw new Error(`Error deleting social accounts: ${deleteError.message}`)
       }
-      
-      // --- Social Accounts: New Logic ---
+
+      // Handle social account inserts and updates
       const socialToInsert = [];
       const socialToUpdate = [];
 
       for (const a of socialAccounts) {
-        if (!a.platform) continue; // Skip empty accounts
+        if (!a.platform) continue;
 
         let password = a.password;
         if (a.newPassword) {
@@ -250,8 +261,8 @@ export default function EditArtistPage() {
         const { error: deleteError } = await supabase.from('distribution_accounts').delete().in('id', distributionAccountIdsToDelete);
         if (deleteError) throw new Error(`Error deleting distribution accounts: ${deleteError.message}`);
       }
-      
-      // --- Distribution Accounts: New Logic ---
+
+      // Handle distribution account inserts and updates
       const distroToInsert = [];
       const distroToUpdate = [];
 
@@ -330,7 +341,7 @@ export default function EditArtistPage() {
               <p className="text-muted-foreground">{artist.name}</p>
             </div>
           </div>
-          <form onSubmit={handleSubmit} className="max-w-4xl space-y-6">
+          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
             <Card>
               <CardHeader><CardTitle>Basic Information</CardTitle></CardHeader>
               <CardContent className="space-y-4">
@@ -338,6 +349,14 @@ export default function EditArtistPage() {
                   <div className="space-y-2">
                     <Label htmlFor="name">Artist Name *</Label>
                     <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Artist's first name" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Artist's last name" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="genre">Genre *</Label>
@@ -359,7 +378,7 @@ export default function EditArtistPage() {
                     <Label htmlFor="location">Location</Label>
                     <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="City, Country" />
                   </div>
-                   <div className="space-y-2">
+                  <div className="space-y-2">
                     <Label htmlFor="spotify-id">Spotify Artist URL or ID</Label>
                     <Input id="spotify-id" value={spotifyInput} onChange={(e) => setSpotifyInput(e.target.value)} placeholder="Paste Spotify URL, URI, or ID" />
                     <p className="text-sm text-muted-foreground">
@@ -373,7 +392,7 @@ export default function EditArtistPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Profile Image</Label>
-                  {artist?.profile_image && <Image src={artist.profile_image} alt={artist.name} width={96} height={96} className="rounded-full object-cover"/>}
+                  {artist?.profile_image && <Image src={artist.profile_image} alt={artist.name} width={96} height={96} className="rounded-full object-cover" />}
                   <Input id="profile-image" type="file" accept="image/*" onChange={(e) => setNewProfileImage(e.target.files ? e.target.files[0] : null)} />
                   <p className="text-sm text-muted-foreground">Upload a new image to replace the current one.</p>
                 </div>
@@ -434,7 +453,7 @@ export default function EditArtistPage() {
                       <Label className="text-sm font-medium">Password Management</Label>
                       <p className="text-xs text-muted-foreground mb-2">Save or view the password for this account.</p>
                       {account.id && currentUserId ? (
-                        <CredentialManager 
+                        <CredentialManager
                           accountId={account.id}
                           tableName="social_accounts"
                         />
