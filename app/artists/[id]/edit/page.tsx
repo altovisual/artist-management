@@ -198,39 +198,49 @@ export default function EditArtistPage() {
         if (deleteError) throw new Error(`Error deleting social accounts: ${deleteError.message}`);
       }
       
-      const socialAccountsToUpsert = await Promise.all(
-        socialAccounts.map(async a => {
-          let password = a.password;
-          if (a.newPassword) {
-            const { encrypted, iv } = await encrypt(a.newPassword);
-            password = JSON.stringify({ encrypted, iv });
-          }
-      
-          const cleanedFollowers = String(a.followers || '').replace(/\D/g, '');
-          const followersCount = cleanedFollowers ? parseInt(cleanedFollowers, 10) : 0;
+      // --- Social Accounts: New Logic ---
+      const socialToInsert = [];
+      const socialToUpdate = [];
 
-          const accountData: any = {
-            artist_id: artistId,
-            platform: a.platform,
-            username: a.username || null,
-            handle: a.handle || null,
-            url: a.url || null,
-            followers: followersCount,
-            email: a.email || null,
-            password: password
-          };
-      
-          if (a.id) {
-            accountData.id = a.id;
-          }
-      
-          return accountData;
-        })
-      );
-      
-      if (socialAccountsToUpsert.length > 0) {
-        const { error } = await supabase.from("social_accounts").upsert(socialAccountsToUpsert.filter(a => a.platform));
-        if (error) throw new Error(`Error handling social accounts: ${error.message}`);
+      for (const a of socialAccounts) {
+        if (!a.platform) continue; // Skip empty accounts
+
+        let password = a.password;
+        if (a.newPassword) {
+          const { encrypted, iv } = await encrypt(a.newPassword);
+          password = JSON.stringify({ encrypted, iv });
+        }
+
+        const cleanedFollowers = String(a.followers || '').replace(/\D/g, '');
+        const followersCount = cleanedFollowers ? parseInt(cleanedFollowers, 10) : 0;
+
+        const accountData = {
+          artist_id: artistId,
+          platform: a.platform,
+          username: a.username || null,
+          handle: a.handle || null,
+          url: a.url || null,
+          followers: followersCount,
+          email: a.email || null,
+          password: password
+        };
+
+        if (a.id) {
+          socialToUpdate.push({ id: a.id, ...accountData });
+        } else {
+          socialToInsert.push(accountData);
+        }
+      }
+
+      if (socialToInsert.length > 0) {
+        const { error } = await supabase.from('social_accounts').insert(socialToInsert);
+        if (error) throw new Error(`Error inserting social accounts: ${error.message}`);
+      }
+
+      for (const acc of socialToUpdate) {
+        const { id, ...data } = acc;
+        const { error } = await supabase.from('social_accounts').update(data).eq('id', id);
+        if (error) throw new Error(`Error updating social account ${id}: ${error.message}`);
       }
 
       // Handle distribution account deletions
@@ -241,41 +251,51 @@ export default function EditArtistPage() {
         if (deleteError) throw new Error(`Error deleting distribution accounts: ${deleteError.message}`);
       }
       
-      const distroAccountsToUpsert = await Promise.all(
-        distributionAccounts.map(async a => {
-          let password = a.password;
-          if (a.newPassword) {
-            const { encrypted, iv } = await encrypt(a.newPassword);
-            password = JSON.stringify({ encrypted, iv });
-          }
-      
-          const cleanedListeners = String(a.monthly_listeners || '').replace(/\D/g, '');
-          const listenersCount = cleanedListeners ? parseInt(cleanedListeners, 10) : 0;
+      // --- Distribution Accounts: New Logic ---
+      const distroToInsert = [];
+      const distroToUpdate = [];
 
-          const accountData: any = {
-            artist_id: artistId,
-            distributor: a.distributor,
-            service: a.service,
-            monthly_listeners: listenersCount,
-            username: a.username || null,
-            email: a.email || null,
-            notes: a.notes || null,
-            url: a.url || null,
-            account_id: a.account_id || null,
-            password: password
-          };
-      
-          if (a.id) {
-            accountData.id = a.id;
-          }
-      
-          return accountData;
-        })
-      );
+      for (const a of distributionAccounts) {
+        if (!a.distributor || !a.service) continue;
 
-      if (distroAccountsToUpsert.length > 0) {
-        const { error } = await supabase.from("distribution_accounts").upsert(distroAccountsToUpsert.filter(a => a.distributor && a.service));
-        if (error) throw new Error(`Error handling distribution accounts: ${error.message}`);
+        let password = a.password;
+        if (a.newPassword) {
+          const { encrypted, iv } = await encrypt(a.newPassword);
+          password = JSON.stringify({ encrypted, iv });
+        }
+
+        const cleanedListeners = String(a.monthly_listeners || '').replace(/\D/g, '');
+        const listenersCount = cleanedListeners ? parseInt(cleanedListeners, 10) : 0;
+
+        const accountData = {
+          artist_id: artistId,
+          distributor: a.distributor,
+          service: a.service,
+          monthly_listeners: listenersCount,
+          username: a.username || null,
+          email: a.email || null,
+          notes: a.notes || null,
+          url: a.url || null,
+          account_id: a.account_id || null,
+          password: password
+        };
+
+        if (a.id) {
+          distroToUpdate.push({ id: a.id, ...accountData });
+        } else {
+          distroToInsert.push(accountData);
+        }
+      }
+
+      if (distroToInsert.length > 0) {
+        const { error } = await supabase.from('distribution_accounts').insert(distroToInsert);
+        if (error) throw new Error(`Error inserting distribution accounts: ${error.message}`);
+      }
+
+      for (const acc of distroToUpdate) {
+        const { id, ...data } = acc;
+        const { error } = await supabase.from('distribution_accounts').update(data).eq('id', id);
+        if (error) throw new Error(`Error updating distribution account ${id}: ${error.message}`);
       }
 
       toast({ title: "Success!", description: "Artist updated successfully." })
