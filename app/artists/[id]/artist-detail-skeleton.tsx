@@ -21,6 +21,7 @@ export default function ArtistDetailPageSkeleton() {
             <Skeleton className="h-9 w-32" />
             <Skeleton className="h-9 w-32" />
             <Skeleton className="h-9 w-32" />
+            <Skeleton className="h-9 w-32" />
           </div>
         </div>
 

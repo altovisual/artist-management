@@ -468,6 +468,7 @@ export default function ArtistDetailPage() {
         <div className="grid grid-cols-2 gap-2 mt-4">
           <Button asChild variant="secondary"><Link href={`/artists/${artist.id}/edit`}>Edit Profile</Link></Button>
           <Button asChild variant="secondary"><Link href={`/artists/${artist.id}/assets`}>Manage Assets</Link></Button>
+          <Button asChild variant="secondary"><Link href={`/artists/${artist.id}/creative-vault`}>Creative Vault</Link></Button>
         </div>
       </div>
 
@@ -509,6 +510,9 @@ export default function ArtistDetailPage() {
         <div className="flex items-center gap-2">
           <Link href={`/artists/${artist.id}/assets`}>
             <Button variant="outline" className="flex items-center gap-2 bg-transparent"><ImageIcon className="h-4 w-4" />Manage Assets</Button>
+          </Link>
+          <Link href={`/artists/${artist.id}/creative-vault`}>
+            <Button variant="outline" className="flex items-center gap-2 bg-transparent"><FolderKanban className="h-4 w-4" />Creative Vault</Button>
           </Link>
           <Link href={`/artists/${artist.id}/edit`}>
             <Button className="flex items-center gap-2"><Edit className="h-4 w-4" />Edit Artist</Button>
