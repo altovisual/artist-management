@@ -9,8 +9,8 @@ const handleError = (error: any, message: string) => {
 };
 
 // GET /api/creative-vault/[artistId]
-export async function GET(request: Request, { params }: { params: { artistId: string } }) {
-  const { artistId } = params;
+export async function GET(request: Request, context: { params: { artistId: string } }) {
+  const { artistId } = context.params;
   const cookieStore = cookies();
   const supabase = await createClient(cookieStore);
 
@@ -31,8 +31,8 @@ export async function GET(request: Request, { params }: { params: { artistId: st
 }
 
 // POST /api/creative-vault/[artistId]
-export async function POST(request: Request, { params }: { params: { artistId: string } }) {
-  const { artistId } = params;
+export async function POST(request: Request, context: { params: { artistId: string } }) {
+  const { artistId } = context.params;
   const cookieStore = cookies();
   const supabase = await createClient(cookieStore);
 
@@ -83,8 +83,8 @@ export async function POST(request: Request, { params }: { params: { artistId: s
 }
 
 // PUT /api/creative-vault/[artistId]?itemId=[itemId]
-export async function PUT(request: Request, { params }: { params: { artistId: string } }) {
-  const { artistId } = params;
+export async function PUT(request: Request, context: { params: { artistId: string } }) {
+  const { artistId } = context.params;
   const { searchParams } = new URL(request.url);
   const itemId = searchParams.get('itemId');
 
@@ -172,8 +172,8 @@ export async function PUT(request: Request, { params }: { params: { artistId: st
 }
 
 // DELETE /api/creative-vault/[artistId]?itemId=[itemId]
-export async function DELETE(request: Request, { params }: { params: { artistId: string } }) {
-  const { artistId } = params;
+export async function DELETE(request: Request, context: { params: { artistId: string } }) {
+  const { artistId } = context.params;
   const { searchParams } = new URL(request.url);
   const itemId = searchParams.get('itemId');
 
