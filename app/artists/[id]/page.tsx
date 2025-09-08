@@ -241,6 +241,8 @@ export default function ArtistDetailPage() {
                 <CardHeader><CardTitle>Artist Information</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div><label className="text-sm font-medium text-muted-foreground">First Name</label><p className="mt-1">{artist.first_name}</p></div>
+                    <div><label className="text-sm font-medium text-muted-foreground">Last Name</label><p className="mt-1">{artist.last_name}</p></div>
                     <div><label className="text-sm font-medium text-muted-foreground">Genre</label><p className="mt-1">{artist.genre}</p></div>
                     <div><label className="text-sm font-medium text-muted-foreground">Country</label><p className="mt-1">{artist.country}</p></div>
                     <div><label className="text-sm font-medium text-muted-foreground">Total Streams</label><p className="mt-1">{artist.total_streams?.toLocaleString() || "0"}</p></div>

@@ -1,0 +1,2 @@
+ALTER TABLE public.artists DROP CONSTRAINT IF EXISTS artists_spotify_artist_id_key;
+CREATE UNIQUE INDEX artists_spotify_artist_id_key_nullable ON public.artists (spotify_artist_id) WHERE spotify_artist_id IS NOT NULL;

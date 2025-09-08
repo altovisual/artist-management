@@ -20,19 +20,20 @@ import { AnimatedTitle } from "@/components/animated-title"
 import { EditArtistSkeleton } from "./edit-artist-skeleton"
 
 // Helper function to extract Spotify ID from URL
-const extractSpotifyId = (urlOrId: string): string => {
-  if (!urlOrId) return ''
+const extractSpotifyId = (urlOrId: string): string | null => {
+  const trimmedUrl = urlOrId.trim()
+  if (!trimmedUrl) return null
   try {
-    if (urlOrId.includes('spotify.com')) {
-      const url = new URL(urlOrId)
+    if (trimmedUrl.includes('spotify.com')) {
+      const url = new URL(trimmedUrl)
       const pathParts = url.pathname.split('/')
       const artistId = pathParts.find(part => part.length === 22) // Spotify IDs are 22 chars
-      return artistId || ''
+      return artistId || null
     }
-    if (urlOrId.startsWith('spotify:artist:')) {
-      return urlOrId.split(':')[2]
+    if (trimmedUrl.startsWith('spotify:artist:')) {
+      return trimmedUrl.split(':')[2]
     }
-    return urlOrId
+    return trimmedUrl
   } catch (error) {
     console.error("Invalid Spotify URL, returning original value", error)
     return urlOrId
