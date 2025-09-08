@@ -9,7 +9,7 @@ const handleError = (error: any, message: string) => {
 };
 
 // GET /api/creative-vault/[artistId]
-export async function GET(request: NextRequest, context: { params: { artistId: string } }) {
+export async function GET(request: NextRequest, context: any) {
   const { artistId } = context.params;
   const supabase = await createClient();
 
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest, context: { params: { artistId: s
 }
 
 // POST /api/creative-vault/[artistId]
-export async function POST(request: NextRequest, context: { params: { artistId: string } }) {
+export async function POST(request: NextRequest, context: any) {
   const { artistId } = context.params;
   const supabase = await createClient();
 
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest, context: { params: { artistId: 
 }
 
 // PUT /api/creative-vault/[artistId]?itemId=[itemId]
-export async function PUT(request: NextRequest, context: { params: { artistId: string } }) {
+export async function PUT(request: NextRequest, context: any) {
   const { artistId } = context.params;
   const { searchParams } = new URL(request.url);
   const itemId = searchParams.get('itemId');
@@ -169,7 +169,7 @@ export async function PUT(request: NextRequest, context: { params: { artistId: s
 }
 
 // DELETE /api/creative-vault/[artistId]?itemId=[itemId]
-export async function DELETE(request: NextRequest, context: { params: { artistId: string } }) {
+export async function DELETE(request: NextRequest, context: any) {
   const { artistId } = context.params;
   const { searchParams } = new URL(request.url);
   const itemId = searchParams.get('itemId');
