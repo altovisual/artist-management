@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Artists can upload their own creative vault assets." ON storage.objects;

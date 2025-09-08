@@ -12,7 +12,7 @@ const handleError = (error: any, message: string) => {
 export async function GET(request: Request, { params }: { params: { artistId: string } }) {
   const { artistId } = params;
   const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = await createClient(cookieStore);
 
   try {
     const { data: items, error } = await supabase
@@ -34,7 +34,7 @@ export async function GET(request: Request, { params }: { params: { artistId: st
 export async function POST(request: Request, { params }: { params: { artistId: string } }) {
   const { artistId } = params;
   const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = await createClient(cookieStore);
 
   try {
     const formData = await request.formData();
@@ -93,7 +93,7 @@ export async function PUT(request: Request, { params }: { params: { artistId: st
   }
 
   const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = await createClient(cookieStore);
 
   try {
     const formData = await request.formData();
@@ -182,7 +182,7 @@ export async function DELETE(request: Request, { params }: { params: { artistId:
   }
 
   const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = await createClient(cookieStore);
 
   try {
     // First, get the file_url to delete the file from storage

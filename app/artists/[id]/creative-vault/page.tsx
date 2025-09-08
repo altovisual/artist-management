@@ -12,6 +12,18 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Trash2, Music, FileText, Image as ImageIcon, Link as LinkIcon } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import Image from "next/image"
 
 interface CreativeVaultItem {
   id: string;
@@ -32,6 +44,7 @@ export default function CreativeVaultPage() {
 
   const [items, setItems] = useState<CreativeVaultItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [newItem, setNewItem] = useState({
     type: '',
     title: '',
@@ -142,6 +155,72 @@ export default function CreativeVaultPage() {
     }
   }
 
+  const renderItemContent = (item: CreativeVaultItem) => {
+    switch (item.type) {
+      case 'audio':
+        return item.file_url ? <audio controls src={item.file_url} className="mt-2 w-full" /> : null;
+      case 'image':
+        return item.file_url ? (
+          <img 
+            src={item.file_url} 
+            alt={item.title} 
+            className="mt-2 max-h-48 object-contain cursor-pointer"
+            onClick={() => setSelectedImage(item.file_url)}
+          />
+        ) : null;
+      case 'text':
+        return item.content ? <p className="text-sm mt-1 whitespace-pre-wrap">{item.content}</p> : null;
+      case 'link':
+        if (!item.content) return null;
+
+        // YouTube Embed
+        const youtubeMatch = item.content.match(/(?:https?:\/\/)?(?:www\.)?(?:m\.)?(?:youtube\.com|youtu\.be)\/ (?:watch\?v=|embed\/|v\/|)([^&?\n%]{11})/);
+        if (youtubeMatch && youtubeMatch[1]) {
+          return (
+            <div className="relative w-full overflow-hidden rounded-lg mt-2" style={{ paddingTop: '56.25%' }}>
+              <iframe
+                className="absolute top-0 left-0 w-full h-full"
+                src={`https://www.youtube.com/embed/${youtubeMatch[1]}`}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                title={item.title}
+              ></iframe>
+            </div>
+          );
+        }
+
+        // Spotify Embed (Track, Album, Playlist)
+        const spotifyMatch = item.content.match(/(?:https?:\/\/)?(?:open\.spotify\.com\/(track|album|playlist)\/([a-zA-Z0-9]+))/);
+        if (spotifyMatch && spotifyMatch[1] && spotifyMatch[2]) {
+          const type = spotifyMatch[1];
+          const id = spotifyMatch[2];
+          return (
+            <div className="relative w-full overflow-hidden rounded-lg mt-2" style={{ paddingTop: '100%' }}> {/* Spotify embeds are often square */}
+              <iframe
+                className="absolute top-0 left-0 w-full h-full"
+                src={`https://open.spotify.com/embed/${type}/${id}`}
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                allow="encrypted-media"
+                title={item.title}
+              ></iframe>
+            </div>
+          );
+        }
+
+        // Generic Link
+        return (
+          <a href={item.content} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline mt-1 block">
+            {item.content}
+          </a>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="p-4 md:p-6">
@@ -217,8 +296,7 @@ export default function CreativeVaultPage() {
                       <div>
                         <h3 className="font-semibold">{item.title}</h3>
                         <p className="text-sm text-muted-foreground">{item.type} - {new Date(item.created_at).toLocaleDateString()}</p>
-                        {item.content && <p className="text-sm mt-1">{item.content}</p>}
-                        {item.file_url && (item.type === 'audio' ? <audio controls src={item.file_url} className="mt-2 w-full" /> : <img src={item.file_url} alt={item.title} className="mt-2 max-h-48 object-contain" />)}
+                        {renderItemContent(item)}
                         {item.notes && <p className="text-xs text-muted-foreground mt-1">Notes: {item.notes}</p>}
                       </div>
                     </div>
@@ -231,5 +309,21 @@ export default function CreativeVaultPage() {
         </Card>
       </div>
     </DashboardLayout>
+
+    {selectedImage && (
+      <AlertDialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <AlertDialogContent className="max-w-3xl w-full">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Image Preview</AlertDialogTitle>
+            <AlertDialogDescription>
+              <Image src={selectedImage} alt="Preview" width={800} height={600} className="w-full h-auto object-contain" />
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setSelectedImage(null)}>Close</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    )}
   )
 }
