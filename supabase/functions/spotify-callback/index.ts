@@ -2,88 +2,107 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
-const SPOTIFY_CLIENT_ID = Deno.env.get('SPOTIFY_CLIENT_ID')
-const SPOTIFY_CLIENT_SECRET = Deno.env.get('SPOTIFY_CLIENT_SECRET')
-const REDIRECT_URI = `${Deno.env.get('SUPABASE_URL')?.replace('localhost', '127.0.0.1')}/functions/v1/spotify-callback`
+const SPOTIFY_CLIENT_ID = Deno.env.get('SPOTIFY_CLIENT_ID')!
+const SPOTIFY_CLIENT_SECRET = Deno.env.get('SPOTIFY_CLIENT_SECRET')!
+const REDIRECT_URI = `${Deno.env.get('SUPABASE_URL')}/functions/v1/spotify-callback`
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
-  const supabaseAdmin = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-    { auth: { persistSession: false } }
-  )
-
   try {
     const url = new URL(req.url)
     const code = url.searchParams.get('code')
-    const state = url.searchParams.get('state')
+    const state = url.searchParams.get('state') // This is now the artistId
+    const error = url.searchParams.get('error')
 
-    if (!code) throw new Error('Authorization code not found.')
-    if (!state) throw new Error('State parameter not found.')
+    if (error) {
+      throw new Error(`Spotify error: ${error}`)
+    }
 
-    // 1. Verify the state and get the user and account IDs
-    const { data: stateData, error: stateError } = await supabaseAdmin
-      .from('oauth_state')
-      .select('user_id, distribution_account_id')
-      .eq('state', state)
-      .single()
+    if (!code) {
+      throw new Error('Missing authorization code.')
+    }
 
-    if (stateError) throw new Error('Invalid or expired state. Please try connecting again.')
-    
-    const { distribution_account_id } = stateData
+    if (!state) {
+      throw new Error('Missing state parameter (artistId).')
+    }
 
-    // 2. Exchange authorization code for an access token
-    const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
+    const artistId = state; // State is now artistId
+
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      { auth: { persistSession: false } }
+    )
+
+    // Exchange authorization code for tokens
+    const response = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': 'Basic ' + btoa(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`)
+        'Authorization': 'Basic ' + btoa(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`),
       },
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         code: code,
-        redirect_uri: REDIRECT_URI
-      })
+        redirect_uri: REDIRECT_URI,
+      }),
     })
 
-    if (!tokenResponse.ok) {
-      const errorBody = await tokenResponse.json()
-      throw new Error(`Failed to fetch access token: ${errorBody.error_description}`)
+    if (!response.ok) {
+      const errorBody = await response.json()
+      throw new Error(`Failed to get tokens: ${errorBody.error_description || JSON.stringify(errorBody)}`)
     }
 
-    const tokens = await tokenResponse.json()
-    const { access_token, refresh_token, expires_in } = tokens
+    const { access_token, refresh_token, expires_in } = await response.json()
+    const token_expires_at = new Date(Date.now() + expires_in * 1000).toISOString()
 
-    // 3. Securely save tokens to the distribution_accounts table
-    const expires_at = new Date(Date.now() + expires_in * 1000).toISOString()
-
-    const { error: updateError } = await supabaseAdmin
+    // Check if an entry for this artist and provider already exists
+    const { data: existingAccount, error: fetchError } = await supabaseAdmin
       .from('distribution_accounts')
-      .update({
-        access_token: access_token, // TODO: Encrypt before saving
-        refresh_token: refresh_token, // TODO: Encrypt before saving
-        token_expires_at: expires_at,
-        analytics_status: 'connected',
-        last_synced_at: new Date().toISOString()
-      })
-      .eq('id', distribution_account_id)
+      .select('id')
+      .eq('artist_id', artistId)
+      .eq('provider', 'spotify')
+      .single()
 
-    if (updateError) throw new Error(`Failed to save tokens: ${updateError.message}`)
+    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 means no rows found
+      throw new Error(`Database fetch error: ${fetchError.message}`)
+    }
 
-    // 4. Clean up the state entry
-    await supabaseAdmin.from('oauth_state').delete().eq('state', state)
+    const accountData = {
+      artist_id: artistId,
+      provider: 'spotify',
+      access_token: access_token,
+      refresh_token: refresh_token,
+      token_expires_at: token_expires_at,
+      analytics_status: 'connected',
+    };
 
-    // 5. Redirect user back to the frontend application
-    const redirectUrl = `${Deno.env.get('SITE_URL')}/dashboard/analytics?status=success`
-    return Response.redirect(redirectUrl, 303)
+    if (existingAccount) {
+      // Update existing account
+      const { error: updateError } = await supabaseAdmin
+        .from('distribution_accounts')
+        .update(accountData)
+        .eq('id', existingAccount.id)
+
+      if (updateError) throw new Error(`Failed to update account: ${updateError.message}`)
+    } else {
+      // Insert new account
+      const { error: insertError } = await supabaseAdmin
+        .from('distribution_accounts')
+        .insert([accountData])
+
+      if (insertError) throw new Error(`Failed to insert account: ${insertError.message}`)
+    }
+
+    // Redirect to dashboard with success status
+    return Response.redirect(`${Deno.env.get('SITE_URL')}/dashboard?status=success`, 302)
 
   } catch (error) {
-    console.error(error)
-    const redirectUrl = `${Deno.env.get('SITE_URL')}/dashboard/analytics?status=error&message=${encodeURIComponent(error.message)}`
-    return Response.redirect(redirectUrl, 303)
+    console.error('Error in spotify-callback function:', error)
+    // Redirect to dashboard with error status
+    return Response.redirect(`${Deno.env.get('SITE_URL')}/dashboard?status=error&message=${encodeURIComponent(error.message)}`, 302)
   }
 })

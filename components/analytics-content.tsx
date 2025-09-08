@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { SpotifyConnectModal } from './spotify-connect-modal'
+// import { SpotifyConnectModal } from './spotify-connect-modal' // No longer needed for public analytics
 import { TrackPopularityChart } from '@/components/ui/glowing-line'
 import { GenreDistributionChart } from '@/components/ui/genre-distribution-chart'
 import { AnalyticsSkeleton } from './analytics-skeleton'
@@ -104,25 +104,22 @@ export const AnalyticsContent = ({ artistId }: AnalyticsContentProps) => {
       setError(null)
       setRawError(null)
       try {
-        let invokeData: any;
-        if (artistId) {
-          const { data, error: invokeError } = await supabase.functions.invoke('fetch-spotify-analytics', {
-            body: { artist_id: artistId },
-          });
-          invokeData = data;
-          if (invokeError) throw new Error(invokeError.message);
-        } else {
-          const { data, error: invokeError } = await supabase.functions.invoke('fetch-spotify-analytics');
-          invokeData = data;
-          if (invokeError) throw new Error(invokeError.message);
+        if (!artistId) {
+          throw new Error('No artist ID provided for analytics.');
+        }
+        const { data, error: invokeError } = await supabase.functions.invoke('fetch-spotify-analytics', {
+          body: { artist_id: artistId },
+        });
+
+        if (invokeError) {
+          throw new Error(invokeError.message);
         }
 
-        if (invokeData.error) {
-          setRawError(invokeData.error)
-          throw new Error(invokeData.error)
+        if (data.error) {
+          throw new Error(data.error)
         }
 
-        setAnalyticsData(invokeData)
+        setAnalyticsData(data)
       } catch (err: any) {
         setError(err.message || 'An unknown error occurred.')
         setRawError(err)
@@ -167,24 +164,6 @@ export const AnalyticsContent = ({ artistId }: AnalyticsContentProps) => {
   }
 
   if (error) {
-    if (error.includes("Edge Function returned a non-2xx status code")) {
-      return (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <SproutIcon className="h-5 w-5 text-green-500"/>
-              Connect your Spotify Account
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground mb-4">
-              To see your Spotify analytics, you need to connect your account. This will allow us to fetch your data and display it here.
-            </p>
-            <SpotifyConnectModal />
-          </CardContent>
-        </Card>
-      )
-    }
     return (
         <div className="space-y-6">
             <div className="text-center py-16">

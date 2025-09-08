@@ -139,7 +139,7 @@ export default function ArtistDetailPage() {
       try {
         const { data: artistData, error: artistError } = await supabase
           .from("artists")
-          .select("*, social_accounts(*), distribution_accounts(*)")
+          .select("*, spotify_artist_id, social_accounts(*), distribution_accounts(*)")
           .eq("id", artistId)
           .single()
 
@@ -407,7 +407,7 @@ export default function ArtistDetailPage() {
       case 'analytics': // New case for analytics tab
         return (
           <div className="space-y-6">
-            <AnalyticsContent artistId={artist.id} />
+            <AnalyticsContent artistId={artist.spotify_artist_id} />
           </div>
         );
       default:

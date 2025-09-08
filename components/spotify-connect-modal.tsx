@@ -13,24 +13,65 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { SproutIcon } from 'lucide-react'
+import { SproutIcon, Loader2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 export function SpotifyConnectModal() {
   const [isOpen, setIsOpen] = useState(false)
   const [artistUrl, setArtistUrl] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const supabase = createClient()
 
-  const handleConnect = () => {
-    // In a real application, this would initiate the OAuth flow with Spotify.
-    // For now, we'll just log a message to the console.
-    console.log(`Connecting to Spotify with artist URL: ${artistUrl}`)
-    // You would typically redirect to your backend endpoint that starts the Spotify auth flow.
-    // window.location.href = `/api/spotify-auth?artistUrl=${artistUrl}`;
-    alert(`This is where the Spotify connection would be initiated with URL: ${artistUrl}`)
-    setIsOpen(false)
+  const handleConnect = async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const urlParts = artistUrl.split('/');
+      const artistIndex = urlParts.indexOf('artist');
+      if (artistIndex === -1 || artistIndex + 1 >= urlParts.length) {
+        throw new Error('Invalid Spotify Artist URL. Please use the format: https://open.spotify.com/artist/...');
+      }
+      const artistId = urlParts[artistIndex + 1].split('?')[0];
+
+      if (!artistId) {
+        throw new Error('Could not extract Artist ID from the URL.');
+      }
+
+      console.log('Frontend: Extracted artistId:', artistId); // Debug log
+
+      const { data, error: invokeError } = await supabase.functions.invoke('spotify-auth', {
+        body: { artistId },
+      });
+
+      if (invokeError) {
+        throw new Error(`Function error: ${invokeError.message}`);
+      }
+
+      if (data.error) {
+        throw new Error(`API error: ${data.error}`);
+      }
+
+      if (data.authorizationUrl) {
+        window.location.href = data.authorizationUrl;
+      } else {
+        throw new Error('Could not retrieve authorization URL.');
+      }
+
+    } catch (err: any) {
+      setError(err.message)
+      setIsLoading(false) // Stop loading only if there is an error
+    }
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={(open) => { 
+      setIsOpen(open); 
+      setError(null); 
+      setArtistUrl('');
+      setIsLoading(false);
+    }}>
       <DialogTrigger asChild>
         <Button>Connect to Spotify</Button>
       </DialogTrigger>
@@ -41,7 +82,7 @@ export function SpotifyConnectModal() {
             Connect your Spotify Account
           </DialogTitle>
           <DialogDescription>
-            To see your Spotify analytics, you need to connect your account. This will allow us to fetch your data and display it here.
+            Paste your Spotify Artist profile URL below to begin syncing your analytics data.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -55,12 +96,24 @@ export function SpotifyConnectModal() {
               onChange={(e) => setArtistUrl(e.target.value)}
               className="col-span-3"
               placeholder="https://open.spotify.com/artist/..."
+              disabled={isLoading}
             />
           </div>
         </div>
+        
+        {error && (
+          <Alert variant="destructive">
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
         <DialogFooter>
-          <Button variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-          <Button onClick={handleConnect}>Connect</Button>
+          <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isLoading}>Cancel</Button>
+          <Button onClick={handleConnect} disabled={isLoading}>
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Connect
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

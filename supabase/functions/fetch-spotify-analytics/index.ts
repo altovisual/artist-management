@@ -1,13 +1,18 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
 const SPOTIFY_CLIENT_ID = Deno.env.get('SPOTIFY_CLIENT_ID')!
 const SPOTIFY_CLIENT_SECRET = Deno.env.get('SPOTIFY_CLIENT_SECRET')!
 
-// ... (helper functions remain the same) ...
-async function refreshAccessToken(refreshToken: string) {
+let cachedAccessToken: string | null = null;
+let tokenExpiresAt: number = 0;
+
+async function getApplicationAccessToken(): Promise<string> {
+  if (cachedAccessToken && Date.now() < tokenExpiresAt) {
+    return cachedAccessToken;
+  }
+
   const response = await fetch('https://accounts.spotify.com/api/token', {
     method: 'POST',
     headers: {
@@ -15,15 +20,19 @@ async function refreshAccessToken(refreshToken: string) {
       'Authorization': 'Basic ' + btoa(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`),
     },
     body: new URLSearchParams({
-      grant_type: 'refresh_token',
-      refresh_token: refreshToken,
+      grant_type: 'client_credentials',
     }),
-  })
+  });
+
   if (!response.ok) {
-    const errorBody = await response.json()
-    throw new Error(`Failed to refresh access token: ${errorBody.error_description}`)
+    const errorBody = await response.json();
+    throw new Error(`Failed to get application access token: ${errorBody.error_description || JSON.stringify(errorBody)}`);
   }
-  return await response.json()
+
+  const data = await response.json();
+  cachedAccessToken = data.access_token;
+  tokenExpiresAt = Date.now() + (data.expires_in - 300) * 1000; // Cache for 5 minutes less than expiry
+  return cachedAccessToken;
 }
 
 async function fetchFromSpotify(endpoint: string, accessToken: string) {
@@ -42,21 +51,8 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      { auth: { persistSession: false } }
-    )
+    const accessToken = await getApplicationAccessToken();
 
-    const userSupabaseClient = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-        { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    )
-    const { data: { user } } = await userSupabaseClient.auth.getUser()
-    if (!user) throw new Error('User not found')
-
-    // Get artist_id from request body if provided, otherwise use current user's artist_id
     let targetArtistId: string;
     let body;
     try {
@@ -70,62 +66,16 @@ serve(async (req) => {
     if (bodyArtistId) {
         targetArtistId = bodyArtistId;
     } else {
-        // Fetch artist_id for the current user
-        const { data: currentUserArtist, error: currentUserArtistError } = await supabaseAdmin
-            .from('artists')
-            .select('id')
-            .eq('user_id', user.id)
-            .single();
-        if (currentUserArtistError || !currentUserArtist) {
-            throw new Error('Could not find artist profile for the current user.');
-        }
-        targetArtistId = currentUserArtist.id;
+        // If no artist_id is provided in the body, we cannot proceed.
+        // In the previous version, it tried to get the current user's artist_id.
+        // For public analytics, we must have an artist_id provided.
+        throw new Error('Artist ID is required for public analytics.');
     }
-
-    const { data: artistProfile, error: profileError } = await supabaseAdmin
-      .from('artists')
-      .select('spotify_artist_id')
-      .eq('id', targetArtistId)
-      .single();
-
-    if (profileError) throw new Error('Could not fetch artist profile for the given ID.');
-    if (!artistProfile.spotify_artist_id) {
-      throw new Error('Spotify Artist ID is not set for this artist. Please add it in their profile page.');
-    }
-    const spotifyArtistId = artistProfile.spotify_artist_id;
-
-    const { data: account, error: accountError } = await supabaseAdmin
-      .from('distribution_accounts')
-      .select('id, access_token, refresh_token, token_expires_at')
-      .eq('analytics_status', 'connected')
-      .limit(1)
-      .single()
-
-    if (accountError || !account) {
-      throw new Error('No connected Spotify account found.')
-    }
-
-    let { access_token, refresh_token, token_expires_at } = account;
-
-    if (new Date(token_expires_at) < new Date(Date.now() + 5 * 60 * 1000)) {
-      const newTokens = await refreshAccessToken(refresh_token!)
-      access_token = newTokens.access_token
-      if (newTokens.refresh_token) refresh_token = newTokens.refresh_token;
-      const new_expires_at = new Date(Date.now() + newTokens.expires_in * 1000).toISOString()
-
-      await supabaseAdmin
-        .from('distribution_accounts')
-        .update({ access_token, refresh_token, token_expires_at: new_expires_at })
-        .eq('id', account.id)
-    }
-
-    const userData = await fetchFromSpotify('me', access_token!)
-    const market = userData.country || 'US';
 
     const [artistDetails, topTracksData, albumsData] = await Promise.all([
-      fetchFromSpotify(`artists/${spotifyArtistId}`, access_token!),
-      fetchFromSpotify(`artists/${spotifyArtistId}/top-tracks?market=${market}`, access_token!),
-      fetchFromSpotify(`artists/${spotifyArtistId}/albums?include_groups=album,single,appears_on,compilation&limit=50`, access_token!)
+      fetchFromSpotify(`artists/${targetArtistId}`, accessToken),
+      fetchFromSpotify(`artists/${targetArtistId}/top-tracks?market=US`, accessToken), // Using a default market for simplicity
+      fetchFromSpotify(`artists/${targetArtistId}/albums?include_groups=album,single,appears_on,compilation&limit=50`, accessToken)
     ]);
 
     const responsePayload = {
