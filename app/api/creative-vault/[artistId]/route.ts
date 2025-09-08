@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
+
 
 // Helper function to handle errors consistently
 const handleError = (error: any, message: string) => {
@@ -9,10 +9,9 @@ const handleError = (error: any, message: string) => {
 };
 
 // GET /api/creative-vault/[artistId]
-export async function GET(request: NextRequest, context: any) {
+export async function GET(request: NextRequest, context: { params: { artistId: string } }) {
   const { artistId } = context.params;
-  const cookieStore = cookies();
-  const supabase = await createClient(cookieStore);
+  const supabase = await createClient();
 
   try {
     const { data: items, error } = await supabase
@@ -31,10 +30,9 @@ export async function GET(request: NextRequest, context: any) {
 }
 
 // POST /api/creative-vault/[artistId]
-export async function POST(request: NextRequest, context: any) {
+export async function POST(request: NextRequest, context: { params: { artistId: string } }) {
   const { artistId } = context.params;
-  const cookieStore = cookies();
-  const supabase = await createClient(cookieStore);
+  const supabase = await createClient();
 
   try {
     const formData = await request.formData();
@@ -83,7 +81,7 @@ export async function POST(request: NextRequest, context: any) {
 }
 
 // PUT /api/creative-vault/[artistId]?itemId=[itemId]
-export async function PUT(request: NextRequest, context: any) {
+export async function PUT(request: NextRequest, context: { params: { artistId: string } }) {
   const { artistId } = context.params;
   const { searchParams } = new URL(request.url);
   const itemId = searchParams.get('itemId');
@@ -92,8 +90,7 @@ export async function PUT(request: NextRequest, context: any) {
     return NextResponse.json({ error: 'Item ID is required for updating.' }, { status: 400 });
   }
 
-  const cookieStore = cookies();
-  const supabase = await createClient(cookieStore);
+  const supabase = await createClient();
 
   try {
     const formData = await request.formData();
@@ -172,7 +169,7 @@ export async function PUT(request: NextRequest, context: any) {
 }
 
 // DELETE /api/creative-vault/[artistId]?itemId=[itemId]
-export async function DELETE(request: NextRequest, context: any) {
+export async function DELETE(request: NextRequest, context: { params: { artistId: string } }) {
   const { artistId } = context.params;
   const { searchParams } = new URL(request.url);
   const itemId = searchParams.get('itemId');
@@ -181,8 +178,7 @@ export async function DELETE(request: NextRequest, context: any) {
     return NextResponse.json({ error: 'Item ID is required for deleting.' }, { status: 400 });
   }
 
-  const cookieStore = cookies();
-  const supabase = await createClient(cookieStore);
+  const supabase = await createClient();
 
   try {
     // First, get the file_url to delete the file from storage
