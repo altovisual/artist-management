@@ -8,15 +8,30 @@ export function DashboardSkeleton() {
       {/* Header */}
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div>
               <Skeleton className="h-8 w-48" />
               <Skeleton className="h-4 w-64 mt-2" />
             </div>
-            <Skeleton className="h-10 w-24" />
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <Skeleton className="h-10 w-24 hidden md:block" /> {/* ArtistViewSwitcher */}
+              <Skeleton className="h-10 w-32" /> {/* New Artist Button */}
+            </div>
           </div>
         </div>
       </header>
+
+      {/* DbSizeCard Skeleton (conditionally rendered in Dashboard) */}
+      <div className="container mx-auto px-4 py-4">
+        <Card className="w-full md:w-1/2 lg:w-1/3">
+          <CardHeader className="pb-2">
+            <Skeleton className="h-4 w-32" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-8 w-24" />
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">

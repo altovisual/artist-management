@@ -222,108 +222,110 @@ export default function CreativeVaultPage() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="p-4 md:p-6">
-        <h1 className="text-3xl font-bold mb-6">Creative Vault</h1>
+    <>
+      <DashboardLayout>
+        <div className="p-4 md:p-6">
+          <h1 className="text-3xl font-bold mb-6">Creative Vault</h1>
 
-        <Card className="mb-6">
-          <CardHeader><CardTitle>Add New Item</CardTitle></CardHeader>
-          <CardContent>
-            <form onSubmit={handleAddItem} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="type">Type</Label>
-                  <Select name="type" value={newItem.type} onValueChange={(value) => setNewItem(prev => ({ ...prev, type: value }))} required>
-                    <SelectTrigger><SelectValue placeholder="Select item type" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="audio">Audio</SelectItem>
-                      <SelectItem value="text">Text (Lyrics, Notes)</SelectItem>
-                      <SelectItem value="image">Image (Moodboard)</SelectItem>
-                      <SelectItem value="link">Link (Inspiration)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="title">Title</Label>
-                  <Input type="text" id="title" name="title" value={newItem.title} onChange={handleInputChange} required />
-                </div>
-              </div>
-
-              {newItem.type === 'text' && (
-                <div className="space-y-2">
-                  <Label htmlFor="content">Content</Label>
-                  <Textarea id="content" name="content" value={newItem.content} onChange={handleInputChange} rows={5} />
-                </div>
-              )}
-
-              {(newItem.type === 'audio' || newItem.type === 'image') && (
-                <div className="space-y-2">
-                  <Label htmlFor="file">File</Label>
-                  <Input type="file" id="file" name="file" onChange={handleFileChange} accept={newItem.type === 'audio' ? 'audio/*' : 'image/*'} />
-                </div>
-              )}
-
-              {newItem.type === 'link' && (
-                <div className="space-y-2">
-                  <Label htmlFor="content">URL</Label>
-                  <Input type="url" id="content" name="content" value={newItem.content} onChange={handleInputChange} placeholder="https://example.com" />
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea id="notes" name="notes" value={newItem.notes} onChange={handleInputChange} rows={3} />
-              </div>
-
-              <Button type="submit" disabled={loading}><Plus className="h-4 w-4 mr-2" />{loading ? "Adding..." : "Add Item"}</Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader><CardTitle>Your Creative Vault Items</CardTitle></CardHeader>
-          <CardContent>
-            {loading && items.length === 0 ? (
-              <p>Loading items...</p>
-            ) : items.length === 0 ? (
-              <p>No items in your Creative Vault yet. Add one above!</p>
-            ) : (
-              <div className="space-y-4">
-                {items.map(item => (
-                  <div key={item.id} className="border p-4 rounded-lg flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      {getItemIcon(item.type)}
-                      <div>
-                        <h3 className="font-semibold">{item.title}</h3>
-                        <p className="text-sm text-muted-foreground">{item.type} - {new Date(item.created_at).toLocaleDateString()}</p>
-                        {renderItemContent(item)}
-                        {item.notes && <p className="text-xs text-muted-foreground mt-1">Notes: {item.notes}</p>}
-                      </div>
-                    </div>
-                    <Button variant="destructive" size="sm" onClick={() => handleDeleteItem(item.id)} disabled={loading}><Trash2 className="h-4 w-4" /></Button>
+          <Card className="mb-6">
+            <CardHeader><CardTitle>Add New Item</CardTitle></CardHeader>
+            <CardContent>
+              <form onSubmit={handleAddItem} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="type">Type</Label>
+                    <Select name="type" value={newItem.type} onValueChange={(value) => setNewItem(prev => ({ ...prev, type: value }))} required>
+                      <SelectTrigger><SelectValue placeholder="Select item type" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="audio">Audio</SelectItem>
+                        <SelectItem value="text">Text (Lyrics, Notes)</SelectItem>
+                        <SelectItem value="image">Image (Moodboard)</SelectItem>
+                        <SelectItem value="link">Link (Inspiration)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </DashboardLayout>
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Title</Label>
+                    <Input type="text" id="title" name="title" value={newItem.title} onChange={handleInputChange} required />
+                  </div>
+                </div>
 
-    {selectedImage && (
-      <AlertDialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-        <AlertDialogContent className="max-w-3xl w-full">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Image Preview</AlertDialogTitle>
-            <AlertDialogDescription>
-              <Image src={selectedImage} alt="Preview" width={800} height={600} className="w-full h-auto object-contain" />
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setSelectedImage(null)}>Close</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    )}
+                {newItem.type === 'text' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="content">Content</Label>
+                    <Textarea id="content" name="content" value={newItem.content} onChange={handleInputChange} rows={5} />
+                  </div>
+                )}
+
+                {(newItem.type === 'audio' || newItem.type === 'image') && (
+                  <div className="space-y-2">
+                    <Label htmlFor="file">File</Label>
+                    <Input type="file" id="file" name="file" onChange={handleFileChange} accept={newItem.type === 'audio' ? 'audio/*' : 'image/*'} />
+                  </div>
+                )}
+
+                {newItem.type === 'link' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="content">URL</Label>
+                    <Input type="url" id="content" name="content" value={newItem.content} onChange={handleInputChange} placeholder="https://example.com" />
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea id="notes" name="notes" value={newItem.notes} onChange={handleInputChange} rows={3} />
+                </div>
+
+                <Button type="submit" disabled={loading}><Plus className="h-4 w-4 mr-2" />{loading ? "Adding..." : "Add Item"}</Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>Your Creative Vault Items</CardTitle></CardHeader>
+            <CardContent>
+              {loading && items.length === 0 ? (
+                <p>Loading items...</p>
+              ) : items.length === 0 ? (
+                <p>No items in your Creative Vault yet. Add one above!</p>
+              ) : (
+                <div className="space-y-4">
+                  {items.map(item => (
+                    <div key={item.id} className="border p-4 rounded-lg flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        {getItemIcon(item.type)}
+                        <div>
+                          <h3 className="font-semibold">{item.title}</h3>
+                          <p className="text-sm text-muted-foreground">{item.type} - {new Date(item.created_at).toLocaleDateString()}</p>
+                          {renderItemContent(item)}
+                          {item.notes && <p className="text-xs text-muted-foreground mt-1">Notes: {item.notes}</p>}
+                        </div>
+                      </div>
+                      <Button variant="destructive" size="sm" onClick={() => handleDeleteItem(item.id)} disabled={loading}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+
+      {selectedImage && (
+        <AlertDialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+          <AlertDialogContent className="max-w-3xl w-full">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Image Preview</AlertDialogTitle>
+              <AlertDialogDescription>
+                <Image src={selectedImage} alt="Preview" width={800} height={600} className="w-full h-auto object-contain" />
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction onClick={() => setSelectedImage(null)}>Close</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+    </>
   )
 }
