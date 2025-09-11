@@ -11,12 +11,12 @@ El objetivo es crear una API interna que sirva como fuente única y centralizada
 *   **`[x]` Participants:** (Artistas, managers, productores, etc.) - **¡COMPLETADO!**
 *   **`[x]` Works:** (Obras musicales) - **¡COMPLETADO!**
 *   **`[x]` Templates:** (Plantillas de contratos) - **¡COMPLETADO!**
-    *   `GET /api/templates`
-    *   `POST /api/templates`
-    *   `GET /api/templates/:id`
-    *   `PATCH /api/templates/:id`
-    *   `DELETE /api/templates/:id`
-*   **`[ ]` Contracts:** (Contratos generados) - **PENDIENTE**
+*   **`[x]` Contracts:** (Contratos generados) - **¡COMPLETADO!**
+    *   `GET /api/contracts`
+    *   `POST /api/contracts`
+    *   `GET /api/contracts/:id`
+    *   `PATCH /api/contracts/:id`
+    *   `DELETE /api/contracts/:id`
 *   **`[ ]` Signatures:** (Firmas electrónicas) - **PENDIENTE**
 
 ## 3. Resumen del Trabajo Realizado
@@ -25,14 +25,14 @@ El objetivo es crear una API interna que sirva como fuente única y centralizada
 *   **API de Participantes:** Se ha implementado una API REST completa para la entidad `participants` usando una conexión directa a la base de datos (`pg`).
 *   **API de Obras:** Se ha implementado una API REST completa para la entidad `works` (sobre la tabla `projects`), incluyendo la gestión de autores a través de una tabla de unión (`work_participants`).
 *   **API de Plantillas:** Se ha implementado una API REST completa para la entidad `templates`.
-*   **Base de Datos:** Se han creado y modificado las tablas `participants`, `projects`, `work_participants` y `templates` con sus respectivas columnas, permisos y claves foráneas.
+*   **API de Contratos:** Se ha implementado una API REST completa para la entidad `contracts`, incluyendo la gestión de participantes a través de una tabla de unión (`contract_participants`).
+*   **Base de Datos:** Se han creado y modificado las tablas `participants`, `projects`, `work_participants`, `templates`, `contracts` y `contract_participants` con sus respectivas columnas, permisos y claves foráneas.
 
 ## 4. Próximos Pasos
 
-El siguiente objetivo es construir la API para **Contracts**.
+El siguiente objetivo es construir la API para **Signatures**.
 
-1.  **Paso Inmediato:** Crear una nueva migración de base de datos (`055_...`) para crear la tabla `contracts` y la tabla de unión `contract_participants`.
-    *   `contracts` columns: `id`, `work_id`, `template_id`, `status`, `final_contract_pdf_url`, `signed_at`.
-    *   `contract_participants` columns: `contract_id`, `participant_id`, `role`.
+1.  **Paso Inmediato:** Investigar e integrar un servicio de firma electrónica (por ejemplo, DocuSign, HelloSign, o similar).
 2.  **Siguientes Pasos:**
-    *   Crear los endpoints de la API para `contracts` (`GET`, `POST`, etc.) usando nuestro método de conexión directa.
+    *   Crear una nueva migración de base de datos (`056_...`) para crear la tabla `signatures` con las columnas necesarias para rastrear el estado de las firmas.
+    *   Crear los endpoints de la API para `signatures` que interactúen con el servicio de firma electrónica.
