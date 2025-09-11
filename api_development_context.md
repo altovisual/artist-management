@@ -12,12 +12,12 @@ El objetivo es crear una API interna que sirva como fuente única y centralizada
 *   **`[x]` Works:** (Obras musicales) - **¡COMPLETADO!**
 *   **`[x]` Templates:** (Plantillas de contratos) - **¡COMPLETADO!**
 *   **`[x]` Contracts:** (Contratos generados) - **¡COMPLETADO!**
-    *   `GET /api/contracts`
-    *   `POST /api/contracts`
-    *   `GET /api/contracts/:id`
-    *   `PATCH /api/contracts/:id`
-    *   `DELETE /api/contracts/:id`
-*   **`[ ]` Signatures:** (Firmas electrónicas) - **PENDIENTE**
+*   **`[x]` Signatures:** (Firmas electrónicas) - **¡COMPLETADO!**
+    *   `GET /api/signatures`
+    *   `POST /api/signatures`
+    *   `GET /api/signatures/:id`
+    *   `PATCH /api/signatures/:id`
+    *   `DELETE /api/signatures/:id`
 
 ## 3. Resumen del Trabajo Realizado
 
@@ -26,13 +26,15 @@ El objetivo es crear una API interna que sirva como fuente única y centralizada
 *   **API de Obras:** Se ha implementado una API REST completa para la entidad `works` (sobre la tabla `projects`), incluyendo la gestión de autores a través de una tabla de unión (`work_participants`).
 *   **API de Plantillas:** Se ha implementado una API REST completa para la entidad `templates`.
 *   **API de Contratos:** Se ha implementado una API REST completa para la entidad `contracts`, incluyendo la gestión de participantes a través de una tabla de unión (`contract_participants`).
-*   **Base de Datos:** Se han creado y modificado las tablas `participants`, `projects`, `work_participants`, `templates`, `contracts` y `contract_participants` con sus respectivas columnas, permisos y claves foráneas.
+*   **API de Firmas:** Se ha implementado un prototipo de API REST para la entidad `signatures`, simulando la interacción con un servicio de firma electrónica.
+*   **Base de Datos:** Se han creado y modificado todas las tablas necesarias (`participants`, `projects`, `work_participants`, `templates`, `contracts`, `contract_participants`, `signatures`) con sus respectivas columnas, permisos y claves foráneas.
 
 ## 4. Próximos Pasos
 
-El siguiente objetivo es construir la API para **Signatures**.
+¡Todos los módulos de la API han sido implementados!
 
-1.  **Paso Inmediato:** Investigar e integrar un servicio de firma electrónica (por ejemplo, DocuSign, HelloSign, o similar).
+1.  **Paso Inmediato:** Realizar pruebas exhaustivas de todos los endpoints de la API para asegurar su correcto funcionamiento.
 2.  **Siguientes Pasos:**
-    *   Crear una nueva migración de base de datos (`056_...`) para crear la tabla `signatures` con las columnas necesarias para rastrear el estado de las firmas.
-    *   Crear los endpoints de la API para `signatures` que interactúen con el servicio de firma electrónica.
+    *   Integrar un servicio de firma electrónica real (como Yousign) en la API de `signatures`.
+    *   Desplegar la API a un entorno de producción.
+    *   Documentar la API para su uso por parte de servicios externos.
