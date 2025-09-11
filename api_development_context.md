@@ -10,12 +10,12 @@ El objetivo es crear una API interna que sirva como fuente única y centralizada
 
 *   **`[x]` Participants:** (Artistas, managers, productores, etc.) - **¡COMPLETADO!**
 *   **`[x]` Works:** (Obras musicales) - **¡COMPLETADO!**
-    *   `GET /api/works`
-    *   `POST /api/works`
-    *   `GET /api/works/:id`
-    *   `PATCH /api/works/:id`
-    *   `DELETE /api/works/:id`
-*   **`[ ]` Templates:** (Plantillas de contratos) - **EN PROGRESO**
+*   **`[x]` Templates:** (Plantillas de contratos) - **¡COMPLETADO!**
+    *   `GET /api/templates`
+    *   `POST /api/templates`
+    *   `GET /api/templates/:id`
+    *   `PATCH /api/templates/:id`
+    *   `DELETE /api/templates/:id`
 *   **`[ ]` Contracts:** (Contratos generados) - **PENDIENTE**
 *   **`[ ]` Signatures:** (Firmas electrónicas) - **PENDIENTE**
 
@@ -24,12 +24,15 @@ El objetivo es crear una API interna que sirva como fuente única y centralizada
 *   **Entorno de Desarrollo:** Se ha depurado y estabilizado un entorno local de Supabase muy problemático.
 *   **API de Participantes:** Se ha implementado una API REST completa para la entidad `participants` usando una conexión directa a la base de datos (`pg`).
 *   **API de Obras:** Se ha implementado una API REST completa para la entidad `works` (sobre la tabla `projects`), incluyendo la gestión de autores a través de una tabla de unión (`work_participants`).
-*   **Base de Datos:** Se han creado y modificado las tablas `participants`, `projects` y `work_participants` con sus respectivas columnas, permisos y claves foráneas.
+*   **API de Plantillas:** Se ha implementado una API REST completa para la entidad `templates`.
+*   **Base de Datos:** Se han creado y modificado las tablas `participants`, `projects`, `work_participants` y `templates` con sus respectivas columnas, permisos y claves foráneas.
 
 ## 4. Próximos Pasos
 
-El siguiente objetivo es construir la API para **Templates**.
+El siguiente objetivo es construir la API para **Contracts**.
 
-1.  **Paso Inmediato:** Crear una nueva migración de base de datos (`054_...`) para crear la tabla `templates` con las siguientes columnas: `id`, `type`, `language`, `template_html`, `version`, `jurisdiction`.
+1.  **Paso Inmediato:** Crear una nueva migración de base de datos (`055_...`) para crear la tabla `contracts` y la tabla de unión `contract_participants`.
+    *   `contracts` columns: `id`, `work_id`, `template_id`, `status`, `final_contract_pdf_url`, `signed_at`.
+    *   `contract_participants` columns: `contract_id`, `participant_id`, `role`.
 2.  **Siguientes Pasos:**
-    *   Crear los endpoints de la API para `templates` (`GET`, `POST`, etc.) usando nuestro método de conexión directa.
+    *   Crear los endpoints de la API para `contracts` (`GET`, `POST`, etc.) usando nuestro método de conexión directa.
