@@ -439,7 +439,7 @@ export default function NewAssetPage() {
               <Button
                 type="submit"
                 className="flex items-center gap-2"
-                disabled={!formData.file || !formData.name || !formData.category || !formData.type || isLoading}
+                disabled={isLoading || !formData.name || !formData.category || !formData.type || (uploadOption === 'file' && !formData.file) || (uploadOption === 'external' && !formData.externalUrl)}
               >
                 <Save className="h-4 w-4" />
                 {isLoading ? "Uploading..." : "Save Asset"}

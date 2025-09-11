@@ -16,42 +16,12 @@ DROP POLICY IF EXISTS "Artists can delete their own projects." ON public.project
 
 -- RLS Policies for 'social_accounts' table
 ALTER TABLE public.social_accounts ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Enable CRUD for owners and admins" ON public.social_accounts
-FOR ALL
-USING (
-  (get_my_role() = 'admin') OR
-  EXISTS (SELECT 1 FROM artists WHERE artists.id = social_accounts.artist_id AND artists.user_id = auth.uid())
-)
-WITH CHECK (
-  (get_my_role() = 'admin') OR
-  EXISTS (SELECT 1 FROM artists WHERE artists.id = social_accounts.artist_id AND artists.user_id = auth.uid())
-);
 
 -- RLS Policies for 'distribution_accounts' table
 ALTER TABLE public.distribution_accounts ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Enable CRUD for owners and admins" ON public.distribution_accounts
-FOR ALL
-USING (
-  (get_my_role() = 'admin') OR
-  EXISTS (SELECT 1 FROM artists WHERE artists.id = distribution_accounts.artist_id AND artists.user_id = auth.uid())
-)
-WITH CHECK (
-  (get_my_role() = 'admin') OR
-  EXISTS (SELECT 1 FROM artists WHERE artists.id = distribution_accounts.artist_id AND artists.user_id = auth.uid())
-);
 
 -- RLS Policies for 'projects' table
 ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Enable CRUD for owners and admins" ON public.projects
-FOR ALL
-USING (
-  (get_my_role() = 'admin') OR
-  EXISTS (SELECT 1 FROM artists WHERE artists.id = projects.artist_id AND artists.user_id = auth.uid())
-)
-WITH CHECK (
-  (get_my_role() = 'admin') OR
-  EXISTS (SELECT 1 FROM artists WHERE artists.id = projects.artist_id AND artists.user_id = auth.uid())
-);
 
 
 -- Enable Row Level Security on assets table
