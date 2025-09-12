@@ -137,3 +137,25 @@ El usuario debe ejecutar los siguientes 3 comandos en orden para reparar las dep
 
 **Siguiente paso después de la ejecución:**
 *   Ejecutar `C:\Herramientas\supabase.exe db push --include-all` y verificar si todas las migraciones se aplican correctamente.
+
+---
+
+## Depuración de "Link to User or Artist" en Producción (12 de septiembre de 2025 - Noche)
+
+*   **Problema:** Después de desplegar con éxito los cambios anteriores, se descubrió un nuevo bug en producción. En la página "Crear Participante", la lista desplegable para "Link to User or Artist" aparecía vacía, impidiendo enlazar participantes.
+*   **Diagnóstico:**
+    1.  Se revisó el componente del frontend (`app/management/participants/new/page.tsx`) y se confirmó que estaba llamando a la ruta de API `/api/linkable-entities`.
+    2.  Se analizó la ruta de la API (`app/api/linkable-entities/route.ts`). Se descubrió que la cadena de conexión a la base de datos estaba **codificada** (`hardcoded`) para apuntar a la base de datos local: `postgresql://postgres:postgres@127.0.0.1:54322/postgres`.
+    3.  Este `hardcoding` era la causa del problema: la API funcionaba en desarrollo pero fallaba en producción al no poder conectarse a la base de datos de Vercel.
+*   **Solución:**
+    1.  Se modificó `app/api/linkable-entities/route.ts` para reemplazar la cadena de conexión codificada por una variable de entorno: `process.env.SUPABASE_DB_CONNECTION_STRING`.
+    2.  Se guió al usuario para que creara un archivo `.env.local` en la raíz del proyecto para el desarrollo local.
+    3.  Se le indicó cómo encontrar la cadena de conexión correcta en el panel de Supabase (la de modo "Session" o "Transaction", no la de "Connection Pooling").
+    4.  Se le guió para restablecer la contraseña de su base de datos, ya que no la recordaba.
+*   **Estado Actual:** El código ha sido corregido. El usuario ha sido instruido para configurar sus variables de entorno locales y de producción.
+
+### Próximos Pasos
+
+1.  **Verificar en Desarrollo:** El usuario debe reiniciar su servidor de desarrollo (`npm run dev`) para cargar la nueva variable de entorno y confirmar que la lista desplegable funciona localmente.
+2.  **Desplegar a Producción:** El usuario debe añadir la variable de entorno `SUPABASE_DB_CONNECTION_STRING` a la configuración de su proyecto en Vercel.
+3.  **Verificar en Producción:** Una vez desplegado, verificar que la funcionalidad de enlazar artistas y usuarios funciona correctamente en el entorno de producción.
