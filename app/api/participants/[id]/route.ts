@@ -6,8 +6,8 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function GET(request: Request, context: any) {
+  const { id } = context.params;
   let client;
 
   try {
@@ -30,8 +30,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function PATCH(request: Request, context: any) {
+  const { id } = context.params;
   let client;
 
   try {
@@ -50,7 +50,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       return NextResponse.json({ error: 'No valid fields provided for update.' }, { status: 400 });
     }
 
-    const setClause = updateFields.map((field, index) => `"${field}" = ${index + 1}`).join(', ');
+    const setClause = updateFields.map((field, index) => `"${field}" = $${index + 1}`).join(', ');
     const values = updateFields.map(field => {
       // Convert empty string bank_info to null if the column is JSON/JSONB type
       if (field === 'bank_info' && body[field] === "") {
@@ -63,7 +63,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const query = `
       UPDATE public.participants
       SET ${setClause}, updated_at = NOW()
-      WHERE id = ${values.length}
+      WHERE id = $${values.length}
       RETURNING *;
     `;
 
@@ -86,8 +86,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function DELETE(request: Request, context: any) {
+  const { id } = context.params;
   let client;
 
   try {

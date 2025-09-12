@@ -5,7 +5,8 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, context: any) {
+  const { id } = context.params;
   let client;
 
   try {
@@ -61,7 +62,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       WHERE c.id = $1
       GROUP BY c.id, w.id, t.id;
     `;
-    const { rows } = await client.query(query, [params.id]);
+    const { rows } = await client.query(query, [id]);
 
     if (rows.length === 0) {
       return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
@@ -78,8 +79,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function PATCH(request: Request, context: any) {
+  const { id } = context.params;
   const client = await pool.connect();
 
   try {
@@ -188,8 +189,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function DELETE(request: Request, context: any) {
+  const { id } = context.params;
   let client;
 
   try {
