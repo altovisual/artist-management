@@ -35,7 +35,8 @@ export async function POST(request: Request) {
     await browser.close();
 
     // Create a blob from the PDF buffer
-    const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
+    const nodeBuffer = Buffer.from(pdfBuffer);
+    const blob = new Blob([nodeBuffer], { type: 'application/pdf' });
 
     // Return the PDF with correct headers
     return new NextResponse(blob, {
