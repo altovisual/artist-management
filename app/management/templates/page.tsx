@@ -9,16 +9,25 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { DeleteButton } from "../DeleteButton";
+import { Pool } from 'pg';
+
+// Create a connection pool to the database
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
 async function getTemplates() {
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : 'http://localhost:3000';
-  const res = await fetch(`${baseUrl}/api/templates`, { cache: 'no-store' });
-  if (!res.ok) {
-    throw new Error('Failed to fetch templates');
+  let client;
+  try {
+    client = await pool.connect();
+    const { rows } = await client.query('SELECT * FROM public.templates ORDER BY created_at DESC');
+    return rows;
+  } catch (error) {
+    console.error('Database Error fetching templates:', error);
+    throw new Error('Failed to fetch templates.');
+  } finally {
+    if (client) client.release();
   }
-  return res.json();
 }
 
 export default async function TemplatesPage() {

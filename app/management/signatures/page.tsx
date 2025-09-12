@@ -9,48 +9,76 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { DeleteButton } from "../DeleteButton";
+import { Pool } from 'pg';
 
-const baseUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : 'http://localhost:3000';
+// Create a connection pool to the database
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
 async function getSignatures() {
-  const res = await fetch(`${baseUrl}/api/signatures`, { cache: 'no-store' });
-  if (!res.ok) {
-    throw new Error('Failed to fetch signatures');
+  let client;
+  try {
+    client = await pool.connect();
+    const { rows } = await client.query('SELECT * FROM public.signatures ORDER BY created_at DESC');
+    return rows;
+  } catch (error) {
+    console.error('Database Error fetching signatures:', error);
+    throw new Error('Failed to fetch signatures.');
+  } finally {
+    if (client) client.release();
   }
-  return res.json();
 }
 
 async function getContracts() {
-  const res = await fetch(`${baseUrl}/api/contracts`, { cache: 'no-store' });
-  if (!res.ok) {
-    throw new Error('Failed to fetch contracts');
+  let client;
+  try {
+    client = await pool.connect();
+    const { rows } = await client.query('SELECT id, work_id, template_id FROM public.contracts');
+    return rows;
+  } catch (error) {
+    console.error('Database Error fetching contracts:', error);
+    throw new Error('Failed to fetch contracts.');
+  } finally {
+    if (client) client.release();
   }
-  return res.json();
 }
 
 async function getWorks() {
-  const res = await fetch(`${baseUrl}/api/works`, { cache: 'no-store' });
-  if (!res.ok) {
-    throw new Error('Failed to fetch works');
+  let client;
+  try {
+    client = await pool.connect();
+    const { rows } = await client.query('SELECT id, name FROM public.projects');
+    return rows;
+  } catch (error) {
+    console.error('Database Error fetching works:', error);
+    throw new Error('Failed to fetch works.');
+  } finally {
+    if (client) client.release();
   }
-  return res.json();
 }
 
 async function getTemplates() {
-  const res = await fetch(`${baseUrl}/api/templates`, { cache: 'no-store' });
-  if (!res.ok) {
-    throw new Error('Failed to fetch templates');
+  let client;
+  try {
+    client = await pool.connect();
+    const { rows } = await client.query('SELECT id, type, version FROM public.templates');
+    return rows;
+  } catch (error) {
+    console.error('Database Error fetching templates:', error);
+    throw new Error('Failed to fetch templates.');
+  } finally {
+    if (client) client.release();
   }
-  return res.json();
 }
 
 export default async function SignaturesPage() {
-  const signatures = await getSignatures();
-  const contracts = await getContracts();
-  const works = await getWorks();
-  const templates = await getTemplates();
+  const [signatures, contracts, works, templates] = await Promise.all([
+    getSignatures(),
+    getContracts(),
+    getWorks(),
+    getTemplates()
+  ]);
 
   const getContractDetails = (contractId: number) => {
     const contract = contracts.find((c: any) => c.id === contractId);

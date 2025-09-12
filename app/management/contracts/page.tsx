@@ -9,51 +9,83 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { DeleteButton } from "../DeleteButton";
-import { createClient } from "@/lib/supabase/server"; // Import createClient
+import { createClient } from "@/lib/supabase/server";
+import { Pool } from 'pg';
 
-const baseUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : 'http://localhost:3000';
+// Create a connection pool to the database
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
 async function getContracts(userId: string | null) {
-  const url = userId ? `${baseUrl}/api/contracts?user_id=${userId}` : `${baseUrl}/api/contracts`;
-  const res = await fetch(url, { cache: 'no-store' });
-  if (!res.ok) {
-    throw new Error('Failed to fetch contracts');
+  let client;
+  try {
+    client = await pool.connect();
+    let query = `
+      SELECT c.*,
+             json_agg(json_build_object('id', p.id, 'name', p.name, 'role', cp.role)) as participants
+      FROM public.contracts c
+      LEFT JOIN public.contract_participants cp ON c.id = cp.contract_id
+      LEFT JOIN public.participants p ON cp.participant_id = p.id
+    `;
+    const queryParams = [];
+
+    if (userId) {
+      query += ` WHERE c.id IN (SELECT contract_id FROM public.contract_participants WHERE participant_id IN (SELECT id FROM public.participants WHERE user_id = $1))`;
+      queryParams.push(userId);
+    }
+
+    query += ` GROUP BY c.id ORDER BY c.created_at DESC;`;
+    const { rows } = await client.query(query, queryParams);
+    return rows;
+  } catch (error) {
+    console.error('Database Error fetching contracts:', error);
+    throw new Error('Failed to fetch contracts.');
+  } finally {
+    if (client) client.release();
   }
-  return res.json();
 }
 
 async function getWorks() {
-  const res = await fetch(`${baseUrl}/api/works`, { cache: 'no-store' });
-  if (!res.ok) {
-    throw new Error('Failed to fetch works');
+  let client;
+  try {
+    client = await pool.connect();
+    const { rows } = await client.query('SELECT id, name FROM public.projects');
+    return rows;
+  } catch (error) {
+    console.error('Database Error fetching works:', error);
+    throw new Error('Failed to fetch works.');
+  } finally {
+    if (client) client.release();
   }
-  return res.json();
 }
 
 async function getTemplates() {
-  const res = await fetch(`${baseUrl}/api/templates`, { cache: 'no-store' });
-  if (!res.ok) {
-    throw new Error('Failed to fetch templates');
+  let client;
+  try {
+    client = await pool.connect();
+    const { rows } = await client.query('SELECT id, type, version FROM public.templates');
+    return rows;
+  } catch (error) {
+    console.error('Database Error fetching templates:', error);
+    throw new Error('Failed to fetch templates.');
+  } finally {
+    if (client) client.release();
   }
-  return res.json();
 }
 
 export default async function ContractsPage() {
-  const supabase = await createClient(); // Added await here
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const isAdmin = user?.app_metadata?.role === 'admin';
   const currentUserId = user?.id || null;
 
-  console.log("isAdmin:", isAdmin);
-  console.log("currentUserId:", currentUserId);
-
-  const contracts = await getContracts(isAdmin ? null : currentUserId);
-  console.log("Contracts fetched:", contracts);
-
-  const works = await getWorks();
-  const templates = await getTemplates();
+  // Fetch all data in parallel for efficiency
+  const [contracts, works, templates] = await Promise.all([
+    getContracts(isAdmin ? null : currentUserId),
+    getWorks(),
+    getTemplates()
+  ]);
 
   const getWorkName = (workId: string) => {
     const work = works.find((w: any) => w.id === workId);
