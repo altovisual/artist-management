@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
+import { revalidatePath } from 'next/cache';
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.POSTGRES_URL_POOLER,
 });
 
 export async function GET(request: Request) {
@@ -42,34 +43,51 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Failed to fetch contracts' }, { status: 500 });
   } finally {
     if (client) {
-      client.release();
+      try {
+        client.release();
+      } catch (releaseError) {
+        console.error('Error releasing client:', releaseError);
+      }
     }
   }
 }
 
 export async function POST(request: Request) {
-  const client = await pool.connect();
+  let client;
+  console.log("POST /api/contracts: Received request.");
   try {
+    console.log("POST /api/contracts: Connecting to database...");
+    client = await pool.connect();
+    console.log("POST /api/contracts: Database connected. Parsing body...");
     const body = await request.json();
+    console.log("POST /api/contracts: Body parsed:", body);
     const {
       work_id,
       template_id,
       status = 'draft',
-      internal_reference, // New field
-      signing_location,   // New field
-      additional_notes,   // New field
-      publisher,          // New field
-      publisher_percentage, // New field
-      co_publishers,      // New field
-      publisher_admin,    // New field
+      internal_reference,
+      signing_location,
+      additional_notes,
+      publisher,
+      publisher_percentage,
+      co_publishers,
+      publisher_admin,
       participants
     } = body;
 
     if (!work_id || !template_id || !participants || !Array.isArray(participants) || participants.length === 0) {
+      console.log("POST /api/contracts: Validation failed.");
       return NextResponse.json({ error: 'work_id, template_id, and a non-empty array of participants are required.' }, { status: 400 });
     }
 
+    const totalPercentage = participants.reduce((acc, p) => acc + (p.percentage || 0), 0);
+    if (Math.abs(totalPercentage - 100) > 0.001) {
+      return NextResponse.json({ error: 'La suma de los porcentajes de los participantes debe ser exactamente 100%.' }, { status: 400 });
+    }
+
+    console.log("POST /api/contracts: Starting transaction...");
     await client.query('BEGIN');
+    console.log("POST /api/contracts: Transaction started. Inserting into contracts...");
 
     const contractQuery = `
       INSERT INTO public.contracts (
@@ -87,7 +105,9 @@ export async function POST(request: Request) {
     ];
     const contractResult = await client.query(contractQuery, contractValues);
     const newContract = contractResult.rows[0];
+    console.log("POST /api/contracts: Inserted into contracts:", newContract);
 
+    console.log("POST /api/contracts: Inserting into contract_participants...");
     const participantQuery = 'INSERT INTO public.contract_participants (contract_id, participant_id, role, percentage) VALUES ($1, $2, $3, $4)';
     for (const participant of participants) {
       if (!participant.id || !participant.role) {
@@ -95,10 +115,15 @@ export async function POST(request: Request) {
       }
       await client.query(participantQuery, [newContract.id, participant.id, participant.role, participant.percentage || null]);
     }
+    console.log("POST /api/contracts: Inserted into contract_participants.");
 
+    console.log("POST /api/contracts: Committing transaction...");
     await client.query('COMMIT');
+    console.log("POST /api/contracts: Transaction committed.");
 
-    // Refetch the created contract with its participants to return it in the response
+    revalidatePath('/management/contracts');
+
+    console.log("POST /api/contracts: Refetching created contract...");
     const refetchQuery = `
       SELECT
         c.*,
@@ -117,15 +142,31 @@ export async function POST(request: Request) {
       GROUP BY c.id;
     `;
     const { rows } = await client.query(refetchQuery, [newContract.id]);
-
+    console.log("POST /api/contracts: Refetched contract. Sending response.");
 
     return NextResponse.json(rows[0], { status: 201 });
 
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error('Database Error on POST /api/contracts:', error);
-    return NextResponse.json({ error: 'Failed to create contract' }, { status: 500 });
+    if (client) {
+      try {
+        console.log("POST /api/contracts: Rolling back transaction...");
+        await client.query('ROLLBACK');
+        console.log("POST /api/contracts: Transaction rolled back.");
+      } catch (rollbackError) {
+        console.error('Error rolling back transaction:', rollbackError);
+      }
+    }
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json({ error: 'Failed to create contract', details: errorMessage }, { status: 500 });
   } finally {
-    client.release();
+    if (client) {
+      try {
+        console.log("POST /api/contracts: Releasing client.");
+        client.release();
+      } catch (releaseError) {
+        console.error('Error releasing client:', releaseError);
+      }
+    }
   }
 }

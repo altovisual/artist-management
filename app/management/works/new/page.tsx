@@ -40,7 +40,7 @@ const formSchema = z.object({
 
 export default function NewWorkPage() {
   const router = useRouter();
-  const [participants, setParticipants] = useState<any[]>([]);
+  const [artists, setArtists] = useState<any[]>([]);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -52,15 +52,15 @@ export default function NewWorkPage() {
   });
 
   useEffect(() => {
-    async function getParticipants() {
-      const res = await fetch('/api/participants', { cache: 'no-store' });
+    async function getArtists() {
+      const res = await fetch('/api/artists', { cache: 'no-store' });
       if (!res.ok) {
-        throw new Error('Failed to fetch participants');
+        throw new Error('Failed to fetch artists');
       }
       const data = await res.json();
-      setParticipants(data);
+      setArtists(data);
     }
-    getParticipants();
+    getArtists();
   }, []);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -130,9 +130,9 @@ export default function NewWorkPage() {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {participants.map((participant) => (
-                      <SelectItem key={participant.id} value={participant.id}>
-                        {participant.name}
+                    {artists.map((artist) => (
+                      <SelectItem key={artist.id} value={artist.id}>
+                        {artist.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

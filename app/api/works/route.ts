@@ -3,7 +3,7 @@ import { Pool } from 'pg';
 
 // Create a connection pool to the database
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.POSTGRES_URL_POOLER,
 });
 
 export async function GET(request: Request) {
@@ -17,14 +17,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Failed to fetch works' }, { status: 500 });
   } finally {
     if (client) {
-      client.release();
+      try {
+        client.release();
+      } catch (releaseError) {
+        console.error('Error releasing client:', releaseError);
+      }
     }
   }
 }
 
 export async function POST(request: Request) {
-  const client = await pool.connect();
+  let client;
   try {
+    client = await pool.connect();
     const body = await request.json();
     const {
       name,
@@ -78,10 +83,19 @@ export async function POST(request: Request) {
     return NextResponse.json(newWork, { status: 201 });
 
   } catch (error) {
-    await client.query('ROLLBACK');
+    if (client) {
+      await client.query('ROLLBACK');
+    }
     console.error('Database Error on POST /api/works:', error);
-    return NextResponse.json({ error: 'Failed to create work' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json({ error: 'Failed to create work', details: errorMessage }, { status: 500 });
   } finally {
-    client.release();
+    if (client) {
+      try {
+        client.release();
+      } catch (releaseError) {
+        console.error('Error releasing client:', releaseError);
+      }
+    }
   }
 }

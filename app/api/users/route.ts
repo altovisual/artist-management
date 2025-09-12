@@ -3,7 +3,7 @@ import { Client } from 'pg';
 
 // Debido a un bug persistente en la caché de la API local de Supabase,
 // nos conectamos directamente a la base de datos, ignorando el cliente de Supabase.
-const connectionString = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
+const connectionString = process.env.SUPABASE_DB_CONNECTION_STRING;
 
 export async function GET() {
   const client = new Client({ connectionString });

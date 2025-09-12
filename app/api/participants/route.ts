@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
+import { revalidatePath } from 'next/cache';
 
 // Create a connection pool to the database
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.POSTGRES_URL_POOLER,
 });
 
 export async function GET(request: Request) {
@@ -72,6 +73,8 @@ export async function POST(request: Request) {
     ];
 
     const { rows } = await client.query(query, values);
+
+    revalidatePath('/management/participants');
 
     return NextResponse.json(rows[0], { status: 201 });
   } catch (error) {

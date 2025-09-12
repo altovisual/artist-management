@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.POSTGRES_URL_POOLER,
 });
 
-export async function GET(request: Request, context: any) {
-  const { id } = context.params;
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  const { id } = params;
   let client;
 
   try {
@@ -71,19 +71,25 @@ export async function GET(request: Request, context: any) {
     return NextResponse.json(rows[0]);
   } catch (error) {
     console.error('Database Error:', error);
-    return NextResponse.json({ error: 'Failed to fetch contract' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json({ error: 'Failed to fetch contract', details: errorMessage }, { status: 500 });
   } finally {
     if (client) {
-      client.release();
+      try {
+        client.release();
+      } catch (releaseError) {
+        console.error('Error releasing client:', releaseError);
+      }
     }
   }
 }
 
-export async function PATCH(request: Request, context: any) {
-  const { id } = context.params;
-  const client = await pool.connect();
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  const { id } = params;
+  let client;
 
   try {
+    client = await pool.connect();
     const body = await request.json();
     const {
       status,
@@ -104,20 +110,20 @@ export async function PATCH(request: Request, context: any) {
     const updateValues = [];
     let paramIndex = 1;
 
-    if (status !== undefined) { updateFields.push(`status = $${paramIndex++}`); updateValues.push(status); }
-    if (internal_reference !== undefined) { updateFields.push(`internal_reference = $${paramIndex++}`); updateValues.push(internal_reference); }
-    if (signing_location !== undefined) { updateFields.push(`signing_location = $${paramIndex++}`); updateValues.push(signing_location); }
-    if (additional_notes !== undefined) { updateFields.push(`additional_notes = $${paramIndex++}`); updateValues.push(additional_notes); }
-    if (publisher !== undefined) { updateFields.push(`publisher = $${paramIndex++}`); updateValues.push(publisher); }
-    if (publisher_percentage !== undefined) { updateFields.push(`publisher_percentage = $${paramIndex++}`); updateValues.push(publisher_percentage); }
-    if (co_publishers !== undefined) { updateFields.push(`co_publishers = $${paramIndex++}`); updateValues.push(co_publishers); }
-    if (publisher_admin !== undefined) { updateFields.push(`publisher_admin = $${paramIndex++}`); updateValues.push(publisher_admin); }
+    if (status !== undefined) { updateFields.push(`status = ${paramIndex++}`); updateValues.push(status); }
+    if (internal_reference !== undefined) { updateFields.push(`internal_reference = ${paramIndex++}`); updateValues.push(internal_reference); }
+    if (signing_location !== undefined) { updateFields.push(`signing_location = ${paramIndex++}`); updateValues.push(signing_location); }
+    if (additional_notes !== undefined) { updateFields.push(`additional_notes = ${paramIndex++}`); updateValues.push(additional_notes); }
+    if (publisher !== undefined) { updateFields.push(`publisher = ${paramIndex++}`); updateValues.push(publisher); }
+    if (publisher_percentage !== undefined) { updateFields.push(`publisher_percentage = ${paramIndex++}`); updateValues.push(publisher_percentage); }
+    if (co_publishers !== undefined) { updateFields.push(`co_publishers = ${paramIndex++}`); updateValues.push(co_publishers); }
+    if (publisher_admin !== undefined) { updateFields.push(`publisher_admin = ${paramIndex++}`); updateValues.push(publisher_admin); }
 
     if (updateFields.length > 0) {
       const updateContractQuery = `
         UPDATE public.contracts
         SET ${updateFields.join(', ')}, updated_at = NOW()
-        WHERE id = $${paramIndex}
+        WHERE id = ${paramIndex}
         RETURNING *;
       `;
       updateValues.push(id);
@@ -181,16 +187,25 @@ export async function PATCH(request: Request, context: any) {
     return NextResponse.json(rows[0]);
 
   } catch (error) {
-    await client.query('ROLLBACK');
+    if (client) {
+      await client.query('ROLLBACK');
+    }
     console.error('Database Error on PATCH /api/contracts/[id]:', error);
-    return NextResponse.json({ error: 'Failed to update contract' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json({ error: 'Failed to update contract', details: errorMessage }, { status: 500 });
   } finally {
-    client.release();
+    if (client) {
+      try {
+        client.release();
+      } catch (releaseError) {
+        console.error('Error releasing client:', releaseError);
+      }
+    }
   }
 }
 
-export async function DELETE(request: Request, context: any) {
-  const { id } = context.params;
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  const { id } = params;
   let client;
 
   try {
@@ -205,10 +220,15 @@ export async function DELETE(request: Request, context: any) {
     return NextResponse.json(rows[0]);
   } catch (error) {
     console.error('Database Error on DELETE:', error);
-    return NextResponse.json({ error: 'Failed to delete contract' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json({ error: 'Failed to delete contract', details: errorMessage }, { status: 500 });
   } finally {
     if (client) {
-      client.release();
+      try {
+        client.release();
+      } catch (releaseError) {
+        console.error('Error releasing client:', releaseError);
+      }
     }
   }
 }

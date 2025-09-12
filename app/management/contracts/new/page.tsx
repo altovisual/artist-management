@@ -29,10 +29,10 @@ import { redirect } from "next/navigation";
 
 const formSchema = z.object({
   work_id: z.string({
-    required_error: "Please select a work.",
+    required_error: "Por favor seleccione una obra.",
   }),
   template_id: z.string({
-    required_error: "Please select a template.",
+    required_error: "Por favor seleccione una plantilla.",
   }),
   status: z.string().optional(), // Added status
   internal_reference: z.string().optional(),
@@ -47,14 +47,21 @@ const formSchema = z.object({
   publisher_admin: z.string().optional(),
   participants: z.array(
     z.object({
-      id: z.string(),
-      role: z.string().min(2, { message: "Role must be at least 2 characters." }),
+      id: z.string().min(1, { message: "Debe seleccionar un participante." }),
+      role: z.string().min(2, { message: "El rol debe tener al menos 2 caracteres." }),
       percentage: z.preprocess(
         (val) => (val === "" ? undefined : Number(val)),
-        z.number().optional()
+        z.number({ required_error: "El porcentaje es requerido." }).min(0, "El porcentaje no puede ser negativo.").max(100, "El porcentaje no puede ser mayor a 100.")
       ),
     })
   ),
+}).refine(data => {
+    const totalPercentage = data.participants.reduce((acc, participant) => acc + (participant.percentage || 0), 0);
+    // Allow for small floating point inaccuracies
+    return Math.abs(totalPercentage - 100) < 0.001;
+}, {
+    message: "La suma de los porcentajes de los participantes debe ser exactamente 100%.",
+    path: ["participants"],
 });
 
 export default function NewContractPage() {
@@ -156,6 +163,12 @@ export default function NewContractPage() {
     } else {
       // Handle error
       console.error("Failed to create contract");
+      try {
+        const errorData = await res.json();
+        console.error("Server error:", errorData);
+      } catch (e) {
+        console.error("Failed to parse error response:", e);
+      }
     }
   }
 
@@ -177,7 +190,7 @@ export default function NewContractPage() {
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a work" />
+                      <SelectValue placeholder="Seleccione una obra" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -201,7 +214,7 @@ export default function NewContractPage() {
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a template" />
+                      <SelectValue placeholder="Seleccione una plantilla" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -346,7 +359,12 @@ export default function NewContractPage() {
           />
 
           <div>
-            <h3 className="text-lg font-medium">Participants</h3>
+            <h3 className="text-lg font-medium">Participantes</h3>
+            {form.formState.errors.participants && (
+              <p className="text-sm font-medium text-destructive py-2">
+                {form.formState.errors.participants.root?.message}
+              </p>
+            )}
             {fields.map((field, index) => (
               <div key={field.id} className="flex items-center space-x-4 mt-2">
                 <FormField
@@ -357,7 +375,7 @@ export default function NewContractPage() {
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a participant" />
+                            <SelectValue placeholder="Seleccione un participante" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -368,6 +386,7 @@ export default function NewContractPage() {
                           ))}
                         </SelectContent>
                       </Select>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -377,8 +396,9 @@ export default function NewContractPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Input placeholder="Role" {...field} value={field.value ?? ""} />
+                        <Input placeholder="Rol" {...field} value={field.value ?? ""} />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -388,13 +408,14 @@ export default function NewContractPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Input type="number" placeholder="Percentage" {...field} value={field.value ?? ""} />
+                        <Input type="number" placeholder="Porcentaje" {...field} value={field.value ?? ""} />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
                 <Button type="button" variant="destructive" onClick={() => remove(index)}>
-                  Remove
+                  Eliminar
                 </Button>
               </div>
             ))}
@@ -405,7 +426,7 @@ export default function NewContractPage() {
               className="mt-2"
               onClick={() => append({ id: "", role: "", percentage: undefined })}
             >
-              Add Participant
+              Añadir participante
             </Button>
           </div>
 

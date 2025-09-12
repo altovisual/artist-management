@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { Client } from 'pg';
 
 // Using direct connection to bypass local Supabase API cache issues
-const connectionString = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
+const connectionString = process.env.SUPABASE_DB_CONNECTION_STRING;
 
 export async function GET() {
   const client = new Client({ connectionString });

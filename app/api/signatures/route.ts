@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { randomBytes } from 'crypto';
+import { revalidatePath } from 'next/cache';
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.POSTGRES_URL_POOLER,
 });
 
 export async function GET(request: Request) {
@@ -43,6 +44,8 @@ export async function POST(request: Request) {
     `;
     const values = [contract_id, signer_email, signature_request_id];
     const { rows } = await client.query(query, values);
+
+    revalidatePath('/management/signatures');
 
     return NextResponse.json(rows[0], { status: 201 });
 
