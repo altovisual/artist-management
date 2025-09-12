@@ -32,26 +32,51 @@ export async function POST(request: Request) {
   let client;
   try {
     const body = await request.json();
-    const { name, email, type, id_number, address, country, phone, bank_info } = body;
+    let {
+      name,
+      email,
+      type,
+      id_number,
+      address,
+      country,
+      phone,
+      bank_info,
+      artistic_name,
+      management_entity,
+      ipi,
+      user_id // Added user_id
+    } = body;
 
     // Basic validation
     if (!name || !type) {
       return NextResponse.json({ error: 'Name and type are required fields.' }, { status: 400 });
     }
 
+    // Convert empty string to null for optional fields
+    if (bank_info === "") bank_info = null;
+    if (user_id === "") user_id = null;
+
+
     client = await pool.connect();
     const query = `
-      INSERT INTO public.participants (name, email, type, id_number, address, country, phone, bank_info)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO public.participants (
+        name, email, type, id_number, address, country, phone, bank_info,
+        artistic_name, management_entity, ipi, user_id
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *;
     `;
-    const values = [name, email, type, id_number, address, country, phone, bank_info];
+    const values = [
+      name, email, type, id_number, address, country, phone, bank_info,
+      artistic_name, management_entity, ipi, user_id
+    ];
 
     const { rows } = await client.query(query, values);
 
     return NextResponse.json(rows[0], { status: 201 });
   } catch (error) {
     console.error('Database Error on POST:', error);
+    console.error(error);
     return NextResponse.json({ error: 'Failed to create participant' }, { status: 500 });
   } finally {
     if (client) {

@@ -26,8 +26,21 @@ export async function POST(request: Request) {
   const client = await pool.connect();
   try {
     const body = await request.json();
-    // Destructure all fields, including the new artist_id
-    const { name, type, artist_id, status = 'planning', release_date, description, isrc, upc, genre, duration, participant_ids } = body;
+    const {
+      name,
+      type,
+      artist_id,
+      status = 'planning',
+      release_date,
+      description,
+      isrc,
+      upc,
+      genre,
+      duration,
+      alternative_title, // New field
+      iswc,              // New field
+      participant_ids
+    } = body;
 
     // Basic validation, now including artist_id
     if (!name || !type || !artist_id) {
@@ -38,11 +51,17 @@ export async function POST(request: Request) {
 
     // 1. Insert the work into the projects table
     const projectQuery = `
-      INSERT INTO public.projects (name, type, artist_id, status, release_date, description, isrc, upc, genre, duration)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      INSERT INTO public.projects (
+        name, type, artist_id, status, release_date, description, isrc, upc, genre, duration,
+        alternative_title, iswc
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *;
     `;
-    const projectValues = [name, type, artist_id, status, release_date, description, isrc, upc, genre, duration];
+    const projectValues = [
+      name, type, artist_id, status, release_date, description, isrc, upc, genre, duration,
+      alternative_title, iswc
+    ];
     const projectResult = await client.query(projectQuery, projectValues);
     const newWork = projectResult.rows[0];
 

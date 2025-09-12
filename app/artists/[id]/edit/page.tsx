@@ -92,6 +92,14 @@ export default function EditArtistPage() {
   const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([])
   const [distributionAccounts, setDistributionAccounts] = useState<DistributionAccount[]>([])
 
+  // New participant-related fields
+  const [idNumber, setIdNumber] = useState("")
+  const [address, setAddress] = useState("")
+  const [phone, setPhone] = useState("")
+  const [bankInfo, setBankInfo] = useState("") // Will be JSON string
+  const [managementEntity, setManagementEntity] = useState("")
+  const [ipi, setIpi] = useState("")
+
   // State to track original IDs for deletion
   const [initialSocialAccountIds, setInitialSocialAccountIds] = useState<string[]>([]);
   const [initialDistributionAccountIds, setInitialDistributionAccountIds] = useState<string[]>([]);
@@ -160,6 +168,14 @@ export default function EditArtistPage() {
         setLastName(artistData.last_name || "")
         setSpotifyInput(artistData.spotify_artist_id || "")
 
+        // Set new participant fields
+        setIdNumber(artistData.id_number || "");
+        setAddress(artistData.address || "");
+        setPhone(artistData.phone || "");
+        setBankInfo(artistData.bank_info ? JSON.stringify(artistData.bank_info, null, 2) : "");
+        setManagementEntity(artistData.management_entity || "");
+        setIpi(artistData.ipi || "");
+
         const loadedSocialAccounts = artistData.social_accounts || [];
         setSocialAccounts(loadedSocialAccounts);
         setInitialSocialAccountIds(loadedSocialAccounts.map((a: any) => a.id).filter(Boolean));
@@ -186,6 +202,17 @@ export default function EditArtistPage() {
     const finalSpotifyId = extractSpotifyId(spotifyInput)
     const artistId = params.id as string
 
+    let parsedBankInfo = null;
+    if (bankInfo) {
+      try {
+        parsedBankInfo = JSON.parse(bankInfo);
+      } catch (jsonError) {
+        toast({ title: "Error", description: "Bank Info must be valid JSON.", variant: "destructive" });
+        setIsLoading(false);
+        return;
+      }
+    }
+
     try {
       let imageUrl: string | undefined = artist.profile_image
 
@@ -197,7 +224,22 @@ export default function EditArtistPage() {
         imageUrl = urlData.publicUrl
       }
 
-      const updateData: any = { name, genre, country: location, bio, profile_image: imageUrl, spotify_artist_id: finalSpotifyId, first_name: firstName, last_name: lastName }
+      const updateData: any = {
+        name,
+        genre,
+        country: location,
+        bio,
+        profile_image: imageUrl,
+        spotify_artist_id: finalSpotifyId,
+        first_name: firstName,
+        last_name: lastName,
+        id_number: idNumber || null,
+        address: address || null,
+        phone: phone || null,
+        bank_info: parsedBankInfo,
+        management_entity: managementEntity || null,
+        ipi: ipi || null,
+      }
 
       const { error: artistError } = await supabase.from("artists").update(updateData).eq("id", artistId)
       if (artistError) throw new Error(`Error updating artist details: ${artistError.message}`)
@@ -386,11 +428,73 @@ export default function EditArtistPage() {
                       You can paste the full URL from the share button on your Spotify artist profile.
                     </p>
                   </div>
+                   {/* New participant-related fields */}
+                  <div className="space-y-2">
+                    <Label htmlFor="idNumber">ID Number</Label>
+                    <Input
+                      id="idNumber"
+                      value={idNumber}
+                      onChange={(e) => setIdNumber(e.target.value)}
+                      placeholder="Identification number"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Address</Label>
+                    <Input
+                      id="address"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="Artist's address"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="Artist's phone number"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="managementEntity">Management Entity</Label>
+                    <Input
+                      id="managementEntity"
+                      value={managementEntity}
+                      onChange={(e) => setManagementEntity(e.target.value)}
+                      placeholder="e.g., PRO, publisher"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="ipi">IPI Number</Label>
+                    <Input
+                      id="ipi"
+                      value={ipi}
+                      onChange={(e) => setIpi(e.target.value)}
+                      placeholder="IPI number (if applicable)"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="bio">Biography</Label>
                   <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell us about the artist..." rows={4} />
                 </div>
+                <div className="space-y-2">
+                    <Label htmlFor="bankInfo">Bank Info (JSON)</Label>
+                    <Textarea
+                      id="bankInfo"
+                      value={bankInfo}
+                      onChange={(e) => setBankInfo(e.target.value)}
+                      placeholder={`{
+  "bank_name": "Global Bank",
+  "account_holder": "Artist Name",
+  "account_number": "1234567890",
+  "routing_number": "0987654321",
+  "swift_code": "GLOBUS33"
+}`}
+                      rows={6}
+                    />
+                  </div>
                 <div className="space-y-2">
                   <Label>Profile Image</Label>
                   {artist?.profile_image && <Image src={artist.profile_image} alt={artist.name} width={96} height={96} className="rounded-full object-cover" />}

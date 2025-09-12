@@ -1,0 +1,184 @@
+"use client";
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+
+const formSchema = z.object({
+  name: z.string().min(2, {
+    message: "Name must be at least 2 characters.",
+  }),
+  type: z.string().min(2, {
+    message: "Type must be at least 2 characters.",
+  }),
+  artist_id: z.string({
+    required_error: "Please select an artist.",
+  }),
+  alternative_title: z.string().optional(),
+  iswc: z.string().optional(),
+});
+
+export default function NewWorkPage() {
+  const router = useRouter();
+  const [participants, setParticipants] = useState<any[]>([]);
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      type: "song",
+      alternative_title: "",
+      iswc: "",
+    },
+  });
+
+  useEffect(() => {
+    async function getParticipants() {
+      const res = await fetch('/api/participants', { cache: 'no-store' });
+      if (!res.ok) {
+        throw new Error('Failed to fetch participants');
+      }
+      const data = await res.json();
+      setParticipants(data);
+    }
+    getParticipants();
+  }, []);
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    const res = await fetch("/api/works", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(values),
+    });
+
+    if (res.ok) {
+      router.push("/management/works");
+    } else {
+      // Handle error
+      console.error("Failed to create work");
+    }
+  }
+
+  return (
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">Create Work</h1>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Work's name" {...field} />
+                </FormControl>
+                <FormDescription>
+                  The title of the work.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="type"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Type</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., song, album" {...field} />
+                </FormControl>
+                <FormDescription>
+                  The type of the work.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="artist_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Artist</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an artist" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {participants.map((participant) => (
+                      <SelectItem key={participant.id} value={participant.id}>
+                        {participant.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  The main artist of the work.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="alternative_title"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Alternative Title</FormLabel>
+                <FormControl>
+                  <Input placeholder="Alternative title (if applicable)" {...field} value={field.value ?? ""} />
+                </FormControl>
+                <FormDescription>
+                  An alternative title for the work.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="iswc"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>ISWC</FormLabel>
+                <FormControl>
+                  <Input placeholder="ISWC code (if applicable)" {...field} value={field.value ?? ""} />
+                </FormControl>
+                <FormDescription>
+                  The International Standard Musical Work Code.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit">Submit</Button>
+        </form>
+      </Form>
+    </div>
+  );
+}

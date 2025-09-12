@@ -37,8 +37,12 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   try {
     const body = await request.json();
 
-    // Whitelist of updatable fields to prevent updating protected columns
-    const allowedFields = ['name', 'email', 'type', 'id_number', 'address', 'country', 'phone', 'bank_info'];
+    const allowedFields = [
+      'name', 'email', 'type', 'id_number', 'address', 'country', 'phone', 'bank_info',
+      'artistic_name',      // New field
+      'management_entity',  // New field
+      'ipi'                 // New field
+    ];
 
     const updateFields = Object.keys(body).filter(field => allowedFields.includes(field));
 
@@ -46,14 +50,20 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       return NextResponse.json({ error: 'No valid fields provided for update.' }, { status: 400 });
     }
 
-    const setClause = updateFields.map((field, index) => `"${field}" = $${index + 1}`).join(', ');
-    const values = updateFields.map(field => body[field]);
+    const setClause = updateFields.map((field, index) => `"${field}" = ${index + 1}`).join(', ');
+    const values = updateFields.map(field => {
+      // Convert empty string bank_info to null if the column is JSON/JSONB type
+      if (field === 'bank_info' && body[field] === "") {
+        return null;
+      }
+      return body[field];
+    });
     values.push(id); // Add the id for the WHERE clause
 
     const query = `
       UPDATE public.participants
       SET ${setClause}, updated_at = NOW()
-      WHERE id = $${values.length}
+      WHERE id = ${values.length}
       RETURNING *;
     `;
 

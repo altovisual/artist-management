@@ -1,0 +1,1 @@
+ALTER TABLE public.distribution_accounts ALTER COLUMN platform DROP NOT NULL;

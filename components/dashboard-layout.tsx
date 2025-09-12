@@ -95,6 +95,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     { href: "/dashboard/releases", label: "Releases", icon: Music },
   ];
 
+  // Conditionally add the Management link
+  if (isAdmin) {
+    navLinks.push({ href: "/management/participants", label: "Management", icon: Shield });
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <header className="sticky top-0 z-50 w-full border-b bg-card text-card-foreground">

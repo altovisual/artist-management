@@ -1,0 +1,4 @@
+ALTER TABLE public.participants
+ADD COLUMN IF NOT EXISTS artistic_name TEXT,
+ADD COLUMN IF NOT EXISTS management_entity TEXT,
+ADD COLUMN IF NOT EXISTS ipi TEXT;

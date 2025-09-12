@@ -13,7 +13,21 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
   try {
     client = await pool.connect();
-    const query = 'SELECT * FROM public.projects WHERE id = $1';
+    const query = `
+      SELECT
+        w.*,
+        json_agg(
+          json_build_object(
+            'id', p.id,
+            'name', p.name
+          )
+        ) as participants
+      FROM public.projects w
+      LEFT JOIN public.work_participants wp ON w.id = wp.project_id
+      LEFT JOIN public.participants p ON wp.participant_id = p.id
+      WHERE w.id = $1
+      GROUP BY w.id;
+    `;
     const { rows } = await client.query(query, [id]);
 
     if (rows.length === 0) {
@@ -39,7 +53,12 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   try {
     const body = await request.json();
 
-    const allowedFields = ['name', 'type', 'status', 'release_date', 'description', 'isrc', 'upc', 'genre', 'duration'];
+    const allowedFields = [
+      'name', 'type', 'status', 'release_date', 'description', 'isrc', 'upc', 'genre', 'duration',
+      'alternative_title', // New field
+      'iswc',               // New field
+      'artist_id'
+    ];
     const updateFields = Object.keys(body).filter(field => allowedFields.includes(field));
 
     if (updateFields.length === 0) {
@@ -66,9 +85,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     return NextResponse.json(rows[0]);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Database Error on PATCH:', error);
-    return NextResponse.json({ error: 'Failed to update work' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update work', details: error.message }, { status: 500 });
   } finally {
     if (client) {
       client.release();

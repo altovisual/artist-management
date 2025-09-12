@@ -241,12 +241,15 @@ export default function ArtistDetailPage() {
                 <CardHeader><CardTitle>Artist Information</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div><label className="text-sm font-medium text-muted-foreground">First Name</label><p className="mt-1">{artist.first_name}</p></div>
-                    <div><label className="text-sm font-medium text-muted-foreground">Last Name</label><p className="mt-1">{artist.last_name}</p></div>
-                    <div><label className="text-sm font-medium text-muted-foreground">Genre</label><p className="mt-1">{artist.genre}</p></div>
-                    <div><label className="text-sm font-medium text-muted-foreground">Country</label><p className="mt-1">{artist.country}</p></div>
-                    <div><label className="text-sm font-medium text-muted-foreground">Total Streams</label><p className="mt-1">{artist.total_streams?.toLocaleString() || "0"}</p></div>
-                    <div><label className="text-sm font-medium text-muted-foreground">Monthly Listeners</label><p className="mt-1">{artist.monthly_listeners?.toLocaleString() || "0"}</p></div>
+                    <div><label className="text-sm font-medium text-muted-foreground">First Name</label><p className="mt-1">{artist.first_name || "N/A"}</p></div>
+                    <div><label className="text-sm font-medium text-muted-foreground">Last Name</label><p className="mt-1">{artist.last_name || "N/A"}</p></div>
+                    <div><label className="text-sm font-medium text-muted-foreground">Genre</label><p className="mt-1">{artist.genre || "N/A"}</p></div>
+                    <div><label className="text-sm font-medium text-muted-foreground">Country</label><p className="mt-1">{artist.country || "N/A"}</p></div>
+                    <div><label className="text-sm font-medium text-muted-foreground">ID Number</label><p className="mt-1">{artist.id_number || "N/A"}</p></div>
+                    <div><label className="text-sm font-medium text-muted-foreground">Phone</label><p className="mt-1">{artist.phone || "N/A"}</p></div>
+                    <div className="md:col-span-2"><label className="text-sm font-medium text-muted-foreground">Address</label><p className="mt-1">{artist.address || "N/A"}</p></div>
+                    <div><label className="text-sm font-medium text-muted-foreground">Management Entity</label><p className="mt-1">{artist.management_entity || "N/A"}</p></div>
+                    <div><label className="text-sm font-medium text-muted-foreground">IPI Number</label><p className="mt-1">{artist.ipi || "N/A"}</p></div>
                     <div><label className="text-sm font-medium text-muted-foreground">Created</label><p className="mt-1">{new Date(artist.created_at).toLocaleDateString()}</p></div>
                   </div>
                   <Separator />
@@ -254,6 +257,17 @@ export default function ArtistDetailPage() {
                     <label className="text-sm font-medium text-muted-foreground">Biography</label>
                     <p className="mt-2 text-sm leading-relaxed">{artist.bio || "No biography available."}</p>
                   </div>
+                  {artist.bank_info && (
+                    <>
+                      <Separator />
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Bank Information</label>
+                        <pre className="mt-2 text-sm leading-relaxed bg-muted p-3 rounded-md whitespace-pre-wrap">
+                          {JSON.stringify(artist.bank_info, null, 2)}
+                        </pre>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </div>

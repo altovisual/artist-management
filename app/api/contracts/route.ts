@@ -9,7 +9,10 @@ export async function GET(request: Request) {
   let client;
   try {
     client = await pool.connect();
-    const query = `
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('user_id');
+
+    let query = `
       SELECT
         c.*,
         json_agg(
@@ -22,9 +25,17 @@ export async function GET(request: Request) {
       FROM public.contracts c
       LEFT JOIN public.contract_participants cp ON c.id = cp.contract_id
       LEFT JOIN public.participants p ON cp.participant_id = p.id
-      GROUP BY c.id;
     `;
-    const { rows } = await client.query(query);
+    const queryParams = [];
+
+    if (userId) {
+      query += ` WHERE cp.participant_id IN (SELECT id FROM public.participants WHERE user_id = $1)`;
+      queryParams.push(userId);
+    }
+
+    query += ` GROUP BY c.id;`;
+
+    const { rows } = await client.query(query, queryParams);
     return NextResponse.json(rows);
   } catch (error) {
     console.error('Database Error:', error);
@@ -40,7 +51,19 @@ export async function POST(request: Request) {
   const client = await pool.connect();
   try {
     const body = await request.json();
-    const { work_id, template_id, status = 'draft', participants } = body;
+    const {
+      work_id,
+      template_id,
+      status = 'draft',
+      internal_reference, // New field
+      signing_location,   // New field
+      additional_notes,   // New field
+      publisher,          // New field
+      publisher_percentage, // New field
+      co_publishers,      // New field
+      publisher_admin,    // New field
+      participants
+    } = body;
 
     if (!work_id || !template_id || !participants || !Array.isArray(participants) || participants.length === 0) {
       return NextResponse.json({ error: 'work_id, template_id, and a non-empty array of participants are required.' }, { status: 400 });
@@ -49,20 +72,28 @@ export async function POST(request: Request) {
     await client.query('BEGIN');
 
     const contractQuery = `
-      INSERT INTO public.contracts (work_id, template_id, status)
-      VALUES ($1, $2, $3)
+      INSERT INTO public.contracts (
+        work_id, template_id, status,
+        internal_reference, signing_location, additional_notes,
+        publisher, publisher_percentage, co_publishers, publisher_admin
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *;
     `;
-    const contractValues = [work_id, template_id, status];
+    const contractValues = [
+      work_id, template_id, status,
+      internal_reference, signing_location, additional_notes,
+      publisher, publisher_percentage, co_publishers, publisher_admin
+    ];
     const contractResult = await client.query(contractQuery, contractValues);
     const newContract = contractResult.rows[0];
 
-    const participantQuery = 'INSERT INTO public.contract_participants (contract_id, participant_id, role) VALUES ($1, $2, $3)';
+    const participantQuery = 'INSERT INTO public.contract_participants (contract_id, participant_id, role, percentage) VALUES ($1, $2, $3, $4)';
     for (const participant of participants) {
       if (!participant.id || !participant.role) {
         throw new Error('Each participant must have an id and a role.');
       }
-      await client.query(participantQuery, [newContract.id, participant.id, participant.role]);
+      await client.query(participantQuery, [newContract.id, participant.id, participant.role, participant.percentage || null]);
     }
 
     await client.query('COMMIT');
@@ -75,7 +106,8 @@ export async function POST(request: Request) {
           json_build_object(
             'id', p.id,
             'name', p.name,
-            'role', cp.role
+            'role', cp.role,
+            'percentage', cp.percentage
           )
         ) as participants
       FROM public.contracts c

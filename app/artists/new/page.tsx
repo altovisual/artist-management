@@ -53,6 +53,14 @@ export default function NewArtistPage() {
   const [lastName, setLastName] = useState("")
   const [profileImage, setProfileImage] = useState<File | null>(null)
 
+  // New participant-related fields
+  const [idNumber, setIdNumber] = useState("")
+  const [address, setAddress] = useState("")
+  const [phone, setPhone] = useState("")
+  const [bankInfo, setBankInfo] = useState("") // Will be JSON string
+  const [managementEntity, setManagementEntity] = useState("")
+  const [ipi, setIpi] = useState("")
+
   // Social accounts
   const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([
     { platform: "", username: "", followers: "", url: "" },
@@ -103,6 +111,17 @@ export default function NewArtistPage() {
       return;
     }
 
+    let parsedBankInfo = null;
+    if (bankInfo) {
+      try {
+        parsedBankInfo = JSON.parse(bankInfo);
+      } catch (jsonError) {
+        toast({ title: "Error", description: "Bank Info must be valid JSON.", variant: "destructive" });
+        setIsLoading(false);
+        return;
+      }
+    }
+
     try {
       let imageUrl: string | null = null
       if (profileImage) {
@@ -133,6 +152,13 @@ export default function NewArtistPage() {
           monthly_listeners: 0,
           first_name: firstName,
           last_name: lastName,
+          // New participant-related fields
+          id_number: idNumber || null,
+          address: address || null,
+          phone: phone || null,
+          bank_info: parsedBankInfo,
+          management_entity: managementEntity || null,
+          ipi: ipi || null,
         })
         .select()
         .single()
@@ -297,6 +323,62 @@ export default function NewArtistPage() {
                     type="file"
                     accept="image/*"
                     onChange={(e) => setProfileImage(e.target.files ? e.target.files[0] : null)}
+                  />
+                </div>
+                {/* New participant-related fields */}
+                <div className="space-y-2">
+                  <Label htmlFor="idNumber">ID Number</Label>
+                  <Input
+                    id="idNumber"
+                    value={idNumber}
+                    onChange={(e) => setIdNumber(e.target.value)}
+                    placeholder="Identification number"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Input
+                    id="address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Artist's address"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="Artist's phone number"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bankInfo">Bank Info (JSON)</Label>
+                  <Textarea
+                    id="bankInfo"
+                    value={bankInfo}
+                    onChange={(e) => setBankInfo(e.target.value)}
+                    placeholder="Enter bank information as JSON"
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="managementEntity">Management Entity</Label>
+                  <Input
+                    id="managementEntity"
+                    value={managementEntity}
+                    onChange={(e) => setManagementEntity(e.target.value)}
+                    placeholder="e.g., PRO, publisher"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ipi">IPI Number</Label>
+                  <Input
+                    id="ipi"
+                    value={ipi}
+                    onChange={(e) => setIpi(e.target.value)}
+                    placeholder="IPI number (if applicable)"
                   />
                 </div>
               </div>
