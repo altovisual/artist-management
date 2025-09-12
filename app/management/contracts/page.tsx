@@ -35,7 +35,7 @@ async function getContracts(userId: string | null) {
       queryParams.push(userId);
     }
 
-    query += ` GROUP BY c.id ORDER BY c.created_at DESC;`;
+    query += ` GROUP BY c.id;`;
     const { rows } = await client.query(query, queryParams);
     return rows;
   } catch (error) {

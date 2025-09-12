@@ -20,7 +20,7 @@ async function getSignatures() {
   let client;
   try {
     client = await pool.connect();
-    const { rows } = await client.query('SELECT * FROM public.signatures ORDER BY created_at DESC');
+    const { rows } = await client.query('SELECT * FROM public.signatures');
     return rows;
   } catch (error) {
     console.error('Database Error fetching signatures:', error);

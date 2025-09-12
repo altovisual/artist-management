@@ -20,7 +20,7 @@ async function getParticipants() {
   let client;
   try {
     client = await pool.connect();
-    const { rows } = await client.query('SELECT * FROM public.participants ORDER BY created_at DESC');
+    const { rows } = await client.query('SELECT * FROM public.participants');
     return rows;
   } catch (error) {
     console.error('Database Error:', error);

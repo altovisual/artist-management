@@ -20,7 +20,7 @@ async function getWorks() {
   let client;
   try {
     client = await pool.connect();
-    const { rows } = await client.query('SELECT * FROM public.projects ORDER BY created_at DESC');
+    const { rows } = await client.query('SELECT * FROM public.projects');
     return rows;
   } catch (error) {
     console.error('Database Error fetching works:', error);

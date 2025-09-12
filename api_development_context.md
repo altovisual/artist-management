@@ -80,3 +80,60 @@ Hemos avanzado significativamente en la configuración del entorno y la implemen
     *   Modificar el formulario de perfil de artista (`app/artists/[id]/edit/page.tsx` o similar) para incluir estos nuevos campos.
     *   Modificar el formulario de creación de artista (`app/artists/new/page.tsx` o similar) para incluir estos nuevos campos.
     *   Actualizar las APIs (`GET`, `POST`, `PATCH`) de artistas para manejar estos nuevos campos.
+
+---
+
+## Depuración de Despliegue en Vercel (12 de septiembre de 2025 - Tarde)
+
+Después de implementar las funcionalidades de artistas y participantes, se procedió a hacer `commit` y `push` de todos los cambios. El despliegue en Vercel comenzó a fallar.
+
+### Problema 1: Errores de Build por Tipos en Rutas de API
+
+*   **Error:** `Type error: Route "..." has an invalid "GET" export: Type "{ params: { id: string; }; }" is not a valid type for the function's second argument.`
+*   **Diagnóstico:** Este error apareció secuencialmente en todas las rutas de API dinámicas (`/api/artists/[id]`, `/api/contracts/[id]`, etc.). Se determinó que era un problema de incompatibilidad entre la firma de tipos de la función y el entorno de build de Vercel (usando Next.js 15.2.4).
+*   **Solución (Temporal/Diagnóstico):** Se modificaron todas las rutas de API dinámicas para usar `context: any` como segundo argumento en las funciones `GET`, `PATCH` y `DELETE`. Esto permitió que el build avanzara.
+
+### Problema 2: Error de `Blob` en Generación de PDF
+
+*   **Error:** `Type error: Argument of type 'Uint8Array<ArrayBufferLike>' is not assignable to parameter of type 'BlobPart'.`
+*   **Diagnóstico:** En la ruta `/api/export-pdf`, el buffer de PDF devuelto por `puppeteer` no era directamente compatible con el constructor `new Blob()`.
+*   **Solución:** Se convirtió el `Uint8Array` a un `Buffer` de Node.js (`Buffer.from(pdfBuffer)`) antes de crear el `Blob`, resolviendo el conflicto de tipos.
+
+### Problema 3: Error de Renderizado en Servidor (`ECONNREFUSED`)
+
+*   **Error:** `Application error: a server-side exception has occurred... Digest: 2027818240` y en los logs: `Error: connect ECONNREFUSED 127.0.0.1:3000`.
+*   **Diagnóstico:** Se descubrió que los componentes de servidor en el directorio `/management` estaban llamando a sus propias rutas de API usando `fetch` con URLs `http://localhost:3000`. Esto falla en producción porque el servidor no puede llamarse a sí mismo en `localhost`.
+*   **Solución (Arquitectónica):** Se refactorizaron todas las páginas afectadas (`participants`, `contracts`, `signatures`, `templates`, `works`) para que dejen de usar `fetch`. En su lugar, ahora acceden a la base de datos directamente usando la librería `pg`, lo cual es más eficiente y la práctica recomendada en Next.js.
+
+### Problema 4 (Actual): Fallo de Autenticación y Migraciones en Producción
+
+*   **Error:** `Database Error: error: password authentication failed for user "postgres"`, seguido de `relation "..." does not exist`.
+*   **Diagnóstico:** Se identificaron múltiples problemas en cadena:
+    1.  La contraseña de la base de datos en la variable de entorno `DATABASE_URL` de Vercel era incorrecta.
+    2.  Una vez corregida, el `build` seguía fallando porque las tablas no existían en la base de datos de producción.
+    3.  Se descubrió que el comando `supabase db push` estaba fallando debido a un historial de migraciones corrupto en la nube y una inconsistencia en los nombres de los archivos de migración (un formato antiguo `001_...` y uno nuevo `2025...`).
+
+*   **Solución en Progreso:** Se está siguiendo un proceso iterativo para reparar el historial de migraciones en la nube y renombrar los archivos locales para que `db push` pueda aplicar la estructura de tablas correcta.
+
+### Estado Actual y Próximos Pasos
+
+Hemos identificado que la cadena de dependencias completa es `signatures` -> `contracts` -> `templates` y `projects`. Para evitar seguir haciéndolo uno por uno, el plan actual es reparar todas las dependencias de una vez.
+
+**Acción Pendiente (donde nos quedamos):**
+El usuario debe ejecutar los siguientes 3 comandos en orden para reparar las dependencias de `templates` y `projects` antes de intentar el `push` final.
+
+1.  **Reparar `templates`:**
+    ```powershell
+    C:\Herramientas\supabase.exe migration repair --status reverted 20250911204256
+    ```
+2.  **Renombrar `projects`:**
+    ```powershell
+    ren supabase\migrations\004_create_projects_table.sql 20250825191901_create_projects_table.sql
+    ```
+3.  **Reparar la referencia antigua de `projects`:**
+    ```powershell
+    C:\Herramientas\supabase.exe migration repair --status reverted 004
+    ```
+
+**Siguiente paso después de la ejecución:**
+*   Ejecutar `C:\Herramientas\supabase.exe db push --include-all` y verificar si todas las migraciones se aplican correctamente.

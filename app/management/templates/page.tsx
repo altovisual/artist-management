@@ -20,7 +20,7 @@ async function getTemplates() {
   let client;
   try {
     client = await pool.connect();
-    const { rows } = await client.query('SELECT * FROM public.templates ORDER BY created_at DESC');
+    const { rows } = await client.query('SELECT * FROM public.templates');
     return rows;
   } catch (error) {
     console.error('Database Error fetching templates:', error);
