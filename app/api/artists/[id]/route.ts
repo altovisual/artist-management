@@ -3,8 +3,8 @@ import { Client } from 'pg';
 
 const connectionString = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function GET(request: Request, context: { params: { id: string } }) {
+  const { id } = context.params;
   const client = new Client({ connectionString });
 
   try {
