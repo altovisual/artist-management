@@ -10,8 +10,12 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { DeleteButton } from "../DeleteButton";
 
+const baseUrl = process.env.VERCEL_URL
+  ? `https://${process.env.VERCEL_URL}`
+  : 'http://localhost:3000';
+
 async function getSignatures() {
-  const res = await fetch('http://localhost:3000/api/signatures', { cache: 'no-store' });
+  const res = await fetch(`${baseUrl}/api/signatures`, { cache: 'no-store' });
   if (!res.ok) {
     throw new Error('Failed to fetch signatures');
   }
@@ -19,7 +23,7 @@ async function getSignatures() {
 }
 
 async function getContracts() {
-  const res = await fetch('http://localhost:3000/api/contracts', { cache: 'no-store' });
+  const res = await fetch(`${baseUrl}/api/contracts`, { cache: 'no-store' });
   if (!res.ok) {
     throw new Error('Failed to fetch contracts');
   }
@@ -27,7 +31,7 @@ async function getContracts() {
 }
 
 async function getWorks() {
-  const res = await fetch('http://localhost:3000/api/works', { cache: 'no-store' });
+  const res = await fetch(`${baseUrl}/api/works`, { cache: 'no-store' });
   if (!res.ok) {
     throw new Error('Failed to fetch works');
   }
@@ -35,7 +39,7 @@ async function getWorks() {
 }
 
 async function getTemplates() {
-  const res = await fetch('http://localhost:3000/api/templates', { cache: 'no-store' });
+  const res = await fetch(`${baseUrl}/api/templates`, { cache: 'no-store' });
   if (!res.ok) {
     throw new Error('Failed to fetch templates');
   }

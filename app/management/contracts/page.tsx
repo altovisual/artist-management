@@ -11,8 +11,12 @@ import Link from "next/link";
 import { DeleteButton } from "../DeleteButton";
 import { createClient } from "@/lib/supabase/server"; // Import createClient
 
+const baseUrl = process.env.VERCEL_URL
+  ? `https://${process.env.VERCEL_URL}`
+  : 'http://localhost:3000';
+
 async function getContracts(userId: string | null) {
-  const url = userId ? `http://localhost:3000/api/contracts?user_id=${userId}` : 'http://localhost:3000/api/contracts';
+  const url = userId ? `${baseUrl}/api/contracts?user_id=${userId}` : `${baseUrl}/api/contracts`;
   const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) {
     throw new Error('Failed to fetch contracts');
@@ -21,7 +25,7 @@ async function getContracts(userId: string | null) {
 }
 
 async function getWorks() {
-  const res = await fetch('http://localhost:3000/api/works', { cache: 'no-store' });
+  const res = await fetch(`${baseUrl}/api/works`, { cache: 'no-store' });
   if (!res.ok) {
     throw new Error('Failed to fetch works');
   }
@@ -29,7 +33,7 @@ async function getWorks() {
 }
 
 async function getTemplates() {
-  const res = await fetch('http://localhost:3000/api/templates', { cache: 'no-store' });
+  const res = await fetch(`${baseUrl}/api/templates`, { cache: 'no-store' });
   if (!res.ok) {
     throw new Error('Failed to fetch templates');
   }

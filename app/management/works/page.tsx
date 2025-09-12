@@ -11,7 +11,10 @@ import Link from "next/link";
 import { DeleteButton } from "../DeleteButton";
 
 async function getWorks() {
-  const res = await fetch('http://localhost:3000/api/works', { cache: 'no-store' });
+  const baseUrl = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : 'http://localhost:3000';
+  const res = await fetch(`${baseUrl}/api/works`, { cache: 'no-store' });
   if (!res.ok) {
     throw new Error('Failed to fetch works');
   }
