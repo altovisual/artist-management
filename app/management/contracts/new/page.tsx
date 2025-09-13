@@ -424,7 +424,7 @@ export default function NewContractPage() {
               variant="outline"
               size="sm"
               className="mt-2"
-              onClick={() => append({ id: "", role: "", percentage: undefined })}
+              onClick={() => append({ id: "", role: "", percentage: 0 })}
             >
               Añadir participante
             </Button>
