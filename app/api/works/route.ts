@@ -79,6 +79,7 @@ export async function POST(request: Request) {
     }
 
     await client.query('COMMIT');
+    revalidatePath('/management/works');
 
     return NextResponse.json(newWork, { status: 201 });
 
