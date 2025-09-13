@@ -5,8 +5,8 @@ const pool = new Pool({
   connectionString: process.env.POSTGRES_URL_POOLER,
 });
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function GET(request: Request, context: any) {
+  const { id } = context.params;
   let client;
 
   try {
