@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { Pool } from 'pg';
 
 // Create a connection pool to the database
