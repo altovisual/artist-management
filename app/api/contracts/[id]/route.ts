@@ -84,8 +84,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function PATCH(request: Request, context: any) {
+  const { id } = context.params;
   let client;
 
   try {
