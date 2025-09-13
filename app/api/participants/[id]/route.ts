@@ -1,97 +1,25 @@
 import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
+import { revalidatePath } from 'next/cache';
 
-// Create a connection pool to the database
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.POSTGRES_URL_POOLER,
 });
 
-export async function GET(request: Request, context: any) {
-  const { id } = context.params;
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  const { id } = params;
   let client;
 
   try {
     client = await pool.connect();
-    const query = 'SELECT * FROM public.participants WHERE id = $1';
-    const { rows } = await client.query(query, [id]);
+    
+    const checkContractsQuery = 'SELECT 1 FROM public.contract_participants WHERE participant_id = $1';
+    const contractCheck = await client.query(checkContractsQuery, [id]);
 
-    if (rows.length === 0) {
-      return NextResponse.json({ error: 'Participant not found' }, { status: 404 });
+    if (contractCheck.rows.length > 0) {
+      return NextResponse.json({ error: 'Cannot delete participant because they are part of one or more contracts.' }, { status: 409 });
     }
-
-    return NextResponse.json(rows[0]);
-  } catch (error) {
-    console.error('Database Error:', error);
-    return NextResponse.json({ error: 'Failed to fetch participant' }, { status: 500 });
-  } finally {
-    if (client) {
-      client.release();
-    }
-  }
-}
-
-export async function PATCH(request: Request, context: any) {
-  const { id } = context.params;
-  let client;
-
-  try {
-    const body = await request.json();
-
-    const allowedFields = [
-      'name', 'email', 'type', 'id_number', 'address', 'country', 'phone', 'bank_info',
-      'artistic_name',      // New field
-      'management_entity',  // New field
-      'ipi'                 // New field
-    ];
-
-    const updateFields = Object.keys(body).filter(field => allowedFields.includes(field));
-
-    if (updateFields.length === 0) {
-      return NextResponse.json({ error: 'No valid fields provided for update.' }, { status: 400 });
-    }
-
-    const setClause = updateFields.map((field, index) => `"${field}" = $${index + 1}`).join(', ');
-    const values = updateFields.map(field => {
-      // Convert empty string bank_info to null if the column is JSON/JSONB type
-      if (field === 'bank_info' && body[field] === "") {
-        return null;
-      }
-      return body[field];
-    });
-    values.push(id); // Add the id for the WHERE clause
-
-    const query = `
-      UPDATE public.participants
-      SET ${setClause}, updated_at = NOW()
-      WHERE id = $${values.length}
-      RETURNING *;
-    `;
-
-    client = await pool.connect();
-    const { rows } = await client.query(query, values);
-
-    if (rows.length === 0) {
-      return NextResponse.json({ error: 'Participant not found' }, { status: 404 });
-    }
-
-    return NextResponse.json(rows[0]);
-
-  } catch (error) {
-    console.error('Database Error on PATCH:', error);
-    return NextResponse.json({ error: 'Failed to update participant' }, { status: 500 });
-  } finally {
-    if (client) {
-      client.release();
-    }
-  }
-}
-
-export async function DELETE(request: Request, context: any) {
-  const { id } = context.params;
-  let client;
-
-  try {
-    client = await pool.connect();
+    
     const query = 'DELETE FROM public.participants WHERE id = $1 RETURNING *';
     const { rows } = await client.query(query, [id]);
 
@@ -99,13 +27,20 @@ export async function DELETE(request: Request, context: any) {
       return NextResponse.json({ error: 'Participant not found' }, { status: 404 });
     }
 
+    revalidatePath('/management/participants');
+
     return NextResponse.json(rows[0]);
   } catch (error) {
-    console.error('Database Error on DELETE:', error);
-    return NextResponse.json({ error: 'Failed to delete participant' }, { status: 500 });
+    console.error('Database Error on DELETE /api/participants/[id]:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json({ error: 'Failed to delete participant', details: errorMessage }, { status: 500 });
   } finally {
     if (client) {
-      client.release();
+      try {
+        client.release();
+      } catch (releaseError) {
+        console.error('Error releasing client:', releaseError);
+      }
     }
   }
 }
