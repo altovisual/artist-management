@@ -1,3 +1,4 @@
+
 import { NextResponse, NextRequest } from 'next/server';
 import { Pool } from 'pg';
 import { revalidatePath } from 'next/cache';
@@ -17,6 +18,7 @@ export async function GET(request: NextRequest) {
     }
 
     client = await pool.connect();
+    // SELECT * will automatically include the new profile_data column
     const { rows } = await client.query(
       'SELECT * FROM public.muso_ai_profiles WHERE artist_id = $1',
       [artistId]
@@ -41,15 +43,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: Request) {
   let client;
   try {
-    const { artistId, musoAiProfileId, popularity } = await request.json();
+    // Destructure the new profile_data field
+    const { artistId, musoAiProfileId, popularity, profile_data } = await request.json();
 
-    if (!artistId || !musoAiProfileId || popularity === undefined) {
-      return NextResponse.json({ error: 'artistId, musoAiProfileId, and popularity are required.' }, { status: 400 });
+    // profile_data is optional for the initial link, but required for sync
+    if (!artistId || !musoAiProfileId) {
+      return NextResponse.json({ error: 'artistId and musoAiProfileId are required.' }, { status: 400 });
     }
 
     client = await pool.connect();
 
-    // Check if profile already exists
     const existingProfile = await client.query(
       'SELECT id FROM public.muso_ai_profiles WHERE artist_id = $1',
       [artistId]
@@ -59,22 +62,22 @@ export async function POST(request: Request) {
       // Update existing profile
       const updateQuery = `
         UPDATE public.muso_ai_profiles
-        SET popularity = $1, last_updated = NOW(), muso_ai_profile_id = $2
-        WHERE artist_id = $3
+        SET popularity = $1, last_updated = NOW(), muso_ai_profile_id = $2, profile_data = $3
+        WHERE artist_id = $4
         RETURNING *;
       `;
-      const { rows } = await client.query(updateQuery, [popularity, musoAiProfileId, artistId]);
-      revalidatePath('/dashboard/analytics'); // Revalidate analytics page
+      const { rows } = await client.query(updateQuery, [popularity, musoAiProfileId, profile_data, artistId]);
+      revalidatePath('/dashboard/analytics');
       return NextResponse.json(rows[0]);
     } else {
       // Insert new profile
       const insertQuery = `
-        INSERT INTO public.muso_ai_profiles (artist_id, muso_ai_profile_id, popularity)
-        VALUES ($1, $2, $3)
+        INSERT INTO public.muso_ai_profiles (artist_id, muso_ai_profile_id, popularity, profile_data)
+        VALUES ($1, $2, $3, $4)
         RETURNING *;
       `;
-      const { rows } = await client.query(insertQuery, [artistId, musoAiProfileId, popularity]);
-      revalidatePath('/dashboard/analytics'); // Revalidate analytics page
+      const { rows } = await client.query(insertQuery, [artistId, musoAiProfileId, popularity, profile_data]);
+      revalidatePath('/dashboard/analytics');
       return NextResponse.json(rows[0], { status: 201 });
     }
   } catch (error) {
