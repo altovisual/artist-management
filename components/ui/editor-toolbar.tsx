@@ -1,11 +1,19 @@
 'use client';
 
-import { type Editor } from '@tiptap/core'; // Changed import from @tiptap/react to @tiptap/core
+import { type Editor } from '@tiptap/core';
 import { Bold, Strikethrough, Italic, List, ListOrdered, Heading2, Underline, AlignLeft, AlignCenter, AlignRight, AlignJustify, Link as LinkIcon, Unlink, PlusCircle } from 'lucide-react';
 import { Toggle } from '@/components/ui/toggle';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+
+// Extend the Editor type directly
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    setTextAlign: (alignment: 'left' | 'center' | 'right' | 'justify') => ReturnType;
+    addPlaceholder: (name: string) => ReturnType;
+  }
+}
 
 interface ToolbarProps {
   editor: Editor | null;
