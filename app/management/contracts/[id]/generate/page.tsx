@@ -58,7 +58,7 @@ export default function GenerateContractPage() {
 
       participants.forEach((p: any, index: number) => {
         Object.keys(p).forEach(key => {
-          const regex = new RegExp(`{{participant\[${index}\]\.${key}}}`, 'g');
+          const regex = new RegExp(`{{participant[${index}].${key}}}`, 'g');
           html = html.replace(regex, p[key] || 'N/A');
         });
       });
@@ -120,11 +120,46 @@ export default function GenerateContractPage() {
       <html lang="en">
         <head>
           <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Contract</title>
-          <style>${stylesheets}</style>
+          <style>
+            ${stylesheets}
+            /* Basic responsive styles */
+            img { max-width: 100%; height: auto; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { padding: 8px; border: 1px solid #ddd; text-align: left; }
+            @media screen and (max-width: 600px) {
+              table, thead, tbody, th, td, tr {
+                display: block;
+              }
+              thead tr {
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+              }
+              tr { border: 1px solid #ccc; margin-bottom: 5px; }
+              td {
+                border: none;
+                border-bottom: 1px solid #eee;
+                position: relative;
+                padding-left: 50%;
+                text-align: right;
+              }
+              td:before {
+                position: absolute;
+                top: 6px;
+                left: 6px;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                text-align: left;
+                font-weight: bold;
+              }
+            }
+          </style>
         </head>
         <body>
-          <div class="prose dark:prose-invert p-4">
+          <div class="p-4">
             ${printableContent}
           </div>
         </body>
@@ -140,6 +175,7 @@ export default function GenerateContractPage() {
 
       if (!response.ok) {
         const errorBody = await response.json();
+        console.error("Server error generating PDF:", errorBody); // Log server error
         throw new Error(errorBody.error || 'Failed to generate PDF');
       }
 
@@ -175,7 +211,7 @@ export default function GenerateContractPage() {
       </div>
       <div 
         ref={contentRef}
-        className="prose dark:prose-invert border p-4 rounded-md" 
+        className="border p-4 rounded-md" 
         dangerouslySetInnerHTML={{ __html: generatedHtml }}
       />
     </div>

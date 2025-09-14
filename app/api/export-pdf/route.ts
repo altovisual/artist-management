@@ -6,8 +6,11 @@ export async function POST(request: Request) {
     const { html } = await request.json();
 
     if (!html) {
+      console.error('PDF Generation Error: HTML content is missing.');
       return NextResponse.json({ error: 'HTML content is required' }, { status: 400 });
     }
+
+    console.log('PDF Generation: Received HTML content (first 500 chars):', html.substring(0, 500));
 
     const browser = await puppeteer.launch({
       headless: true,
@@ -46,8 +49,8 @@ export async function POST(request: Request) {
       },
     });
 
-  } catch (error) {
-    console.error('Error generating PDF:', error);
-    return NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Error generating PDF:', error.message, error.stack);
+    return NextResponse.json({ error: 'Failed to generate PDF', details: error.message }, { status: 500 });
   }
 }
