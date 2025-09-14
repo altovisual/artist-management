@@ -6,6 +6,35 @@ const pool = new Pool({
   connectionString: process.env.POSTGRES_URL_POOLER,
 });
 
+export async function GET(request: Request, context: any) {
+  const { id } = context.params;
+  let client;
+
+  try {
+    client = await pool.connect();
+    const query = 'SELECT * FROM public.participants WHERE id = $1';
+    const { rows } = await client.query(query, [id]);
+
+    if (rows.length === 0) {
+      return NextResponse.json({ error: 'Participant not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(rows[0]);
+  } catch (error) {
+    console.error('Database Error on GET /api/participants/[id]:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json({ error: 'Failed to fetch participant', details: errorMessage }, { status: 500 });
+  } finally {
+    if (client) {
+      try {
+        client.release();
+      } catch (releaseError) {
+        console.error('Error releasing client:', releaseError);
+      }
+    }
+  }
+}
+
 export async function DELETE(request: Request, context: any) {
   const { id } = context.params;
   let client;

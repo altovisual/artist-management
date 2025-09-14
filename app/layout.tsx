@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/components/auth-provider";
 import { VaultProvider } from "@/components/vault-provider";
 import NextNProgress from 'nextjs-toploader';
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 // La metadata no cambia
@@ -37,6 +38,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <NextNProgress color="#e1348f" />
+          <Toaster />
           <AuthProvider>{children}</AuthProvider>
         </ThemeProvider>
       </body>

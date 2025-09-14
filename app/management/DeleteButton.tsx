@@ -13,6 +13,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 export function DeleteButton({ id, resource }: { id: string, resource: string }) {
   const router = useRouter();
@@ -23,10 +24,11 @@ export function DeleteButton({ id, resource }: { id: string, resource: string })
     });
 
     if (res.ok) {
+      toast.success(`${resource.slice(0, -1)} deleted successfully.`);
       router.refresh();
     } else {
-      // Handle error
-      console.error(`Failed to delete ${resource}`);
+      const data = await res.json();
+      toast.error(data.error || `Failed to delete ${resource}`);
     }
   }
 

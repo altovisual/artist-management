@@ -67,7 +67,18 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   // Effect to update underline position and width
   React.useEffect(() => {
     if (isMounted) {
-      const activeLink = navRefs.current.find(ref => ref?.href.endsWith(pathname));
+      const activeLink = navRefs.current.reduce((bestMatch, currentRef) => {
+        if (!currentRef) return bestMatch;
+
+        const currentPathname = new URL(currentRef.href).pathname;
+        if (pathname.startsWith(currentPathname)) {
+          if (!bestMatch || currentPathname.length > new URL(bestMatch.href).pathname.length) {
+            return currentRef;
+          }
+        }
+        return bestMatch;
+      }, null as HTMLAnchorElement | null);
+
       if (activeLink) {
         setUnderlineStyle({
           left: activeLink.offsetLeft,
@@ -80,7 +91,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         }
       }
     }
-  }, [pathname, isMounted]);
+  }, [pathname, isMounted, isAdmin]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -97,7 +108,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   // Conditionally add the Management link
   if (isAdmin) {
-    navLinks.push({ href: "/management/participants", label: "Management", icon: Shield });
+    navLinks.push({ href: "/management", label: "Management", icon: Shield });
   }
 
   return (

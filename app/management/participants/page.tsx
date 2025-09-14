@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -9,36 +12,39 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { DeleteButton } from "../DeleteButton";
-import { Pool } from 'pg';
+import { AnimatedTitle } from '@/components/animated-title';
+import { ParticipantsTableSkeleton } from './participants-table';
 
-// Create a connection pool to the database
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL_POOLER,
-});
+export default function ParticipantsPage() {
+  const [participants, setParticipants] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-async function getParticipants() {
-  let client;
-  try {
-    client = await pool.connect();
-    const { rows } = await client.query('SELECT * FROM public.participants');
-    return rows;
-  } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch participants from the database');
-  } finally {
-    if (client) {
-      client.release();
+  useEffect(() => {
+    async function getParticipants() {
+      setIsLoading(true);
+      try {
+        const res = await fetch('/api/participants');
+        if (res.ok) {
+          const data = await res.json();
+          setParticipants(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch participants:', error);
+      } finally {
+        setIsLoading(false);
+      }
     }
-  }
-}
+    getParticipants();
+  }, []);
 
-export default async function ParticipantsPage() {
-  const participants = await getParticipants();
+  if (isLoading) {
+    return <ParticipantsTableSkeleton />;
+  }
 
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Participants</h1>
+        <AnimatedTitle text="Participants" level={1} className="text-2xl font-bold" />
         <Button asChild>
           <Link href="/management/participants/new">Create Participant</Link>
         </Button>
