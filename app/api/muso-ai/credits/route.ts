@@ -1,4 +1,3 @@
-
 import { NextResponse, NextRequest } from 'next/server';
 
 const MUSO_AI_API_KEY = process.env.MUSO_AI_API_KEY;
@@ -11,13 +10,17 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const profileId = searchParams.get('profile_id');
+  // NEW: Get limit and offset from search params
+  const limit = searchParams.get('limit') || '20'; // Default to 20
+  const offset = searchParams.get('offset') || '0'; // Default to 0
 
   if (!profileId) {
     return NextResponse.json({ error: 'profile_id is required.' }, { status: 400 });
   }
 
   try {
-    const musoAiResponse = await fetch(`${MUSO_AI_BASE_URL}/profile/${profileId}/credits`,
+    // NEW: Pass limit and offset to Muso.AI API
+    const musoAiResponse = await fetch(`${MUSO_AI_BASE_URL}/profile/${profileId}/credits?limit=${limit}&offset=${offset}`,
       {
         headers: {
           'x-api-key': MUSO_AI_API_KEY,

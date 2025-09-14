@@ -1,6 +1,7 @@
+
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -125,6 +126,8 @@ const CreditsTab = ({ profileId }: { profileId: string }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [nowPlaying, setNowPlaying] = useState<string | null>(null); // Track ID of playing song
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
+  const [offset, setOffset] = useState(0); // Offset for pagination
+  const [totalCredits, setTotalCredits] = useState(0); // Total count from API
 
   // Cleanup audio on component unmount
   useEffect(() => {
@@ -155,51 +158,76 @@ const CreditsTab = ({ profileId }: { profileId: string }) => {
     }
   };
 
+  // This effect handles both initial load and subsequent "Load More"
   useEffect(() => {
-    async function fetchCredits() {
-      setIsLoading(true);
-      const res = await fetch(`/api/muso-ai/credits?profile_id=${profileId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setCredits(data.data?.items || []);
-      }
-      setIsLoading(false);
-    }
-    fetchCredits();
-  }, [profileId]);
+    // Only fetch if profileId is available
+    if (!profileId) return;
 
-  if (isLoading) return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">{Array.from({length: 6}).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}</div>;
+    // If offset is 0, it's an initial load or a reset, so clear previous data
+    // If offset > 0, it's a "Load More"
+    const isInitialLoad = offset === 0;
+
+    setIsLoading(true);
+    fetch(`/api/muso-ai/credits?profile_id=${profileId}&limit=20&offset=${offset}`)
+      .then(res => res.json())
+      .then(data => {
+        if (isInitialLoad) {
+          setCredits(data.data?.items || []); // Replace for initial load
+        } else {
+          setCredits(prevCredits => [...prevCredits, ...(data.data?.items || [])]); // Append for load more
+        }
+        setTotalCredits(data.data?.totalCount || 0);
+      })
+      .catch(error => console.error("Error fetching credits:", error))
+      .finally(() => setIsLoading(false));
+
+  }, [profileId, offset]); // This effect runs when profileId or offset changes
+
+  const handleLoadMore = () => {
+    setOffset(prevOffset => prevOffset + 20);
+  };
+
+  if (isLoading && credits.length === 0) return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">{Array.from({length: 6}).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}</div>;
 
   if (!Array.isArray(credits)) {
     return <p>Could not load credits.</p>;
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-      {credits.map(credit => (
-        <Card key={credit.track.id} className="hover:bg-muted/50 transition-colors flex flex-col">
-          <CardContent className="flex items-center gap-4 p-4">
-            <Image src={credit.album?.albumArt || '/placeholder.svg'} alt={credit.track.title} width={64} height={64} className="rounded-md aspect-square object-cover" />
-            <div className="flex-grow overflow-hidden">
-              <p className="font-semibold truncate">{credit.track.title}</p>
-              <p className="text-sm text-muted-foreground truncate">{credit.artists.map((a: any) => a.name).join(', ')}</p>
-              <p className="text-xs text-muted-foreground">{credit.releaseDate?.split('-')[0]}</p>
+    <div className="space-y-4 mt-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {credits.map(credit => (
+          <Card key={credit.track.id} className="hover:bg-muted/50 transition-colors flex flex-col">
+            <CardContent className="flex items-center gap-4 p-4">
+              <Image src={credit.album?.albumArt || '/placeholder.svg'} alt={credit.track.title} width={64} height={64} className="rounded-md aspect-square object-cover" />
+              <div className="flex-grow overflow-hidden">
+                <p className="font-semibold truncate">{credit.track.title}</p>
+                <p className="text-sm text-muted-foreground truncate">{credit.artists.map((a: any) => a.name).join(', ')}</p>
+                <p className="text-xs text-muted-foreground">{credit.releaseDate?.split('-')[0]}</p>
+              </div>
+              {credit.track.spotifyPreviewUrl && (
+                <Button variant="ghost" size="icon" onClick={() => handlePlayPreview(credit.track.id, credit.track.spotifyPreviewUrl)}>
+                  {nowPlaying === credit.track.id ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                </Button>
+              )}
+            </CardContent>
+            <div className="px-4 pb-4 pt-0 mt-auto">
+              <div className="flex flex-wrap gap-1">
+                {credit.credits.map((c: any) => (
+                  <Badge key={c.child} variant="outline">{c.child}</Badge>
+                ))}
+              </div>
             </div>
-            {credit.track.spotifyPreviewUrl && (
-              <Button variant="ghost" size="icon" onClick={() => handlePlayPreview(credit.track.id, credit.track.spotifyPreviewUrl)}>
-                {nowPlaying === credit.track.id ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-              </Button>
-            )}
-          </CardContent>
-          <div className="px-4 pb-4 pt-0 mt-auto">
-            <div className="flex flex-wrap gap-1">
-              {credit.credits.map((c: any) => (
-                <Badge key={c.child} variant="outline">{c.child}</Badge>
-              ))}
-            </div>
-          </div>
-        </Card>
-      ))}
+          </Card>
+        ))}
+      </div>
+      {credits.length < totalCredits && (
+        <div className="flex justify-center mt-4">
+          <Button onClick={handleLoadMore} disabled={isLoading}>
+            {isLoading ? 'Loading...' : 'Load More Credits'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
@@ -207,37 +235,69 @@ const CreditsTab = ({ profileId }: { profileId: string }) => {
 const CollaboratorsTab = ({ profileId }: { profileId: string }) => {
   const [collaborators, setCollaborators] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [offset, setOffset] = useState(0); // Offset for pagination
+  const [totalCollaborators, setTotalCollaborators] = useState(0); // Total count from API
 
+  // This effect handles both initial load and subsequent "Load More"
   useEffect(() => {
-    async function fetchCollaborators() {
-      setIsLoading(true);
-      const res = await fetch(`/api/muso-ai/collaborators?profile_id=${profileId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setCollaborators(data.data?.items || []);
-      }
-      setIsLoading(false);
-    }
-    fetchCollaborators();
-  }, [profileId]);
+    // Only fetch if profileId is available
+    if (!profileId) return;
 
-  if (isLoading) return <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">{Array.from({length: 8}).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}</div>;
+    // If offset is 0, it's an initial load or a reset, so clear previous data
+    // If offset > 0, it's a "Load More"
+    const isInitialLoad = offset === 0;
+
+    setIsLoading(true);
+    fetch(`/api/muso-ai/collaborators?profile_id=${profileId}&limit=20&offset=${offset}`)
+      .then(res => res.json())
+      .then(data => {
+        if (isInitialLoad) {
+          setCollaborators(data.data?.items || []); // Replace for initial load
+        } else {
+          setCollaborators(prevCollaborators => [...prevCollaborators, ...(data.data?.items || [])]); // Append for load more
+        }
+        setTotalCollaborators(data.data?.totalCount || 0);
+      })
+      .catch(error => console.error("Error fetching collaborators:", error))
+      .finally(() => setIsLoading(false));
+
+  }, [profileId, offset]); // This effect runs when profileId or offset changes
+
+  const handleLoadMore = () => {
+    setOffset(prevOffset => prevOffset + 20);
+  };
+
+  if (isLoading && collaborators.length === 0) return <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">{Array.from({length: 8}).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}</div>;
 
   if (!Array.isArray(collaborators)) {
     return <p>Could not load collaborators.</p>;
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
-      {collaborators.map(collab => (
-        <Card key={collab.id} className="hover:bg-muted/50 transition-colors text-center">
-          <CardContent className="p-4">
-            <Image src={collab.avatarUrl || '/placeholder.svg'} alt={collab.name} width={80} height={80} className="rounded-full mx-auto border" />
-            <p className="font-semibold mt-2 truncate">{collab.name}</p>
-            <p className="text-xs text-muted-foreground">{collab.commonCredits?.join(', ')}</p>
-          </CardContent>
-        </Card>
-      ))}
+    <div className="space-y-4 mt-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {collaborators.map(collab => (
+          <Card key={collab.id} className="hover:bg-muted/50 transition-colors text-center">
+            <CardContent className="p-4">
+              <Image src={collab.avatarUrl || '/placeholder.svg'} alt={collab.name} width={80} height={80} className="rounded-full mx-auto border" />
+              <p className="font-semibold mt-2 truncate">{collab.name}</p>
+              <p className="text-xs text-muted-foreground">{collab.commonCredits?.join(', ')}</p>
+              <div className="text-xs text-muted-foreground mt-1">
+                {collab.popularity !== undefined && <p>Popularity: {collab.popularity}</p>}
+                {collab.collaborationsCount !== undefined && <p>Collaborations: {collab.collaborationsCount}</p>}
+                {collab.lastCollaborationDate && <p>Last Collab: {collab.lastCollaborationDate}</p>}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      {collaborators.length < totalCollaborators && (
+        <div className="flex justify-center mt-4">
+          <Button onClick={handleLoadMore} disabled={isLoading}>
+            {isLoading ? 'Loading...' : 'Load More Collaborators'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
