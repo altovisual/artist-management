@@ -1,6 +1,6 @@
 'use client';
 
-import { type Editor } from '@tiptap/react';
+import { type Editor } from '@tiptap/core'; // Changed import from @tiptap/react to @tiptap/core
 import { Bold, Strikethrough, Italic, List, ListOrdered, Heading2, Underline, AlignLeft, AlignCenter, AlignRight, AlignJustify, Link as LinkIcon, Unlink, PlusCircle } from 'lucide-react';
 import { Toggle } from '@/components/ui/toggle';
 import { Input } from '@/components/ui/input';
