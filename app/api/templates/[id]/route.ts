@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
+import { revalidatePath } from 'next/cache';
 
 // Create a connection pool to the database
 const pool = new Pool({
@@ -7,7 +8,7 @@ const pool = new Pool({
 });
 
 export async function GET(request: Request, context: any) {
-  const { id } = context.params;
+  const { id } = await context.params;
   let client;
 
   try {
@@ -36,7 +37,7 @@ export async function GET(request: Request, context: any) {
 }
 
 export async function PATCH(request: Request, context: any) {
-  const { id } = context.params;
+  const { id } = await context.params;
   let client;
 
   try {
@@ -52,14 +53,14 @@ export async function PATCH(request: Request, context: any) {
       return NextResponse.json({ error: 'No valid fields provided for update.' }, { status: 400 });
     }
 
-    const setClause = updateFields.map((field, index) => `"${field}" = ${index + 1}`).join(', ');
+    const setClause = updateFields.map((field, index) => `"${field}" = $${index + 1}`).join(', ');
     const values = updateFields.map(field => body[field]);
     values.push(id); // Add the id for the WHERE clause
 
     const query = `
       UPDATE public.templates
-      SET ${setClause}, updated_at = NOW()
-      WHERE id = ${values.length}
+      SET ${setClause}
+      WHERE id = $${values.length}
       RETURNING *;
     `;
 
@@ -87,7 +88,7 @@ export async function PATCH(request: Request, context: any) {
 }
 
 export async function DELETE(request: Request, context: any) {
-  const { id } = context.params;
+  const { id } = await context.params;
   let client;
 
   try {
@@ -98,6 +99,8 @@ export async function DELETE(request: Request, context: any) {
     if (rows.length === 0) {
       return NextResponse.json({ error: 'Template not found' }, { status: 404 });
     }
+
+    revalidatePath('/management/templates');
 
     return NextResponse.json(rows[0]);
   } catch (error) {
