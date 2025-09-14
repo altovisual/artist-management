@@ -12,11 +12,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-export function DeleteButton({ id, resource }: { id: string, resource: string }) {
-  const router = useRouter();
+export function DeleteButton({ id, resource, onDelete }: { id: string, resource: string, onDelete?: (id: string) => void }) {
 
   async function handleDelete() {
     const res = await fetch(`/api/${resource}/${id}`, {
@@ -25,7 +23,9 @@ export function DeleteButton({ id, resource }: { id: string, resource: string })
 
     if (res.ok) {
       toast.success(`${resource.slice(0, -1)} deleted successfully.`);
-      router.refresh();
+      if (onDelete) {
+        onDelete(id);
+      }
     } else {
       const data = await res.json();
       toast.error(data.error || `Failed to delete ${resource}`);
