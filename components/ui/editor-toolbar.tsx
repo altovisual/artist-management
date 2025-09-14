@@ -7,14 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 
-// Extend the Editor type directly
-declare module '@tiptap/core' {
-  interface Commands<ReturnType> {
-    setTextAlign: (alignment: 'left' | 'center' | 'right' | 'justify') => ReturnType;
-    addPlaceholder: (name: string) => ReturnType;
-  }
-}
-
 interface ToolbarProps {
   editor: Editor | null;
 }
