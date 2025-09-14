@@ -7,12 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 
-declare module '@tiptap/react' {
-  interface ChainedCommands {
-    setTextAlign: (alignment: 'left' | 'center' | 'right' | 'justify') => this;
-  }
-}
-
 interface ToolbarProps {
   editor: Editor | null;
 }
