@@ -3,14 +3,17 @@
 import React, { Suspense, useEffect, useState } from 'react'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import { AnalyticsContent } from '@/components/analytics-content'
+import { MusoAiAnalytics } from '@/components/muso-ai-analytics' // New import
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
 import { AnalyticsSkeleton } from '@/components/analytics-skeleton'
 import { Button } from '@/components/ui/button'
 import { RefreshCcw } from 'lucide-react'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs' // New imports
 
 export default function AnalyticsPage() {
   const [spotifyArtistId, setSpotifyArtistId] = useState<string | null>(null)
+  const [artistDbId, setArtistDbId] = useState<string | null>(null) // New state for artist DB ID
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
@@ -29,7 +32,7 @@ export default function AnalyticsPage() {
 
         const { data: artistData, error: artistError } = await supabase
           .from('artists')
-          .select('spotify_artist_id')
+          .select('id, spotify_artist_id') // Select both IDs
           .eq('user_id', user.id)
           .single()
 
@@ -38,9 +41,11 @@ export default function AnalyticsPage() {
         }
 
         if (!artistData.spotify_artist_id) {
-          throw new Error('Spotify Artist ID is not set for your artist profile. Please update your profile.')
+          // Only throw error if Spotify ID is specifically needed for Spotify analytics
+          // For Muso.AI, we only need artistDbId
         }
 
+        setArtistDbId(artistData.id) // Set the artist DB ID
         setSpotifyArtistId(artistData.spotify_artist_id)
       } catch (err: any) {
         setError(err.message)
@@ -116,16 +121,36 @@ export default function AnalyticsPage() {
           )}
         </Button>
       </div>
-      <Suspense fallback={<AnalyticsSkeleton />}>
-        {spotifyArtistId ? (
-          <AnalyticsContent artistId={spotifyArtistId} />
-        ) : (
-          <div className="text-center py-16">
-            <p className="text-muted-foreground">No Spotify Artist ID found for your profile.</p>
-            <p className="text-sm text-muted-foreground mt-2">Please update your artist profile with your Spotify Artist ID.</p>
-          </div>
-        )}
-      </Suspense>
+      <Tabs defaultValue="spotify" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="spotify">Spotify Analytics</TabsTrigger>
+          <TabsTrigger value="musoai">Muso.AI Analytics</TabsTrigger>
+        </TabsList>
+        <TabsContent value="spotify">
+          <Suspense fallback={<AnalyticsSkeleton />}>
+            {spotifyArtistId ? (
+              <AnalyticsContent artistId={spotifyArtistId} />
+            ) : (
+              <div className="text-center py-16">
+                <p className="text-muted-foreground">No Spotify Artist ID found for your profile.</p>
+                <p className="text-sm text-muted-foreground mt-2">Please update your artist profile with your Spotify Artist ID.</p>
+              </div>
+            )}
+          </Suspense>
+        </TabsContent>
+        <TabsContent value="musoai">
+          <Suspense fallback={<AnalyticsSkeleton />}>
+            {artistDbId ? (
+              <MusoAiAnalytics artistId={artistDbId} />
+            ) : (
+              <div className="text-center py-16">
+                <p className="text-muted-foreground">No Artist Profile found in database.</p>
+                <p className="text-sm text-muted-foreground mt-2">Please ensure your artist profile is correctly set up.</p>
+              </div>
+            )}
+          </Suspense>
+        </TabsContent>
+      </Tabs>
     </DashboardLayout>
   )
 }
