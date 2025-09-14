@@ -9,7 +9,7 @@ const pool = new Pool({
 const MUSO_AI_API_KEY = process.env.MUSO_AI_API_KEY;
 const MUSO_AI_BASE_URL = 'https://api.muso.ai/v1';
 
-export async function GET(request: NextRequest) { // Changed Request to NextRequest
+export async function GET(request: NextRequest) {
   if (!MUSO_AI_API_KEY) {
     return NextResponse.json({ error: 'MUSO_AI_API_KEY is not set.' }, { status: 500 });
   }
@@ -38,9 +38,9 @@ export async function GET(request: NextRequest) { // Changed Request to NextRequ
         });
 
         if (!musoAiResponse.ok) {
-          const errorBody = await musoAiResponse.json();
-          console.error(`Muso.AI API error for artist ${artist.id}:`, errorBody);
-          syncResults.push({ artistId: artist.id, status: 'failed', error: errorBody.message || 'Muso.AI API error' });
+          const errorText = await musoAiResponse.text(); // Get raw text
+          console.error(`Muso.AI API error for artist ${artist.id}: Status ${musoAiResponse.status}, Response: ${errorText}`);
+          syncResults.push({ artistId: artist.id, status: 'failed', error: `Muso.AI API error: Status ${musoAiResponse.status}` });
           continue;
         }
 
