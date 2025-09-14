@@ -8,7 +8,7 @@ export const PlaceholderView = (props: any) => {
 
   return (
     <span>
-      {{'{'{name}'}'}}
+      {`{{${name}}}`}
     </span>
   );
 };
