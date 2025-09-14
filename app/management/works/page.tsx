@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
 import {
   Table,
   TableBody,
@@ -9,34 +12,67 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { DeleteButton } from "../DeleteButton";
-import { Pool } from 'pg';
+import { AnimatedTitle } from '@/components/animated-title';
 
-// Create a connection pool to the database
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL_POOLER,
-});
-
-async function getWorks() {
-  let client;
-  try {
-    client = await pool.connect();
-    const { rows } = await client.query('SELECT * FROM public.projects');
-    return rows;
-  } catch (error) {
-    console.error('Database Error fetching works:', error);
-    throw new Error('Failed to fetch works.');
-  } finally {
-    if (client) client.release();
-  }
+// Skeleton component can be defined here or imported
+function WorksTableSkeleton() {
+  return <div>Loading...</div>; // Replace with actual skeleton
 }
 
-export default async function WorksPage() {
-  const works = await getWorks();
+export default function WorksPage() {
+  const [works, setWorks] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
+
+  useEffect(() => {
+    async function getWorks() {
+      setIsLoading(true);
+      try {
+        const res = await fetch('/api/works');
+        if (res.ok) {
+          const data = await res.json();
+          setWorks(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch works:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    getWorks();
+  }, []);
+
+  const handleDelete = (id: string) => {
+    const anime = (window as any).anime;
+    const row = rowRefs.current[id];
+    if (row && anime) {
+      anime({
+        targets: row,
+        opacity: 0,
+        height: 0,
+        paddingTop: 0,
+        paddingBottom: 0,
+        marginTop: 0,
+        marginBottom: 0,
+        duration: 500,
+        easing: 'easeOutExpo',
+        complete: () => {
+          setWorks(prev => prev.filter(w => w.id !== id));
+        }
+      });
+    } else {
+      setWorks(prev => prev.filter(w => w.id !== id));
+    }
+  };
+
+  if (isLoading) {
+    return <WorksTableSkeleton />;
+  }
 
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Works</h1>
+        <AnimatedTitle text="Works" level={1} className="text-2xl font-bold" />
         <Button asChild>
           <Link href="/management/works/new">Create Work</Link>
         </Button>
@@ -52,7 +88,7 @@ export default async function WorksPage() {
         </TableHeader>
         <TableBody>
           {works.map((work: any) => (
-            <TableRow key={work.id}>
+            <TableRow key={work.id} ref={el => { rowRefs.current[work.id] = el; }}>
               <TableCell>{work.name}</TableCell>
               <TableCell>{work.type}</TableCell>
               <TableCell>{work.status}</TableCell>
@@ -61,7 +97,7 @@ export default async function WorksPage() {
                   <Button asChild variant="outline" size="sm">
                     <Link href={`/management/works/${work.id}/edit`}>Edit</Link>
                   </Button>
-                  <DeleteButton id={work.id} resource="works" />
+                  <DeleteButton id={work.id} resource="works" onDelete={handleDelete} />
                 </div>
               </TableCell>
             </TableRow>

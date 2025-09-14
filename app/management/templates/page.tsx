@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
 import {
   Table,
   TableBody,
@@ -9,34 +12,67 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { DeleteButton } from "../DeleteButton";
-import { Pool } from 'pg';
+import { AnimatedTitle } from '@/components/animated-title';
 
-// Create a connection pool to the database
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL_POOLER,
-});
-
-async function getTemplates() {
-  let client;
-  try {
-    client = await pool.connect();
-    const { rows } = await client.query('SELECT * FROM public.templates');
-    return rows;
-  } catch (error) {
-    console.error('Database Error fetching templates:', error);
-    throw new Error('Failed to fetch templates.');
-  } finally {
-    if (client) client.release();
-  }
+// Skeleton component can be defined here or imported
+function TemplatesTableSkeleton() {
+  return <div>Loading...</div>; // Replace with actual skeleton
 }
 
-export default async function TemplatesPage() {
-  const templates = await getTemplates();
+export default function TemplatesPage() {
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
+
+  useEffect(() => {
+    async function getTemplates() {
+      setIsLoading(true);
+      try {
+        const res = await fetch('/api/templates');
+        if (res.ok) {
+          const data = await res.json();
+          setTemplates(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch templates:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    getTemplates();
+  }, []);
+
+  const handleDelete = (id: string) => {
+    const anime = (window as any).anime;
+    const row = rowRefs.current[id];
+    if (row && anime) {
+      anime({
+        targets: row,
+        opacity: 0,
+        height: 0,
+        paddingTop: 0,
+        paddingBottom: 0,
+        marginTop: 0,
+        marginBottom: 0,
+        duration: 500,
+        easing: 'easeOutExpo',
+        complete: () => {
+          setTemplates(prev => prev.filter(t => t.id !== id));
+        }
+      });
+    } else {
+      setTemplates(prev => prev.filter(t => t.id !== id));
+    }
+  };
+
+  if (isLoading) {
+    return <TemplatesTableSkeleton />;
+  }
 
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Templates</h1>
+        <AnimatedTitle text="Templates" level={1} className="text-2xl font-bold" />
         <Button asChild>
           <Link href="/management/templates/new">Create Template</Link>
         </Button>
@@ -52,7 +88,7 @@ export default async function TemplatesPage() {
         </TableHeader>
         <TableBody>
           {templates.map((template: any) => (
-            <TableRow key={template.id}>
+            <TableRow key={template.id} ref={el => { rowRefs.current[template.id] = el; }}>
               <TableCell>{template.type}</TableCell>
               <TableCell>{template.language}</TableCell>
               <TableCell>{template.version}</TableCell>
@@ -61,7 +97,7 @@ export default async function TemplatesPage() {
                   <Button asChild variant="outline" size="sm">
                     <Link href={`/management/templates/${template.id}/edit`}>Edit</Link>
                   </Button>
-                  <DeleteButton id={template.id} resource="templates" />
+                  <DeleteButton id={template.id} resource="templates" onDelete={handleDelete} />
                 </div>
               </TableCell>
             </TableRow>

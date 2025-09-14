@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Table,
   TableBody,
@@ -18,6 +18,7 @@ import { ParticipantsTableSkeleton } from './participants-table';
 export default function ParticipantsPage() {
   const [participants, setParticipants] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
 
   useEffect(() => {
     async function getParticipants() {
@@ -36,6 +37,29 @@ export default function ParticipantsPage() {
     }
     getParticipants();
   }, []);
+
+  const handleDelete = (id: string) => {
+    const anime = (window as any).anime;
+    const row = rowRefs.current[id];
+    if (row && anime) {
+      anime({
+        targets: row,
+        opacity: 0,
+        height: 0,
+        paddingTop: 0,
+        paddingBottom: 0,
+        marginTop: 0,
+        marginBottom: 0,
+        duration: 500,
+        easing: 'easeOutExpo',
+        complete: () => {
+          setParticipants(prev => prev.filter(p => p.id !== id));
+        }
+      });
+    } else {
+      setParticipants(prev => prev.filter(p => p.id !== id));
+    }
+  };
 
   if (isLoading) {
     return <ParticipantsTableSkeleton />;
@@ -60,7 +84,7 @@ export default function ParticipantsPage() {
         </TableHeader>
         <TableBody>
           {participants.map((participant: any) => (
-            <TableRow key={participant.id}>
+            <TableRow key={participant.id} ref={el => { rowRefs.current[participant.id] = el; }}>
               <TableCell>{participant.name}</TableCell>
               <TableCell>{participant.email}</TableCell>
               <TableCell>{participant.type}</TableCell>
@@ -69,7 +93,7 @@ export default function ParticipantsPage() {
                   <Button asChild variant="outline" size="sm">
                     <Link href={`/management/participants/${participant.id}/edit`}>Edit</Link>
                   </Button>
-                  <DeleteButton id={participant.id} resource="participants" />
+                  <DeleteButton id={participant.id} resource="participants" onDelete={handleDelete} />
                 </div>
               </TableCell>
             </TableRow>
