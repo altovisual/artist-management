@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { Pool } from 'pg';
 import { revalidatePath } from 'next/cache';
 
@@ -9,7 +9,7 @@ const pool = new Pool({
 const MUSO_AI_API_KEY = process.env.MUSO_AI_API_KEY;
 const MUSO_AI_BASE_URL = 'https://api.muso.ai/v1';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) { // Changed Request to NextRequest
   if (!MUSO_AI_API_KEY) {
     return NextResponse.json({ error: 'MUSO_AI_API_KEY is not set.' }, { status: 500 });
   }
