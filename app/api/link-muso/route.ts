@@ -1,11 +1,10 @@
-
 import { NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
 
 export async function GET() {
   const cookieStore = cookies();
-  const supabase = await createServerClient(cookieStore);
+  const supabase = await createClient(); // Corrected function call
   const musoAiProfileId = '29e086f1-b4f2-463f-9b87-1acc516b48fb'; // Hardcoded from user
 
   try {
