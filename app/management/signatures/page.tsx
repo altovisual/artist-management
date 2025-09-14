@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
 import {
   Table,
   TableBody,
@@ -9,94 +12,91 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { DeleteButton } from "../DeleteButton";
-import { Pool } from 'pg';
+import { AnimatedTitle } from '@/components/animated-title';
+import { Skeleton } from "@/components/ui/skeleton";
 
-// Create a connection pool to the database
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL_POOLER,
-});
-
-async function getSignatures() {
-  let client;
-  try {
-    client = await pool.connect();
-    const { rows } = await client.query('SELECT * FROM public.signatures');
-    return rows;
-  } catch (error) {
-    console.error('Database Error fetching signatures:', error);
-    throw new Error('Failed to fetch signatures.');
-  } finally {
-    if (client) client.release();
-  }
+function SignaturesTableSkeleton() {
+  return (
+    <div className="space-y-4">
+      <Skeleton className="h-10 w-full" />
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+            <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+            <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+            <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {[...Array(5)].map((_, i) => (
+            <TableRow key={i}>
+              <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+              <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+              <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+              <TableCell><div className="flex space-x-2"><Skeleton className="h-8 w-16" /><Skeleton className="h-8 w-16" /></div></TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
 }
 
-async function getContracts() {
-  let client;
-  try {
-    client = await pool.connect();
-    const { rows } = await client.query('SELECT id, work_id, template_id FROM public.contracts');
-    return rows;
-  } catch (error) {
-    console.error('Database Error fetching contracts:', error);
-    throw new Error('Failed to fetch contracts.');
-  } finally {
-    if (client) client.release();
-  }
-}
+export default function SignaturesPage() {
+  const [signatures, setSignatures] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
 
-async function getWorks() {
-  let client;
-  try {
-    client = await pool.connect();
-    const { rows } = await client.query('SELECT id, name FROM public.projects');
-    return rows;
-  } catch (error) {
-    console.error('Database Error fetching works:', error);
-    throw new Error('Failed to fetch works.');
-  } finally {
-    if (client) client.release();
-  }
-}
+  useEffect(() => {
+    async function getSignatures() {
+      setIsLoading(true);
+      try {
+        const res = await fetch('/api/signatures');
+        if (res.ok) {
+          const data = await res.json();
+          setSignatures(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch signatures:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    getSignatures();
+  }, []);
 
-async function getTemplates() {
-  let client;
-  try {
-    client = await pool.connect();
-    const { rows } = await client.query('SELECT id, type, version FROM public.templates');
-    return rows;
-  } catch (error) {
-    console.error('Database Error fetching templates:', error);
-    throw new Error('Failed to fetch templates.');
-  } finally {
-    if (client) client.release();
-  }
-}
-
-export default async function SignaturesPage() {
-  const [signatures, contracts, works, templates] = await Promise.all([
-    getSignatures(),
-    getContracts(),
-    getWorks(),
-    getTemplates()
-  ]);
-
-  const getContractDetails = (contractId: number) => {
-    const contract = contracts.find((c: any) => c.id === contractId);
-    if (!contract) return "Unknown Contract";
-
-    const work = works.find((w: any) => w.id === contract.work_id);
-    const template = templates.find((t: any) => t.id === contract.template_id);
-
-    const workName = work ? work.name : "Unknown Work";
-    const templateName = template ? `${template.type} v${template.version}` : "Unknown Template";
-
-    return `${workName} - ${templateName}`;
+  const handleDelete = (id: string) => {
+    const anime = (window as any).anime;
+    const row = rowRefs.current[id];
+    if (row && anime) {
+      anime({
+        targets: row,
+        opacity: 0,
+        height: 0,
+        paddingTop: 0,
+        paddingBottom: 0,
+        marginTop: 0,
+        marginBottom: 0,
+        duration: 500,
+        easing: 'easeOutExpo',
+        complete: () => {
+          setSignatures(prev => prev.filter(s => s.id !== id));
+        }
+      });
+    } else {
+      setSignatures(prev => prev.filter(s => s.id !== id));
+    }
   };
+
+  if (isLoading) {
+    return <SignaturesTableSkeleton />;
+  }
 
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Signatures</h1>
+        <AnimatedTitle text="Signatures" level={1} className="text-2xl font-bold" />
         <Button asChild>
           <Link href="/management/signatures/new">Create Signature</Link>
         </Button>
@@ -112,8 +112,8 @@ export default async function SignaturesPage() {
         </TableHeader>
         <TableBody>
           {signatures.map((signature: any) => (
-            <TableRow key={signature.id}>
-              <TableCell>{getContractDetails(signature.contract_id)}</TableCell>
+            <TableRow key={signature.id} ref={el => { rowRefs.current[signature.id] = el; }}>
+              <TableCell>{signature.contract_id}</TableCell>
               <TableCell>{signature.signer_email}</TableCell>
               <TableCell>{signature.status}</TableCell>
               <TableCell>
@@ -121,7 +121,7 @@ export default async function SignaturesPage() {
                   <Button asChild variant="outline" size="sm">
                     <Link href={`/management/signatures/${signature.id}/edit`}>Edit</Link>
                   </Button>
-                  <DeleteButton id={signature.id} resource="signatures" />
+                  <DeleteButton id={signature.id} resource="signatures" onDelete={handleDelete} />
                 </div>
               </TableCell>
             </TableRow>

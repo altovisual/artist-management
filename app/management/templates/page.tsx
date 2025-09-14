@@ -13,10 +13,34 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { DeleteButton } from "../DeleteButton";
 import { AnimatedTitle } from '@/components/animated-title';
+import { Skeleton } from "@/components/ui/skeleton";
 
-// Skeleton component can be defined here or imported
 function TemplatesTableSkeleton() {
-  return <div>Loading...</div>; // Replace with actual skeleton
+  return (
+    <div className="space-y-4">
+      <Skeleton className="h-10 w-full" />
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+            <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+            <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+            <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {[...Array(5)].map((_, i) => (
+            <TableRow key={i}>
+              <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+              <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+              <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+              <TableCell><div className="flex space-x-2"><Skeleton className="h-8 w-16" /><Skeleton className="h-8 w-16" /></div></TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
 }
 
 export default function TemplatesPage() {

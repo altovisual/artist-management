@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
 import {
   Table,
   TableBody,
@@ -9,103 +12,94 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { DeleteButton } from "../DeleteButton";
-import { createClient } from "@/lib/supabase/server";
-import { Pool } from 'pg';
+import { AnimatedTitle } from '@/components/animated-title';
+import { Skeleton } from "@/components/ui/skeleton";
 
-// Create a connection pool to the database
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL_POOLER,
-});
+function ContractsTableSkeleton() {
+  return (
+    <div className="space-y-4">
+      <Skeleton className="h-10 w-full" />
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+            <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+            <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+            <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {[...Array(5)].map((_, i) => (
+            <TableRow key={i}>
+              <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+              <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+              <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+              <TableCell><div className="flex space-x-2"><Skeleton className="h-8 w-16" /><Skeleton className="h-8 w-16" /></div></TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
 
-async function getContracts(userId: string | null) {
-  let client;
-  try {
-    client = await pool.connect();
-    let query = `
-      SELECT c.*,
-             json_agg(json_build_object('id', p.id, 'name', p.name, 'role', cp.role)) as participants
-      FROM public.contracts c
-      LEFT JOIN public.contract_participants cp ON c.id = cp.contract_id
-      LEFT JOIN public.participants p ON cp.participant_id = p.id
-    `;
-    const queryParams = [];
+export default function ContractsPage() {
+  const [contracts, setContracts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
 
-    if (userId) {
-      query += ` WHERE c.id IN (SELECT contract_id FROM public.contract_participants WHERE participant_id IN (SELECT id FROM public.participants WHERE user_id = $1))`;
-      queryParams.push(userId);
+  useEffect(() => {
+    async function getContracts() {
+      setIsLoading(true);
+      try {
+        const res = await fetch('/api/contracts');
+        if (res.ok) {
+          const data = await res.json();
+          setContracts(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch contracts:', error);
+      } finally {
+        setIsLoading(false);
+      }
     }
+    getContracts();
+  }, []);
 
-    query += ` GROUP BY c.id;`;
-    const { rows } = await client.query(query, queryParams);
-    return rows;
-  } catch (error) {
-    console.error('Database Error fetching contracts:', error);
-    throw new Error('Failed to fetch contracts.');
-  } finally {
-    if (client) client.release();
-  }
-}
-
-async function getWorks() {
-  let client;
-  try {
-    client = await pool.connect();
-    const { rows } = await client.query('SELECT id, name FROM public.projects');
-    return rows;
-  } catch (error) {
-    console.error('Database Error fetching works:', error);
-    throw new Error('Failed to fetch works.');
-  } finally {
-    if (client) client.release();
-  }
-}
-
-async function getTemplates() {
-  let client;
-  try {
-    client = await pool.connect();
-    const { rows } = await client.query('SELECT id, type, version FROM public.templates');
-    return rows;
-  } catch (error) {
-    console.error('Database Error fetching templates:', error);
-    throw new Error('Failed to fetch templates.');
-  } finally {
-    if (client) client.release();
-  }
-}
-
-export default async function ContractsPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const isAdmin = user?.app_metadata?.role === 'admin';
-  const currentUserId = user?.id || null;
-
-  // Fetch all data in parallel for efficiency
-  const [contracts, works, templates] = await Promise.all([
-    getContracts(isAdmin ? null : currentUserId),
-    getWorks(),
-    getTemplates()
-  ]);
-
-  const getWorkName = (workId: string) => {
-    const work = works.find((w: any) => w.id === workId);
-    return work ? work.name : "Unknown Work";
+  const handleDelete = (id: string) => {
+    const anime = (window as any).anime;
+    const row = rowRefs.current[id];
+    if (row && anime) {
+      anime({
+        targets: row,
+        opacity: 0,
+        height: 0,
+        paddingTop: 0,
+        paddingBottom: 0,
+        marginTop: 0,
+        marginBottom: 0,
+        duration: 500,
+        easing: 'easeOutExpo',
+        complete: () => {
+          setContracts(prev => prev.filter(c => c.id !== id));
+        }
+      });
+    } else {
+      setContracts(prev => prev.filter(c => c.id !== id));
+    }
   };
 
-  const getTemplateName = (templateId: number) => {
-    const template = templates.find((t: any) => t.id === templateId);
-    return template ? `${template.type} v${template.version}` : "Unknown Template";
-  };
+  if (isLoading) {
+    return <ContractsTableSkeleton />;
+  }
 
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Contracts</h1>
-        {isAdmin && (
-          <Button asChild>
-            <Link href="/management/contracts/new">Create Contract</Link>
-          </Button>
-        )}
+        <AnimatedTitle text="Contracts" level={1} className="text-2xl font-bold" />
+        <Button asChild>
+          <Link href="/management/contracts/new">Create Contract</Link>
+        </Button>
       </div>
       <Table>
         <TableHeader>
@@ -118,9 +112,9 @@ export default async function ContractsPage() {
         </TableHeader>
         <TableBody>
           {contracts.map((contract: any) => (
-            <TableRow key={contract.id}>
-              <TableCell>{getWorkName(contract.work_id)}</TableCell>
-              <TableCell>{getTemplateName(contract.template_id)}</TableCell>
+            <TableRow key={contract.id} ref={el => { rowRefs.current[contract.id] = el; }}>
+              <TableCell>{contract.work_id}</TableCell>
+              <TableCell>{contract.template_id}</TableCell>
               <TableCell>{contract.status}</TableCell>
               <TableCell>
                 <div className="flex space-x-2">
@@ -130,7 +124,7 @@ export default async function ContractsPage() {
                   <Button asChild variant="outline" size="sm">
                     <Link href={`/management/contracts/${contract.id}/generate`}>Generate</Link>
                   </Button>
-                  <DeleteButton id={contract.id} resource="contracts" />
+                  <DeleteButton id={contract.id} resource="contracts" onDelete={handleDelete} />
                 </div>
               </TableCell>
             </TableRow>
