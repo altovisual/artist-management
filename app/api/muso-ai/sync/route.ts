@@ -18,19 +18,20 @@ export async function GET(request: NextRequest) {
   try {
     client = await pool.connect();
 
-    // Fetch all artists from our database
-    const { rows: artists } = await client.query('SELECT id, spotify_artist_id FROM public.artists WHERE spotify_artist_id IS NOT NULL');
+    // CORRECTED LOGIC: Fetch all profiles from our muso_ai_profiles table
+    const { rows: profiles } = await client.query('SELECT artist_id, muso_ai_profile_id FROM public.muso_ai_profiles WHERE muso_ai_profile_id IS NOT NULL');
 
-    if (artists.length === 0) {
-      return NextResponse.json({ message: 'No artists with Spotify IDs found to sync.' });
+    if (profiles.length === 0) {
+      return NextResponse.json({ message: 'No linked Muso.AI profiles found to sync.' });
     }
 
     const syncResults = [];
 
-    for (const artist of artists) {
+    for (const profile of profiles) {
       try {
-        // Call Muso.AI API to get profile details
-        const musoAiResponse = await fetch(`${MUSO_AI_BASE_URL}/profiles/${artist.spotify_artist_id}`, {
+        // CORRECTED LOGIC: Use the muso_ai_profile_id to call the Muso.AI API
+        const musoAiResponse = await fetch(`${MUSO_AI_BASE_URL}/profiles/${profile.muso_ai_profile_id}`,
+         {
           headers: {
             'Authorization': `Bearer ${MUSO_AI_API_KEY}`,
             'Content-Type': 'application/json',
@@ -38,15 +39,15 @@ export async function GET(request: NextRequest) {
         });
 
         if (!musoAiResponse.ok) {
-          const errorText = await musoAiResponse.text(); // Get raw text
-          console.error(`Muso.AI API error for artist ${artist.id}: Status ${musoAiResponse.status}, Response: ${errorText}`);
-          syncResults.push({ artistId: artist.id, status: 'failed', error: `Muso.AI API error: Status ${musoAiResponse.status}` });
+          const errorText = await musoAiResponse.text();
+          console.error(`Muso.AI API error for artist ${profile.artist_id}: Status ${musoAiResponse.status}, Response: ${errorText}`);
+          syncResults.push({ artistId: profile.artist_id, status: 'failed', error: `Muso.AI API error: Status ${musoAiResponse.status}` });
           continue;
         }
 
         const musoAiData = await musoAiResponse.json();
-        const popularity = musoAiData.popularity; // Assuming popularity is directly available
-        const musoAiProfileId = musoAiData.id; // Muso.AI's internal profile ID
+        // Assuming the API returns popularity directly. This might need adjustment based on the actual API response structure.
+        const popularity = musoAiData.popularity || 0;
 
         // Call our internal API to save/update the data
         const saveResponse = await fetch(`${request.nextUrl.origin}/api/muso-ai/profiles`, {
@@ -54,21 +55,21 @@ export async function GET(request: NextRequest) {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ artistId: artist.id, musoAiProfileId, popularity }),
+          body: JSON.stringify({ artistId: profile.artist_id, musoAiProfileId: profile.muso_ai_profile_id, popularity }),
         });
 
         if (!saveResponse.ok) {
           const errorBody = await saveResponse.json();
-          console.error(`Failed to save Muso.AI data for artist ${artist.id}:`, errorBody);
-          syncResults.push({ artistId: artist.id, status: 'failed', error: errorBody.error || 'Internal save error' });
+          console.error(`Failed to save Muso.AI data for artist ${profile.artist_id}:`, errorBody);
+          syncResults.push({ artistId: profile.artist_id, status: 'failed', error: errorBody.error || 'Internal save error' });
           continue;
         }
 
-        syncResults.push({ artistId: artist.id, status: 'success', popularity });
+        syncResults.push({ artistId: profile.artist_id, status: 'success', popularity });
 
       } catch (innerError: any) {
-        console.error(`Error processing artist ${artist.id}:`, innerError);
-        syncResults.push({ artistId: artist.id, status: 'failed', error: innerError.message || 'Unknown error' });
+        console.error(`Error processing artist ${profile.artist_id}:`, innerError);
+        syncResults.push({ artistId: profile.artist_id, status: 'failed', error: innerError.message || 'Unknown error' });
       }
     }
 
