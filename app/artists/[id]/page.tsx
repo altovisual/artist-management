@@ -55,7 +55,7 @@ import { useIsMobile } from "@/components/ui/use-mobile"
 import { useToast } from "@/components/ui/use-toast"
 import ArtistDetailPageSkeleton from "./artist-detail-skeleton"
 import { AnimatedTitle } from "@/components/animated-title"
-import { AnalyticsContent } from '@/components/analytics-content' // Import AnalyticsContent
+import { ArtistAnalyticsDashboard } from '@/components/artist-analytics-dashboard'
 
 // --- Helper Functions ---
 const getExt = (url?: string) => {
@@ -419,11 +419,7 @@ export default function ArtistDetailPage() {
           </div>
         );
       case 'analytics': // New case for analytics tab
-        return (
-          <div className="space-y-6">
-            <AnalyticsContent artistId={artist.spotify_artist_id} />
-          </div>
-        );
+        return <ArtistAnalyticsDashboard artist={artist} />;
       default:
         return null;
     }
