@@ -1,5 +1,5 @@
 -- Create the signatures table
-CREATE TABLE public.signatures (
+CREATE TABLE IF NOT EXISTS public.signatures (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     contract_id BIGINT NOT NULL REFERENCES public.contracts(id) ON DELETE CASCADE,
     signature_request_id TEXT NOT NULL,
@@ -14,4 +14,4 @@ CREATE TABLE public.signatures (
 ALTER TABLE public.signatures ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies for the new table
-CREATE POLICY "Allow read access to all users" ON public.signatures FOR SELECT USING (true);
+-- CREATE POLICY "Allow read access to all users" ON public.signatures FOR SELECT USING (true);

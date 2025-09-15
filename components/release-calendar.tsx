@@ -300,7 +300,7 @@ export function ReleaseCalendar({
     const provisionalProject = {
       artist_id: form.selectedArtistId,
       name: form.newReleaseTitle,
-      release_date: form.newReleaseDate,
+      release_date: form.newReleaseDate || null,
       type: form.newReleaseType,
       status: form.newReleaseStatus,
       notes: form.newReleaseNotes,
@@ -401,7 +401,7 @@ export function ReleaseCalendar({
     const updateData = {
       artist_id: form.selectedArtistId,
       name: form.newReleaseTitle,
-      release_date: form.newReleaseDate,
+      release_date: form.newReleaseDate || null,
       type: form.newReleaseType,
       status: form.newReleaseStatus,
       notes: form.newReleaseNotes,
