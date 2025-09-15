@@ -161,10 +161,12 @@ export default function CreativeVaultPage() {
         return item.file_url ? <audio controls src={item.file_url} className="mt-2 w-full" /> : null;
       case 'image':
         return item.file_url ? (
-          <img 
-            src={item.file_url} 
-            alt={item.title} 
-            className="mt-2 max-h-48 object-contain cursor-pointer"
+          <Image
+            src={item.file_url}
+            alt={item.title}
+            width={192}
+            height={192}
+            className="mt-2 h-48 w-auto object-contain cursor-pointer"
             onClick={() => setSelectedImage(item.file_url)}
           />
         ) : null;

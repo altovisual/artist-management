@@ -318,7 +318,7 @@ export function ReleaseCalendar({
       .single();
 
     if (insertError || !newProjectData) {
-      toast({ title: "Error creating release", description: insertError.message, variant: "destructive" });
+      toast({ title: "Error creating release", description: insertError?.message || "An unknown error occurred.", variant: "destructive" });
       setIsSavingRelease(false);
       return;
     }
