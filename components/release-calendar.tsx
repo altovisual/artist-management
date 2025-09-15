@@ -242,120 +242,188 @@ export function ReleaseCalendar({
     }
   }, [selectedRelease, initialFormState]);
 
-  const handleFileUpload = async (file: File, artistId: string): Promise<string | null> => {
+  const handleFileUpload = async (file: File, artistId: string, projectId: string, assetType: string, assetCategory: string) => {
     if (!file) return null;
+
     const fileExtension = file.name.split('.').pop();
     const fileName = `${uuidv4()}.${fileExtension}`;
     const filePath = `${artistId}/${fileName}`;
-    const { error } = await supabase.storage.from('creative-vault-assets').upload(filePath, file);
-    if (error) {
-      console.error('Error uploading file:', error);
+
+    const { error: uploadError } = await supabase.storage.from('creative-vault-assets').upload(filePath, file);
+    if (uploadError) {
       toast({ title: "File Upload Error", description: `Could not upload ${file.name}.`, variant: "destructive" });
       return null;
     }
-    const { data } = supabase.storage.from('creative-vault-assets').getPublicUrl(filePath);
-    return data.publicUrl;
+
+    const { data: urlData } = supabase.storage.from('creative-vault-assets').getPublicUrl(filePath);
+    const publicUrl = urlData.publicUrl;
+
+    const { error: dbError } = await supabase.from('assets').insert({
+      artist_id: artistId,
+      project_id: projectId,
+      name: file.name,
+      type: assetType,
+      category: assetCategory,
+      file_url: publicUrl,
+      file_size: file.size,
+      format: file.type,
+    });
+
+    if (dbError) {
+      toast({ title: "Asset Creation Error", description: "File uploaded, but could not create asset record in database.", variant: "destructive" });
+      return null;
+    }
+
+    return publicUrl;
   };
 
-  const prepareSaveData = async () => {
-    let coverArtUrl = form.newReleaseCoverArtUrl;
-    if (coverArtFile && form.selectedArtistId) {
-      const uploadedUrl = await handleFileUpload(coverArtFile, form.selectedArtistId);
-      if (!uploadedUrl) return null;
-      coverArtUrl = uploadedUrl;
+  const handleAddRelease = async () => {
+    setIsSavingRelease(true);
+    if (!form.selectedArtistId) {
+      toast({ title: "Error", description: "Please select an artist.", variant: "destructive" });
+      setIsSavingRelease(false);
+      return;
     }
 
-    let musicFileUrl = form.newReleaseMusicFileUrl;
-    if (musicFile && form.selectedArtistId) {
-      const uploadedUrl = await handleFileUpload(musicFile, form.selectedArtistId);
-      if (!uploadedUrl) return null;
-      musicFileUrl = uploadedUrl;
+    let splitsJson = null;
+    if (form.splits) {
+      try {
+        splitsJson = JSON.parse(form.splits);
+      } catch (e) {
+        toast({ title: "Invalid Splits JSON", variant: "destructive" });
+        setIsSavingRelease(false);
+        return;
+      }
     }
 
-    return {
+    // 1. Insert provisional project data
+    const provisionalProject = {
       artist_id: form.selectedArtistId,
       name: form.newReleaseTitle,
       release_date: form.newReleaseDate,
       type: form.newReleaseType,
       status: form.newReleaseStatus,
-      cover_art_url: coverArtUrl,
       notes: form.newReleaseNotes,
-      music_file_url: musicFileUrl,
-      // The following fields are temporarily disabled to avoid environment-specific errors.
-      // producers: form.producers.split(',').map(s => s.trim()).filter(Boolean),
-      // composers: form.composers.split(',').map(s => s.trim()).filter(Boolean),
-      // credits: form.credits,
-      // lyrics: form.lyrics,
-      // splits: form.splits ? JSON.parse(form.splits) : null,
+      producers: form.producers.split(',').map(s => s.trim()).filter(Boolean),
+      composers: form.composers.split(',').map(s => s.trim()).filter(Boolean),
+      credits: form.credits,
+      lyrics: form.lyrics,
+      splits: splitsJson,
     };
-  }
 
-  const handleAddRelease = async () => {
-    setIsSavingRelease(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast({ title: "Error", description: "You must be logged in to add releases.", variant: "destructive" });
-      setIsSavingRelease(false);
-      return;
-    }
-    if (!form.selectedArtistId) {
-      toast({ title: "Error", description: "Please select an artist for the release.", variant: "destructive" });
-      setIsSavingRelease(false);
-      return;
-    }
+    const { data: newProjectData, error: insertError } = await supabase
+      .from('projects')
+      .insert(provisionalProject)
+      .select()
+      .single();
 
-    const saveData = await prepareSaveData();
-    if (!saveData) {
+    if (insertError || !newProjectData) {
+      toast({ title: "Error creating release", description: insertError.message, variant: "destructive" });
       setIsSavingRelease(false);
       return;
     }
 
-    const { data, error } = await supabase.from("projects").insert(saveData).select();
-    if (error || !data) {
-      console.error("Error adding release:", JSON.stringify(error, null, 2));
-      toast({ title: "Error adding release", description: error?.message || "An unknown error occurred.", variant: "destructive" });
-    } else {
-      const row = data[0] as ProjectRow;
-      toast({ title: "Success", description: "Release added successfully." });
-      const newEvent: ReleaseEvent = { id: String(row.id), title: row.name, start: new Date(row.release_date), end: new Date(row.release_date), allDay: true, resource: row };
-      setEvents((prev) => [...prev, newEvent]);
-      setShowAddReleaseModal(false);
+    const projectId = newProjectData.id;
+    let coverArtUrl = form.newReleaseCoverArtUrl;
+    let musicFileUrl = form.newReleaseMusicFileUrl;
+    let updateRequired = false;
+
+    // 2. Handle file uploads and asset creation
+    if (coverArtFile) {
+      const uploadedUrl = await handleFileUpload(coverArtFile, form.selectedArtistId, projectId, 'cover_art', 'musical_releases');
+      if (uploadedUrl) {
+        coverArtUrl = uploadedUrl;
+        updateRequired = true;
+      }
     }
+    if (musicFile) {
+      const uploadedUrl = await handleFileUpload(musicFile, form.selectedArtistId, projectId, 'music_file', 'musical_releases');
+      if (uploadedUrl) {
+        musicFileUrl = uploadedUrl;
+        updateRequired = true;
+      }
+    }
+
+    // 3. Update project with file URLs if needed
+    let finalProjectData = { ...newProjectData, cover_art_url: coverArtUrl, music_file_url: musicFileUrl };
+
+    if (updateRequired) {
+      const { data: updatedData, error: updateError } = await supabase
+        .from('projects')
+        .update({ cover_art_url: coverArtUrl, music_file_url: musicFileUrl })
+        .eq('id', projectId)
+        .select()
+        .single();
+      
+      if (updateError) {
+        toast({ title: "Error updating release with file URLs", description: updateError.message, variant: "destructive" });
+        // Decide if we should rollback or notify user
+      } else {
+        finalProjectData = updatedData;
+      }
+    }
+
+    toast({ title: "Success", description: "Release added successfully." });
+    const newEvent: ReleaseEvent = { id: String(finalProjectData.id), title: finalProjectData.name, start: new Date(finalProjectData.release_date), end: new Date(finalProjectData.release_date), allDay: true, resource: finalProjectData as ProjectRow };
+    setEvents((prev) => [...prev, newEvent]);
+    setShowAddReleaseModal(false);
     setIsSavingRelease(false);
   }
 
   const handleUpdateRelease = async () => {
-    if (!selectedRelease) return;
+    if (!selectedRelease || !form.selectedArtistId) return;
     setIsSavingRelease(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast({ title: "Error", description: "You must be logged in to update releases.", variant: "destructive" });
-      setIsSavingRelease(false);
-      return;
-    }
-    if (!form.selectedArtistId) {
-      toast({ title: "Error", description: "Please select an artist for the release.", variant: "destructive" });
-      setIsSavingRelease(false);
-      return;
+
+    let splitsJson = null;
+    if (form.splits) {
+      try {
+        splitsJson = JSON.parse(form.splits);
+      } catch (e) {
+        toast({ title: "Invalid Splits JSON", variant: "destructive" });
+        setIsSavingRelease(false);
+        return;
+      }
     }
 
-    const saveData = await prepareSaveData();
-    if (!saveData) {
-      setIsSavingRelease(false);
-      return;
+    const projectId = selectedRelease.resource.id as string;
+    let coverArtUrl = form.newReleaseCoverArtUrl;
+    let musicFileUrl = form.newReleaseMusicFileUrl;
+
+    if (coverArtFile) {
+      const uploadedUrl = await handleFileUpload(coverArtFile, form.selectedArtistId, projectId, 'cover_art', 'musical_releases');
+      if (uploadedUrl) coverArtUrl = uploadedUrl;
+    }
+    if (musicFile) {
+      const uploadedUrl = await handleFileUpload(musicFile, form.selectedArtistId, projectId, 'music_file', 'musical_releases');
+      if (uploadedUrl) musicFileUrl = uploadedUrl;
     }
 
-    const realId = selectedRelease.resource.id;
-    const { error } = await supabase.from("projects").update(saveData).eq("id", realId);
+    const updateData = {
+      artist_id: form.selectedArtistId,
+      name: form.newReleaseTitle,
+      release_date: form.newReleaseDate,
+      type: form.newReleaseType,
+      status: form.newReleaseStatus,
+      notes: form.newReleaseNotes,
+      producers: form.producers.split(',').map(s => s.trim()).filter(Boolean),
+      composers: form.composers.split(',').map(s => s.trim()).filter(Boolean),
+      credits: form.credits,
+      lyrics: form.lyrics,
+      splits: splitsJson,
+      cover_art_url: coverArtUrl,
+      music_file_url: musicFileUrl,
+    };
+
+    const { data: updatedData, error } = await supabase.from("projects").update(updateData).eq("id", projectId).select().single();
+
     if (error) {
-      console.error("Supabase error updating release:", JSON.stringify(error, null, 2));
-      toast({ title: "Error", description: "Could not update release.", variant: "destructive" });
+      toast({ title: "Error updating release", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Success", description: "Release updated successfully." });
       setEvents((prev) =>
         prev.map((event) =>
-          event.resource.id === realId
-            ? { ...event, title: form.newReleaseTitle, start: new Date(form.newReleaseDate), end: new Date(form.newReleaseDate), resource: { ...event.resource, ...saveData, id: realId } }
+          event.resource.id === projectId
+            ? { ...event, title: updatedData.name, start: new Date(updatedData.release_date), end: new Date(updatedData.release_date), resource: updatedData as ProjectRow }
             : event
         )
       );
@@ -366,12 +434,13 @@ export function ReleaseCalendar({
   }
 
   const handleDeleteRelease = async () => {
-    if (!selectedRelease || !confirm("Are you sure you want to delete this release?")) return;
+    if (!selectedRelease) return;
+    if (!confirm("Are you sure you want to delete this release?")) return;
+
     setIsSavingRelease(true);
     const realId = selectedRelease.resource.id;
     const { error } = await supabase.from("projects").delete().eq("id", realId);
     if (error) {
-      console.error("Error deleting release:", error);
       toast({ title: "Error", description: "Could not delete release.", variant: "destructive" });
     } else {
       toast({ title: "Success", description: "Release deleted successfully." });
