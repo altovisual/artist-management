@@ -1,6 +1,6 @@
-"use client"
+'use client'
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { PlusCircle } from "lucide-react"
 import Link from "next/link"
@@ -34,10 +34,10 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { CalendarToolbar } from "./calendar-toolbar";
 import { ReleaseCalendarSkeleton } from "./release-calendar-skeleton";
 import { AnimatedTitle } from "./animated-title";
+import { v4 as uuidv4 } from 'uuid';
 
 const localizer = momentLocalizer(moment)
 
-/** Fila real de la tabla projects (ajusta si tu esquema difiere) */
 type ProjectRow = {
   id: string | number
   name: string
@@ -48,6 +48,11 @@ type ProjectRow = {
   notes?: string | null
   music_file_url?: string | null
   artist_id: string;
+  producers?: string[] | null;
+  composers?: string[] | null;
+  credits?: string | null;
+  lyrics?: string | null;
+  splits?: any | null;
 }
 
 type ReleaseEvent = {
@@ -65,6 +70,96 @@ interface ReleaseCalendarProps {
   initialArtistId: string | null;
   isLoading: boolean;
 }
+
+// Helper Component for Form Fields
+const ReleaseFormFields = ({ form, setForm, artists, coverArtFile, setCoverArtFile, musicFile, setMusicFile }: any) => (
+  <>
+    <div className="space-y-2 md:col-span-2">
+      <Label htmlFor="artist">Artist</Label>
+      <select
+        id="artist"
+        value={form.selectedArtistId || ""}
+        onChange={(e) => setForm({ ...form, selectedArtistId: e.target.value })}
+        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <option value="">Select an artist</option>
+        {artists.filter((artist: any) => typeof artist === 'object' && artist !== null && 'id' in artist && artist.id !== undefined && artist.id !== null).map((artist: any) => (
+          artist && artist.id ? (
+            <option key={artist.id} value={artist.id}>
+              {artist.name}
+            </option>
+          ) : null
+        ))}
+      </select>
+    </div>
+    <div className="space-y-2">
+      <Label htmlFor="title">Title</Label>
+      <Input id="title" value={form.newReleaseTitle} onChange={(e) => setForm({ ...form, newReleaseTitle: e.target.value })} required />
+    </div>
+    <div className="space-y-2">
+      <Label htmlFor="date">Release Date</Label>
+      <Input id="date" type="date" value={form.newReleaseDate} onChange={(e) => setForm({ ...form, newReleaseDate: e.target.value })} required />
+    </div>
+    <div className="space-y-2">
+      <Label htmlFor="type">Release Type</Label>
+      <Select value={form.newReleaseType} onValueChange={(value) => setForm({ ...form, newReleaseType: value }) }>
+        <SelectTrigger><SelectValue placeholder="Select a type" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="single">Single</SelectItem>
+          <SelectItem value="ep">EP</SelectItem>
+          <SelectItem value="album">Album</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+    <div className="space-y-2">
+      <Label htmlFor="status">Status</Label>
+      <Select value={form.newReleaseStatus} onValueChange={(value) => setForm({ ...form, newReleaseStatus: value }) }>
+        <SelectTrigger><SelectValue placeholder="Select a status" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="planned">Planned</SelectItem>
+          <SelectItem value="released">Released</SelectItem>
+          <SelectItem value="postponed">Postponed</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+    <div className="space-y-2">
+      <Label htmlFor="coverArtUrl">Cover Art URL</Label>
+      <Input id="coverArtUrl" type="url" value={form.newReleaseCoverArtUrl} onChange={(e) => setForm({ ...form, newReleaseCoverArtUrl: e.target.value })} placeholder="https://example.com/cover.jpg" disabled={!!coverArtFile} />
+      <Label htmlFor="coverArtFile" className="text-sm text-muted-foreground">Or Upload File</Label>
+      <Input id="coverArtFile" type="file" accept="image/*" onChange={(e) => setCoverArtFile(e.target.files ? e.target.files[0] : null)} disabled={!!form.newReleaseCoverArtUrl} />
+    </div>
+    <div className="space-y-2">
+      <Label htmlFor="musicFileUrl">Music File URL</Label>
+      <Input id="musicFileUrl" type="url" value={form.newReleaseMusicFileUrl} onChange={(e) => setForm({ ...form, newReleaseMusicFileUrl: e.target.value })} placeholder="https://example.com/music.mp3" disabled={!!musicFile} />
+      <Label htmlFor="musicFile" className="text-sm text-muted-foreground">Or Upload File</Label>
+      <Input id="musicFile" type="file" accept="audio/*" onChange={(e) => setMusicFile(e.target.files ? e.target.files[0] : null)} disabled={!!form.newReleaseMusicFileUrl} />
+    </div>
+    <div className="space-y-2 md:col-span-2">
+      <Label htmlFor="notes">Notes</Label>
+      <Textarea id="notes" value={form.newReleaseNotes} onChange={(e) => setForm({ ...form, newReleaseNotes: e.target.value })} placeholder="Additional notes about the release..." className="min-h-[100px]" />
+    </div>
+    <div className="space-y-2">
+      <Label htmlFor="producers">Producers</Label>
+      <Input id="producers" value={form.producers} onChange={(e) => setForm({ ...form, producers: e.target.value })} placeholder="Producer 1, Producer 2..." />
+    </div>
+    <div className="space-y-2">
+      <Label htmlFor="composers">Composers</Label>
+      <Input id="composers" value={form.composers} onChange={(e) => setForm({ ...form, composers: e.target.value })} placeholder="Composer 1, Composer 2..." />
+    </div>
+    <div className="space-y-2 md:col-span-2">
+      <Label htmlFor="credits">Credits</Label>
+      <Textarea id="credits" value={form.credits} onChange={(e) => setForm({ ...form, credits: e.target.value })} placeholder="Full credits text..." />
+    </div>
+    <div className="space-y-2 md:col-span-2">
+      <Label htmlFor="lyrics">Lyrics</Label>
+      <Textarea id="lyrics" value={form.lyrics} onChange={(e) => setForm({ ...form, lyrics: e.target.value })} placeholder="Song lyrics..." className="min-h-[150px]" />
+    </div>
+    <div className="space-y-2 md:col-span-2">
+      <Label htmlFor="splits">Copyright Splits (JSON)</Label>
+      <Textarea id="splits" value={form.splits} onChange={(e) => setForm({ ...form, splits: e.target.value })} placeholder='[{"name": "Writer A", "percentage": 50}, {"name": "Producer B", "percentage": 50}]' className="min-h-[150px] font-mono" />
+    </div>
+  </>
+);
 
 export function ReleaseCalendar({
   initialEvents,
@@ -84,21 +179,31 @@ export function ReleaseCalendar({
   const [selectedRelease, setSelectedRelease] = useState<ReleaseEvent | null>(null)
   const [showEditReleaseModal, setShowEditReleaseModal] = useState(false)
 
-  // Form
-  const [newReleaseTitle, setNewReleaseTitle] = useState("")
-  const [newReleaseDate, setNewReleaseDate] = useState("")
-  const [newReleaseType, setNewReleaseType] = useState("")
-  const [newReleaseStatus, setNewReleaseStatus] = useState("planned")
-  const [newReleaseCoverArtUrl, setNewReleaseCoverArtUrl] = useState("")
-  const [newReleaseNotes, setNewReleaseNotes] = useState("")
-  const [newReleaseMusicFileUrl, setNewReleaseMusicFileUrl] = useState("")
+  const initialFormState = useMemo(() => ({
+    newReleaseTitle: "",
+    newReleaseDate: "",
+    newReleaseType: "",
+    newReleaseStatus: "planned",
+    newReleaseCoverArtUrl: "",
+    newReleaseMusicFileUrl: "",
+    newReleaseNotes: "",
+    producers: "",
+    composers: "",
+    credits: "",
+    lyrics: "",
+    splits: "",
+    selectedArtistId: initialArtistId,
+  }), [initialArtistId]);
+
+  const [form, setForm] = useState(initialFormState);
+  const [coverArtFile, setCoverArtFile] = useState<File | null>(null);
+  const [musicFile, setMusicFile] = useState<File | null>(null);
   const [isSavingRelease, setIsSavingRelease] = useState(false)
   const [artists, setArtists] = useState<any[]>(initialArtists)
-  const [selectedArtistId, setSelectedArtistId] = useState<string | null>(initialArtistId);
 
   useEffect(() => {
     const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < 768); // md breakpoint
+      setIsMobile(window.innerWidth < 768);
     };
     checkIsMobile();
     window.addEventListener("resize", checkIsMobile);
@@ -108,130 +213,173 @@ export function ReleaseCalendar({
   useEffect(() => {
     setEvents(initialEvents);
     setArtists(initialArtists);
-    setSelectedArtistId(initialArtistId);
+    setForm(f => ({ ...f, selectedArtistId: initialArtistId }));
     setIsLoading(initialLoading);
   }, [initialEvents, initialArtists, initialArtistId, initialLoading]);
 
   useEffect(() => {
     if (selectedRelease) {
-      setNewReleaseTitle(selectedRelease.resource.name || "");
-      setNewReleaseDate(selectedRelease.resource.release_date || "");
-      setNewReleaseType(selectedRelease.resource.type || "");
-      setNewReleaseStatus(selectedRelease.resource.status || "planned");
-      setNewReleaseCoverArtUrl(selectedRelease.resource.cover_art_url || "");
-      setNewReleaseNotes(selectedRelease.resource.notes || "");
-      setNewReleaseMusicFileUrl(selectedRelease.resource.music_file_url || "");
-      setSelectedArtistId(selectedRelease.resource.artist_id || null);
+      const r = selectedRelease.resource;
+      setForm({
+        newReleaseTitle: r.name || "",
+        newReleaseDate: r.release_date || "",
+        newReleaseType: r.type || "",
+        newReleaseStatus: r.status || "planned",
+        newReleaseCoverArtUrl: r.cover_art_url || "",
+        newReleaseMusicFileUrl: r.music_file_url || "",
+        selectedArtistId: r.artist_id || null,
+        newReleaseNotes: r.notes || "",
+        producers: r.producers?.join(', ') || '',
+        composers: r.composers?.join(', ') || '',
+        credits: r.credits || '',
+        lyrics: r.lyrics || '',
+        splits: r.splits ? JSON.stringify(r.splits, null, 2) : '',
+      });
+      setCoverArtFile(null);
+      setMusicFile(null);
     } else {
-      // Reset form fields when no release is selected (e.g., modal is closed)
-      setNewReleaseTitle("");
-      setNewReleaseDate("");
-      setNewReleaseType("");
-      setNewReleaseStatus("planned");
-      setNewReleaseCoverArtUrl("");
-      setNewReleaseNotes("");
-      setNewReleaseMusicFileUrl("");
-      // Keep selectedArtistId as is, or reset if needed based on UX
-      // setSelectedArtistId(null);
+      setForm(initialFormState);
     }
-  }, [selectedRelease]);
+  }, [selectedRelease, initialFormState]);
+
+  const handleFileUpload = async (file: File, artistId: string): Promise<string | null> => {
+    if (!file) return null;
+    const fileExtension = file.name.split('.').pop();
+    const fileName = `${uuidv4()}.${fileExtension}`;
+    const filePath = `${artistId}/${fileName}`;
+    const { error } = await supabase.storage.from('creative-vault-assets').upload(filePath, file);
+    if (error) {
+      console.error('Error uploading file:', error);
+      toast({ title: "File Upload Error", description: `Could not upload ${file.name}.`, variant: "destructive" });
+      return null;
+    }
+    const { data } = supabase.storage.from('creative-vault-assets').getPublicUrl(filePath);
+    return data.publicUrl;
+  };
+
+  const prepareSaveData = async () => {
+    let coverArtUrl = form.newReleaseCoverArtUrl;
+    if (coverArtFile && form.selectedArtistId) {
+      const uploadedUrl = await handleFileUpload(coverArtFile, form.selectedArtistId);
+      if (!uploadedUrl) return null;
+      coverArtUrl = uploadedUrl;
+    }
+
+    let musicFileUrl = form.newReleaseMusicFileUrl;
+    if (musicFile && form.selectedArtistId) {
+      const uploadedUrl = await handleFileUpload(musicFile, form.selectedArtistId);
+      if (!uploadedUrl) return null;
+      musicFileUrl = uploadedUrl;
+    }
+
+    return {
+      artist_id: form.selectedArtistId,
+      name: form.newReleaseTitle,
+      release_date: form.newReleaseDate,
+      type: form.newReleaseType,
+      status: form.newReleaseStatus,
+      cover_art_url: coverArtUrl,
+      notes: form.newReleaseNotes,
+      music_file_url: musicFileUrl,
+      // The following fields are temporarily disabled to avoid environment-specific errors.
+      // producers: form.producers.split(',').map(s => s.trim()).filter(Boolean),
+      // composers: form.composers.split(',').map(s => s.trim()).filter(Boolean),
+      // credits: form.credits,
+      // lyrics: form.lyrics,
+      // splits: form.splits ? JSON.parse(form.splits) : null,
+    };
+  }
 
   const handleAddRelease = async () => {
-    setIsSavingRelease(true)
-    const { data: { user } } = await supabase.auth.getUser()
+    setIsSavingRelease(true);
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      toast({ title: "Error", description: "You must be logged in to add releases.", variant: "destructive" })
-      setIsSavingRelease(false)
-      return
+      toast({ title: "Error", description: "You must be logged in to add releases.", variant: "destructive" });
+      setIsSavingRelease(false);
+      return;
     }
-    if (!selectedArtistId) {
-      toast({ title: "Error", description: "Please select an artist for the release.", variant: "destructive" })
-      setIsSavingRelease(false)
-      return
+    if (!form.selectedArtistId) {
+      toast({ title: "Error", description: "Please select an artist for the release.", variant: "destructive" });
+      setIsSavingRelease(false);
+      return;
     }
-    const { data, error } = await supabase
-      .from("projects")
-      .insert({ artist_id: selectedArtistId, name: newReleaseTitle, release_date: newReleaseDate, type: newReleaseType, status: newReleaseStatus, cover_art_url: newReleaseCoverArtUrl, notes: newReleaseNotes, music_file_url: newReleaseMusicFileUrl })
-      .select()
+
+    const saveData = await prepareSaveData();
+    if (!saveData) {
+      setIsSavingRelease(false);
+      return;
+    }
+
+    const { data, error } = await supabase.from("projects").insert(saveData).select();
     if (error || !data) {
-      console.error("Error adding release:", JSON.stringify(error, null, 2))
-      toast({ title: "Error adding release", description: error?.message || "An unknown error occurred.", variant: "destructive" })
+      console.error("Error adding release:", JSON.stringify(error, null, 2));
+      toast({ title: "Error adding release", description: error?.message || "An unknown error occurred.", variant: "destructive" });
     } else {
-      const row = data[0] as ProjectRow
-      toast({ title: "Success", description: "Release added successfully." })
-      const newEvent: ReleaseEvent = { id: String(row.id), title: row.name, start: new Date(row.release_date), end: new Date(row.release_date), allDay: true, resource: row }
-      setEvents((prev) => [...prev, newEvent])
-      setShowAddReleaseModal(false)
+      const row = data[0] as ProjectRow;
+      toast({ title: "Success", description: "Release added successfully." });
+      const newEvent: ReleaseEvent = { id: String(row.id), title: row.name, start: new Date(row.release_date), end: new Date(row.release_date), allDay: true, resource: row };
+      setEvents((prev) => [...prev, newEvent]);
+      setShowAddReleaseModal(false);
     }
-    setIsSavingRelease(false)
+    setIsSavingRelease(false);
   }
 
   const handleUpdateRelease = async () => {
-    console.log("handleUpdateRelease function called!"); // ADD THIS LINE
-    if (!selectedRelease) return
-    setIsSavingRelease(true)
-    const { data: { user } } = await supabase.auth.getUser()
+    if (!selectedRelease) return;
+    setIsSavingRelease(true);
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      toast({ title: "Error", description: "You must be logged in to update releases.", variant: "destructive" })
-      setIsSavingRelease(false)
-      return
+      toast({ title: "Error", description: "You must be logged in to update releases.", variant: "destructive" });
+      setIsSavingRelease(false);
+      return;
     }
-    if (!selectedArtistId) {
-      toast({ title: "Error", description: "Please select an artist for the release.", variant: "destructive" })
-      setIsSavingRelease(false)
-      return
+    if (!form.selectedArtistId) {
+      toast({ title: "Error", description: "Please select an artist for the release.", variant: "destructive" });
+      setIsSavingRelease(false);
+      return;
     }
-    const realId = selectedRelease.resource.id
-    const updateData = {
-      artist_id: selectedArtistId,
-      name: newReleaseTitle,
-      release_date: newReleaseDate,
-      type: newReleaseType,
-      status: newReleaseStatus,
-      cover_art_url: newReleaseCoverArtUrl,
-      notes: newReleaseNotes,
-      music_file_url: newReleaseMusicFileUrl
-    };
-    console.log("Attempting to update release with ID:", realId);
-    console.log("Data being sent for update:", updateData);
 
-    const { error } = await supabase
-      .from("projects")
-      .update(updateData)
-      .eq("id", realId)
+    const saveData = await prepareSaveData();
+    if (!saveData) {
+      setIsSavingRelease(false);
+      return;
+    }
+
+    const realId = selectedRelease.resource.id;
+    const { error } = await supabase.from("projects").update(saveData).eq("id", realId);
     if (error) {
-      console.error("Supabase error updating release:", JSON.stringify(error, null, 2))
-      toast({ title: "Error", description: "Could not update release.", variant: "destructive" })
+      console.error("Supabase error updating release:", JSON.stringify(error, null, 2));
+      toast({ title: "Error", description: "Could not update release.", variant: "destructive" });
     } else {
-      toast({ title: "Success", description: "Release updated successfully." })
+      toast({ title: "Success", description: "Release updated successfully." });
       setEvents((prev) =>
         prev.map((event) =>
           event.resource.id === realId
-            ? { ...event, title: newReleaseTitle, start: new Date(newReleaseDate), end: new Date(newReleaseDate), resource: { ...event.resource, artist_id: selectedArtistId, name: newReleaseTitle, release_date: newReleaseDate, type: newReleaseType, status: newReleaseStatus, cover_art_url: newReleaseCoverArtUrl, notes: newReleaseNotes, music_file_url: newReleaseMusicFileUrl } }
+            ? { ...event, title: form.newReleaseTitle, start: new Date(form.newReleaseDate), end: new Date(form.newReleaseDate), resource: { ...event.resource, ...saveData, id: realId } }
             : event
         )
-      )
-      setShowEditReleaseModal(false)
-      setSelectedRelease(null)
+      );
+      setShowEditReleaseModal(false);
+      setSelectedRelease(null);
     }
-    setIsSavingRelease(false)
+    setIsSavingRelease(false);
   }
 
   const handleDeleteRelease = async () => {
-    if (!selectedRelease || !confirm("Are you sure you want to delete this release?")) return
-    setIsSavingRelease(true)
-    const realId = selectedRelease.resource.id
-    const { error } = await supabase.from("projects").delete().eq("id", realId)
+    if (!selectedRelease || !confirm("Are you sure you want to delete this release?")) return;
+    setIsSavingRelease(true);
+    const realId = selectedRelease.resource.id;
+    const { error } = await supabase.from("projects").delete().eq("id", realId);
     if (error) {
-      console.error("Error deleting release:", error)
-      toast({ title: "Error", description: "Could not delete release.", variant: "destructive" })
+      console.error("Error deleting release:", error);
+      toast({ title: "Error", description: "Could not delete release.", variant: "destructive" });
     } else {
-      toast({ title: "Success", description: "Release deleted successfully." })
-      setEvents((prev) => prev.filter((e) => e.resource.id !== realId))
-      setShowEditReleaseModal(false)
-      setSelectedRelease(null)
+      toast({ title: "Success", description: "Release deleted successfully." });
+      setEvents((prev) => prev.filter((e) => e.resource.id !== realId));
+      setShowEditReleaseModal(false);
+      setSelectedRelease(null);
     }
-    setIsSavingRelease(false)
+    setIsSavingRelease(false);
   }
 
   return (
@@ -245,21 +393,17 @@ export function ReleaseCalendar({
                     <p className="text-muted-foreground">View and manage all upcoming music releases.</p>
                 </div>
                 <Button className="flex items-center gap-2 w-full sm:w-auto" onClick={() => {
-                  setSelectedRelease(null); // Clear any selected release
+                  setSelectedRelease(null);
+                  setForm(initialFormState);
+                  setCoverArtFile(null);
+                  setMusicFile(null);
                   setShowAddReleaseModal(true);
-                  setNewReleaseTitle("");
-                  setNewReleaseDate("");
-                  setNewReleaseType("");
-                  setNewReleaseStatus("planned");
-                  setNewReleaseCoverArtUrl("");
-                  setNewReleaseNotes("");
-                  setNewReleaseMusicFileUrl("");
                   if (initialArtistId) {
-                    setSelectedArtistId(initialArtistId);
+                    setForm(f => ({ ...f, selectedArtistId: initialArtistId }));
                   } else if (artists.length > 0) {
-                    setSelectedArtistId(artists[0].id);
+                    setForm(f => ({ ...f, selectedArtistId: artists[0].id }));
                   } else {
-                    setSelectedArtistId(null);
+                    setForm(f => ({ ...f, selectedArtistId: null }));
                   }
                 }}>
                     <PlusCircle className="mr-2 h-4 w-4" />
@@ -273,7 +417,7 @@ export function ReleaseCalendar({
           {isLoading ? (
             <ReleaseCalendarSkeleton />
           ) : (
-            <div className="h-[600px] overflow-y-auto"> {/* Fixed height and scrollable */}
+            <div className="h-[600px] overflow-y-auto">
               <Calendar
                 localizer={localizer}
                 events={events}
@@ -295,13 +439,11 @@ export function ReleaseCalendar({
                   showMore: (total) => `+ Ver más (${total})`,
                 }}
                 onSelectEvent={(event) => {
-                  setSelectedRelease(event as ReleaseEvent)
-                  setShowEditReleaseModal(true)
+                  setSelectedRelease(event as ReleaseEvent);
+                  setShowEditReleaseModal(true);
                 }}
                 view={currentView}
-                onView={(view) => {
-                  setCurrentView(view)
-                }}
+                onView={(view) => setCurrentView(view)}
                 date={currentDate}
                 onNavigate={(date) => setCurrentDate(date)}
                 components={{
@@ -322,80 +464,12 @@ export function ReleaseCalendar({
           </DialogHeader>
           <ScrollArea className="max-h-[70vh] p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="artist">Artist</Label>
-                
-                {artists && artists.length > 0 ? (
-                  <select
-                    id="artist" // or editArtist
-                    value={selectedArtistId || ""}
-                    onChange={(e) => setSelectedArtistId(e.target.value)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" // Tailwind classes for basic styling
-                  >
-                    <option value="">Select an artist</option>
-                    {artists.filter(artist => typeof artist === 'object' && artist !== null && 'id' in artist && artist.id !== undefined && artist.id !== null).map((artist) => (
-                      artist && artist.id ? (
-                        <option key={artist.id} value={artist.id}>
-                          {artist.name}
-                        </option>
-                      ) : null
-                    ))}
-                  </select>
-                ) : (
-                  <Input value="Loading artists..." disabled />
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
-                <Input id="title" value={newReleaseTitle} onChange={(e) => setNewReleaseTitle(e.target.value)} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="date">Release Date</Label>
-                <Input id="date" type="date" value={newReleaseDate} onChange={(e) => setNewReleaseDate(e.target.value)} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="type">Release Type</Label>
-                <Select value={newReleaseType} onValueChange={setNewReleaseType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="single">Single</SelectItem>
-                    <SelectItem value="ep">EP</SelectItem>
-                    <SelectItem value="album">Album</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <Select value={newReleaseStatus} onValueChange={setNewReleaseStatus}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="planned">Planned</SelectItem>
-                    <SelectItem value="released">Released</SelectItem>
-                    <SelectItem value="postponed">Postponed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="coverArtUrl">Cover Art URL</Label>
-                <Input id="coverArtUrl" type="url" value={newReleaseCoverArtUrl} onChange={(e) => setNewReleaseCoverArtUrl(e.target.value)} placeholder="https://example.com/cover.jpg" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="musicFileUrl">Music File URL</Label>
-                <Input id="musicFileUrl" type="url" value={newReleaseMusicFileUrl} onChange={(e) => setNewReleaseMusicFileUrl(e.target.value)} placeholder="https://example.com/music.mp3" />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea id="notes" value={newReleaseNotes} onChange={(e) => setNewReleaseNotes(e.target.value)} placeholder="Additional notes about the release..." className="min-h-[100px]" />
-              </div>
+              <ReleaseFormFields form={form} setForm={setForm} artists={artists} coverArtFile={coverArtFile} setCoverArtFile={setCoverArtFile} musicFile={musicFile} setMusicFile={setMusicFile} />
             </div>
           </ScrollArea>
           <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setShowAddReleaseModal(false)} className="w-full sm:w-auto">Cancel</Button>
-            <Button onClick={handleAddRelease} disabled={isSavingRelease} className="w-full sm:w-auto">
+            <Button variant="outline" onClick={() => setShowAddReleaseModal(false)}>Cancel</Button>
+            <Button onClick={handleAddRelease} disabled={isSavingRelease}>
               {isSavingRelease ? "Saving..." : "Save Release"}
             </Button>
           </DialogFooter>
@@ -411,75 +485,7 @@ export function ReleaseCalendar({
           </DialogHeader>
           <ScrollArea className="max-h-[70vh] p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="editArtist">Artist</Label>
-                
-                {artists && artists.length > 0 ? (
-                  <Select value={selectedArtistId || ""} onValueChange={setSelectedArtistId}>
-                    <SelectTrigger id="editArtist">
-                      <SelectValue placeholder="Select an artist" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {artists.filter(artist => typeof artist === 'object' && artist !== null && 'id' in artist && artist.id !== undefined && artist.id !== null).map((artist) => (
-                        artist && artist.id ? ( // ADDED EXPLICIT CHECK
-                          <SelectItem key={artist.id} value={artist.id}>
-                            {artist.name}
-                          </SelectItem>
-                        ) : null // Render nothing if artist or artist.id is invalid
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input value="Loading artists..." disabled />
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="editTitle">Title</Label>
-                <Input id="editTitle" value={newReleaseTitle} onChange={(e) => setNewReleaseTitle(e.target.value)} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="editDate">Release Date</Label>
-                <Input id="editDate" type="date" value={newReleaseDate} onChange={(e) => setNewReleaseDate(e.target.value)} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="editType">Release Type</Label>
-                <Select value={newReleaseType} onValueChange={setNewReleaseType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="single">Single</SelectItem>
-                    <SelectItem value="ep">EP</SelectItem>
-                    <SelectItem value="album">Album</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="editStatus">Status</Label>
-                <Select value={newReleaseStatus} onValueChange={setNewReleaseStatus}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="planned">Planned</SelectItem>
-                    <SelectItem value="released">Released</SelectItem>
-                    <SelectItem value="postponed">Postponed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="editCoverArtUrl">Cover Art URL</Label>
-                <Input id="editCoverArtUrl" type="url" value={newReleaseCoverArtUrl} onChange={(e) => setNewReleaseCoverArtUrl(e.target.value)} placeholder="https://example.com/cover.jpg" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="editMusicFileUrl">Music File URL</Label>
-                <Input id="editMusicFileUrl" type="url" value={newReleaseMusicFileUrl} onChange={(e) => setNewReleaseMusicFileUrl(e.target.value)} placeholder="https://example.com/music.mp3" />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="editNotes">Notes</Label>
-                <Textarea id="editNotes" value={newReleaseNotes} onChange={(e) => setNewReleaseNotes(e.target.value)} placeholder="Additional notes about the release..." className="min-h-[100px]" />
-              </div>
-
+              <ReleaseFormFields form={form} setForm={setForm} artists={artists} coverArtFile={coverArtFile} setCoverArtFile={setCoverArtFile} musicFile={musicFile} setMusicFile={setMusicFile} />
               {selectedRelease?.resource?.music_file_url && (
                 <div className="space-y-2 md:col-span-2">
                   <Label>Music Player</Label>
@@ -492,11 +498,11 @@ export function ReleaseCalendar({
             </div>
           </ScrollArea>
           <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setShowEditReleaseModal(false)} className="w-full sm:w-auto">Cancel</Button>
-            <Button variant="destructive" onClick={handleDeleteRelease} disabled={isSavingRelease} className="w-full sm:w-auto">
+            <Button variant="outline" onClick={() => setShowEditReleaseModal(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteRelease} disabled={isSavingRelease}>
               {isSavingRelease ? "Deleting..." : "Delete"}
             </Button>
-            <Button onClick={() => { console.log("Save Changes button clicked!"); handleUpdateRelease(); }} disabled={isSavingRelease} className="w-full sm:w-auto">
+            <Button onClick={handleUpdateRelease} disabled={isSavingRelease}>
               {isSavingRelease ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
