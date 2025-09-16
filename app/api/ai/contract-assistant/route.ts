@@ -17,9 +17,9 @@ const createParticipantTool: FunctionDeclaration = {
   parameters: {
     type: SchemaType.OBJECT,
     properties: {
-      name: { type: "STRING", description: "Nombre completo del participante." },
-      email: { type: "STRING", description: "Correo electrónico del participante." },
-      type: { type: "STRING", description: "Tipo de participante (ej: Artista, Productor, Sello)." }
+      name: { type: SchemaType.STRING, description: "Nombre completo del participante." },
+      email: { type: SchemaType.STRING, description: "Correo electrónico del participante." },
+      type: { type: SchemaType.STRING, description: "Tipo de participante (ej: Artista, Productor, Sello)." }
     },
     required: ["name", "email", "type"]
   }
@@ -31,9 +31,9 @@ const assignPercentageTool: FunctionDeclaration = {
   parameters: {
     type: SchemaType.OBJECT,
     properties: {
-      participant_id: { type: "NUMBER", description: "El ID del participante." },
-      contract_id: { type: "NUMBER", description: "El ID del contrato." },
-      split_percentage: { type: "NUMBER", description: "El porcentaje de reparto (ej: 20 para 20%)." }
+      participant_id: { type: SchemaType.NUMBER, description: "El ID del participante." },
+      contract_id: { type: SchemaType.NUMBER, description: "El ID del contrato." },
+      split_percentage: { type: SchemaType.NUMBER, description: "El porcentaje de reparto (ej: 20 para 20%)." }
     },
     required: ["participant_id", "contract_id", "split_percentage"]
   }
@@ -45,11 +45,11 @@ const createTemplateTool: FunctionDeclaration = {
   parameters: {
     type: SchemaType.OBJECT,
     properties: {
-      type: { type: "STRING", description: "El tipo o nombre de la plantilla (ej: 'Acuerdo de Producción')." },
-      language: { type: "STRING", description: "El idioma de la plantilla (ej: 'es' para español, 'en' para inglés)." },
-      template_html: { type: "STRING", description: "El contenido HTML completo de la plantilla." },
-      version: { type: "STRING", description: "La versión de la plantilla (ej: '1.0')." },
-      jurisdiction: { type: "STRING", description: "La jurisdicción legal a la que aplica la plantilla (ej: 'España', 'México')." }
+      type: { type: SchemaType.STRING, description: "El tipo o nombre de la plantilla (ej: 'Acuerdo de Producción')." },
+      language: { type: SchemaType.STRING, description: "El idioma de la plantilla (ej: 'es' para español, 'en' para inglés)." },
+      template_html: { type: SchemaType.STRING, description: "El contenido HTML completo de la plantilla." },
+      version: { type: SchemaType.STRING, description: "La versión de la plantilla (ej: '1.0')." },
+      jurisdiction: { type: SchemaType.STRING, description: "La jurisdicción legal a la que aplica la plantilla (ej: 'España', 'México')." }
     },
     required: ["type", "language", "template_html", "version", "jurisdiction"]
   }
@@ -61,7 +61,7 @@ const deleteTemplateTool: FunctionDeclaration = {
   parameters: {
     type: SchemaType.OBJECT,
     properties: {
-      template_id: { type: "NUMBER", description: "El ID de la plantilla a eliminar." }
+      template_id: { type: SchemaType.NUMBER, description: "El ID de la plantilla a eliminar." }
     },
     required: ["template_id"]
   }
@@ -73,7 +73,7 @@ const searchTemplateByNameTool: FunctionDeclaration = {
   parameters: {
     type: SchemaType.OBJECT,
     properties: {
-      name: { type: "STRING", description: "El nombre o tipo de la plantilla a buscar." }
+      name: { type: SchemaType.STRING, description: "El nombre o tipo de la plantilla a buscar." }
     },
     required: ["name"]
   }
