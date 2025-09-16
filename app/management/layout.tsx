@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { DashboardLayout } from "@/components/dashboard-layout";
+import AIContractChat from "@/components/ai/AIContractChat";
 
 const navLinks = [
   { href: "/management/participants", label: "Participants" },
@@ -39,6 +40,7 @@ export default function ManagementLayout({ children }: { children: React.ReactNo
           {children}
         </main>
       </div>
+      <AIContractChat />
     </DashboardLayout>
   );
 }

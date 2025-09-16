@@ -62,3 +62,35 @@ export async function POST(request: Request) {
     }
   }
 }
+
+export async function DELETE(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const templateId = searchParams.get('id');
+
+  if (!templateId) {
+    return NextResponse.json({ error: 'Template ID is required' }, { status: 400 });
+  }
+
+  let client;
+  try {
+    client = await pool.connect();
+    const { rowCount } = await client.query('DELETE FROM public.templates WHERE id = $1', [templateId]);
+
+    if (rowCount === 0) {
+      return NextResponse.json({ error: 'Template not found' }, { status: 404 });
+    }
+
+    revalidatePath('/management/templates');
+    return NextResponse.json({ message: 'Template deleted successfully' }, { status: 200 });
+  } catch (error: any) {
+    console.error('Database Error on DELETE:', error);
+    if (error.code === '23503') { // PostgreSQL foreign key violation error code
+      return NextResponse.json({ error: 'Cannot delete template: It is currently referenced by one or more contracts.' }, { status: 409 }); // 409 Conflict
+    }
+    return NextResponse.json({ error: 'Failed to delete template' }, { status: 500 });
+  } finally {
+    if (client) {
+      client.release();
+    }
+  }
+}
