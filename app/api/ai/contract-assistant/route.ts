@@ -1,6 +1,34 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI, FunctionDeclaration, SchemaType } from '@google/generative-ai';
 
+interface CreateParticipantArgs {
+  name: string;
+  email: string;
+  type: string;
+}
+
+interface AssignPercentageArgs {
+  participant_id: number;
+  contract_id: number;
+  split_percentage: number;
+}
+
+interface CreateTemplateArgs {
+  type: string;
+  language: string;
+  template_html: string;
+  version: string;
+  jurisdiction: string;
+}
+
+interface DeleteTemplateArgs {
+  template_id: number;
+}
+
+interface SearchTemplateByNameArgs {
+  name: string;
+}
+
 // Initialize the client with the API key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
@@ -88,7 +116,9 @@ const listTemplatesTool: FunctionDeclaration = {
 // --- Model Definition ---
 const model = genAI.getGenerativeModel({
   model: "gemini-1.5-flash",
-  tools: [listParticipantsTool, createParticipantTool, assignPercentageTool, createTemplateTool, deleteTemplateTool, searchTemplateByNameTool, listTemplatesTool]
+  tools: [{
+    functionDeclarations: [listParticipantsTool, createParticipantTool, assignPercentageTool, createTemplateTool, deleteTemplateTool, searchTemplateByNameTool, listTemplatesTool]
+  }]
 });
 
 // --- API Handler ---
@@ -119,7 +149,7 @@ export async function POST(request: Request) {
         toolResult = { name: "listarParticipantes", response: { participants: data } };
 
       } else if (call.name === "crearParticipante") {
-        const { name, email, type } = call.args;
+        const { name, email, type } = call.args as CreateParticipantArgs;
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:3000`;
         const apiResponse = await fetch(`${baseUrl}/api/participants`, {
           method: 'POST',
@@ -131,7 +161,7 @@ export async function POST(request: Request) {
         toolResult = { name: "crearParticipante", response: { newParticipant: data } };
 
       } else if (call.name === "asignarPorcentaje") {
-        const { participant_id, contract_id, split_percentage } = call.args;
+        const { participant_id, contract_id, split_percentage } = call.args as AssignPercentageArgs;
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:3000`;
         const apiResponse = await fetch(`${baseUrl}/api/contract-participants`, {
           method: 'POST',
@@ -143,7 +173,7 @@ export async function POST(request: Request) {
         toolResult = { name: "asignarPorcentaje", response: { link: data } };
 
       } else if (call.name === "crearPlantilla") {
-        const { type, language, template_html, version, jurisdiction } = call.args;
+        const { type, language, template_html, version, jurisdiction } = call.args as CreateTemplateArgs;
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:3000`;
         const apiResponse = await fetch(`${baseUrl}/api/templates`, {
           method: 'POST',
@@ -155,7 +185,7 @@ export async function POST(request: Request) {
         toolResult = { name: "crearPlantilla", response: { newTemplate: data } };
 
       } else if (call.name === "eliminarPlantilla") {
-        const { template_id } = call.args;
+        const { template_id } = call.args as DeleteTemplateArgs;
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:3000`;
         const apiResponse = await fetch(`${baseUrl}/api/templates?id=${template_id}`, {
           method: 'DELETE',
@@ -166,7 +196,7 @@ export async function POST(request: Request) {
         toolResult = { name: "eliminarPlantilla", response: { status: data } };
 
       } else if (call.name === "buscarPlantillaPorNombre") {
-        const { name } = call.args;
+        const { name } = call.args as SearchTemplateByNameArgs;
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:3000`;
         const apiResponse = await fetch(`${baseUrl}/api/templates`); // Fetch all templates
         if (!apiResponse.ok) throw new Error(`API call failed: ${apiResponse.status}`);
