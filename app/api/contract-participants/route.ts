@@ -1,4 +1,3 @@
-'''
 import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { revalidatePath } from 'next/cache';
@@ -60,4 +59,3 @@ export async function POST(request: Request) {
     if (client) client.release();
   }
 }
-'''
