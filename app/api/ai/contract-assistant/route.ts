@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
+import { systemPrompt } from './system-prompt';
 import { GoogleGenerativeAI, FunctionDeclaration, SchemaType } from '@google/generative-ai';
 
+// Argument Interfaces
 interface CreateParticipantArgs {
   name: string;
   email: string;
@@ -28,6 +30,16 @@ interface DeleteTemplateArgs {
 interface SearchTemplateByNameArgs {
   name: string;
 }
+
+interface CreateContractFromTemplateArgs {
+  template_id: number;
+  title: string;
+  participant_ids: number[];
+  start_date: string;
+  end_date?: string;
+  commission_percentage?: number;
+}
+
 
 // Initialize the client with the API key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
@@ -113,11 +125,38 @@ const listTemplatesTool: FunctionDeclaration = {
   parameters: { type: SchemaType.OBJECT, properties: {}, required: [] }
 };
 
+const crearContratoDesdePlantillaTool: FunctionDeclaration = {
+  name: "crearContratoDesdePlantilla",
+  description: "Crea un nuevo contrato en estado de borrador a partir de una plantilla y una lista de participantes.",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {
+      template_id: { type: SchemaType.NUMBER, description: "El ID de la plantilla a utilizar." },
+      title: { type: SchemaType.STRING, description: "El título del nuevo contrato." },
+      participant_ids: { type: SchemaType.ARRAY, items: { type: SchemaType.NUMBER }, description: "Un array con los IDs de los participantes a vincular en el contrato." },
+      start_date: { type: SchemaType.STRING, description: "La fecha de inicio del contrato en formato YYYY-MM-DD." },
+      end_date: { type: SchemaType.STRING, description: "(Opcional) La fecha de finalización del contrato en formato YYYY-MM-DD." },
+      commission_percentage: { type: SchemaType.NUMBER, description: "(Opcional) El porcentaje de comisión principal del contrato, ej: 20 para un 20%." }
+    },
+    required: ["template_id", "title", "participant_ids", "start_date"]
+  }
+};
+
+
 // --- Model Definition ---
 const model = genAI.getGenerativeModel({
   model: "gemini-1.5-flash",
   tools: [{
-    functionDeclarations: [listParticipantsTool, createParticipantTool, assignPercentageTool, createTemplateTool, deleteTemplateTool, searchTemplateByNameTool, listTemplatesTool]
+    functionDeclarations: [
+      listParticipantsTool, 
+      createParticipantTool, 
+      assignPercentageTool, 
+      createTemplateTool, 
+      deleteTemplateTool, 
+      searchTemplateByNameTool, 
+      listTemplatesTool,
+      crearContratoDesdePlantillaTool
+    ]
   }]
 });
 
@@ -131,7 +170,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
     }
 
-    const chat = model.startChat();
+    const chat = model.startChat({
+      history: [{ role: "user", parts: [{ text: systemPrompt }] }],
+    });
     const result = await chat.sendMessage(prompt);
     const response = result.response;
     const functionCalls = response.functionCalls();
@@ -218,6 +259,17 @@ export async function POST(request: Request) {
         if (!apiResponse.ok) throw new Error(`API call failed: ${apiResponse.status}`);
         const data = await apiResponse.json();
         toolResult = { name: "listarPlantillas", response: { templates: data } };
+
+      } else if (call.name === "crearContratoDesdePlantilla") {
+        const args = call.args as CreateContractFromTemplateArgs;
+        console.log("Tool call: crearContratoDesdePlantilla with args:", args);
+        // TODO: Implement actual logic here
+        // 1. Fetch template from DB
+        // 2. Fetch participants from DB
+        // 3. Replace placeholders in template content
+        // 4. Create new contract in DB
+        // 5. Link participants to contract
+        toolResult = { name: "crearContratoDesdePlantilla", response: { success: true, message: `Contrato '${args.title}' creado como borrador.`, contract_id: 123 } }; // Mock response
 
       } else {
         return NextResponse.json({ response: "No sé cómo realizar esa acción." });
