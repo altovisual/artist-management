@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI, FunctionDeclaration } from '@google/generative-ai';
+import { GoogleGenerativeAI, FunctionDeclaration, SchemaType } from '@google/generative-ai';
 
 // Initialize the client with the API key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
@@ -8,14 +8,14 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const listParticipantsTool: FunctionDeclaration = {
   name: "listarParticipantes",
   description: "Obtiene una lista de todos los participantes registrados en la base de datos.",
-  parameters: { type: "OBJECT", properties: {}, required: [] }
+  parameters: { type: SchemaType.OBJECT, properties: {}, required: [] }
 };
 
 const createParticipantTool: FunctionDeclaration = {
   name: "crearParticipante",
   description: "Crea un nuevo participante en la base de datos.",
   parameters: {
-    type: "OBJECT",
+    type: SchemaType.OBJECT,
     properties: {
       name: { type: "STRING", description: "Nombre completo del participante." },
       email: { type: "STRING", description: "Correo electrónico del participante." },
@@ -29,7 +29,7 @@ const assignPercentageTool: FunctionDeclaration = {
   name: "asignarPorcentaje",
   description: "Asigna un porcentaje de reparto a un participante dentro de un contrato específico.",
   parameters: {
-    type: "OBJECT",
+    type: SchemaType.OBJECT,
     properties: {
       participant_id: { type: "NUMBER", description: "El ID del participante." },
       contract_id: { type: "NUMBER", description: "El ID del contrato." },
@@ -43,7 +43,7 @@ const createTemplateTool: FunctionDeclaration = {
   name: "crearPlantilla",
   description: "Crea una nueva plantilla de contrato en la base de datos.",
   parameters: {
-    type: "OBJECT",
+    type: SchemaType.OBJECT,
     properties: {
       type: { type: "STRING", description: "El tipo o nombre de la plantilla (ej: 'Acuerdo de Producción')." },
       language: { type: "STRING", description: "El idioma de la plantilla (ej: 'es' para español, 'en' para inglés)." },
@@ -59,7 +59,7 @@ const deleteTemplateTool: FunctionDeclaration = {
   name: "eliminarPlantilla",
   description: "Elimina una plantilla de contrato existente de la base de datos.",
   parameters: {
-    type: "OBJECT",
+    type: SchemaType.OBJECT,
     properties: {
       template_id: { type: "NUMBER", description: "El ID de la plantilla a eliminar." }
     },
@@ -71,7 +71,7 @@ const searchTemplateByNameTool: FunctionDeclaration = {
   name: "buscarPlantillaPorNombre",
   description: "Busca una plantilla de contrato por su nombre (campo 'type') y devuelve su ID.",
   parameters: {
-    type: "OBJECT",
+    type: SchemaType.OBJECT,
     properties: {
       name: { type: "STRING", description: "El nombre o tipo de la plantilla a buscar." }
     },
@@ -82,7 +82,7 @@ const searchTemplateByNameTool: FunctionDeclaration = {
 const listTemplatesTool: FunctionDeclaration = {
   name: "listarPlantillas",
   description: "Obtiene una lista de todas las plantillas de contrato existentes en la base de datos.",
-  parameters: { type: "OBJECT", properties: {}, required: [] }
+  parameters: { type: SchemaType.OBJECT, properties: {}, required: [] }
 };
 
 // --- Model Definition ---
