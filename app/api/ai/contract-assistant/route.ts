@@ -88,9 +88,7 @@ const listTemplatesTool: FunctionDeclaration = {
 // --- Model Definition ---
 const model = genAI.getGenerativeModel({
   model: "gemini-1.5-flash",
-  tools: {
-    functionDeclarations: [listParticipantsTool, createParticipantTool, assignPercentageTool, createTemplateTool, deleteTemplateTool, searchTemplateByNameTool, listTemplatesTool]
-  }
+  tools: [listParticipantsTool, createParticipantTool, assignPercentageTool, createTemplateTool, deleteTemplateTool, searchTemplateByNameTool, listTemplatesTool]
 });
 
 // --- API Handler ---
