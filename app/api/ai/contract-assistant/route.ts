@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { systemPrompt } from './system-prompt';
-import { GoogleGenerativeAI, FunctionDeclaration, SchemaType } from '@google/generative-ai';
+import { GoogleGenerativeAI, FunctionDeclaration, SchemaType, Content, Part } from '@google/generative-ai';
 
 // Argument Interfaces
 interface CreateParticipantArgs {
@@ -38,6 +38,14 @@ interface CreateContractFromTemplateArgs {
   start_date: string;
   end_date?: string;
   commission_percentage?: number;
+}
+
+// Type for client-side message history
+interface ClientMessage {
+  text: string;
+  isUser: boolean;
+  image?: string; // Base64 data URL
+  file?: { name: string; type: string; };
 }
 
 
@@ -146,14 +154,15 @@ const crearContratoDesdePlantillaTool: FunctionDeclaration = {
 // --- Model Definition ---
 const model = genAI.getGenerativeModel({
   model: "gemini-1.5-flash",
+  systemInstruction: systemPrompt,
   tools: [{
     functionDeclarations: [
-      listParticipantsTool, 
-      createParticipantTool, 
-      assignPercentageTool, 
-      createTemplateTool, 
-      deleteTemplateTool, 
-      searchTemplateByNameTool, 
+      listParticipantsTool,
+      createParticipantTool,
+      assignPercentageTool,
+      createTemplateTool,
+      deleteTemplateTool,
+      searchTemplateByNameTool,
       listTemplatesTool,
       crearContratoDesdePlantillaTool
     ]
@@ -164,16 +173,40 @@ const model = genAI.getGenerativeModel({
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { prompt } = body;
+    const { prompt, history = [], file: fileDataUrl = null } = body;
 
-    if (!prompt) {
-      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
+    if (!prompt && !fileDataUrl) {
+      return NextResponse.json({ error: 'Prompt or file is required' }, { status: 400 });
     }
 
+    const formattedHistory: Content[] = history.map((msg: ClientMessage) => ({
+      role: msg.isUser ? 'user' : 'model',
+      parts: [{ text: msg.text }],
+    }));
+
     const chat = model.startChat({
-      history: [{ role: "user", parts: [{ text: systemPrompt }] }],
+      history: formattedHistory,
     });
-    const result = await chat.sendMessage(prompt);
+
+    const messageParts: Part[] = [];
+    if (prompt) {
+      messageParts.push({ text: prompt });
+    }
+
+    if (fileDataUrl) {
+      const match = fileDataUrl.match(/^data:(.+);base64,(.+)$/);
+      if (match) {
+        const mimeType = match[1];
+        const base64Data = match[2];
+        // Pass the file directly to Gemini
+        messageParts.push({ inlineData: { mimeType, data: base64Data } });
+      } else {
+        // Handle cases where the data URL might be malformed
+        console.error("Malformed data URL received");
+      }
+    }
+
+    const result = await chat.sendMessage(messageParts);
     const response = result.response;
     const functionCalls = response.functionCalls();
 
@@ -287,8 +320,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ response: text });
     }
 
-  } catch (error) {
-    console.error('Error in AI contract assistant endpoint:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  } catch (error: any) {
+    console.error('[API Handler Error]', error);
+    return NextResponse.json({ error: `Error en el servidor: ${error.message}` }, { status: 500 });
   }
 }

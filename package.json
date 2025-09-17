@@ -84,6 +84,7 @@
     "@tailwindcss/typography": "^0.5.16",
     "@types/moment": "^2.13.0",
     "@types/node": "^22",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-big-calendar": "^1.16.2",
     "@types/react-dom": "^19",
