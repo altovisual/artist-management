@@ -10,19 +10,24 @@ const pool = new Pool({
 export async function GET(request: Request) {
   let client;
   try {
-    // Get a client from the pool
     client = await pool.connect();
+    const { searchParams } = new URL(request.url);
+    const name = searchParams.get('name');
 
-    // Execute the query
-    const { rows } = await client.query('SELECT * FROM public.participants');
+    let query = 'SELECT * FROM public.participants';
+    const values = [];
 
-    // Return the data
+    if (name) {
+      query += ' WHERE name ILIKE $1';
+      values.push(`%${name}%`);
+    }
+
+    const { rows } = await client.query(query, values);
     return NextResponse.json(rows);
   } catch (error) {
     console.error('Database Error:', error);
     return NextResponse.json({ error: 'Failed to fetch participants from the database' }, { status: 500 });
   } finally {
-    // Make sure to release the client back to the pool
     if (client) {
       client.release();
     }
@@ -33,7 +38,7 @@ export async function POST(request: Request) {
   let client;
   try {
     const body = await request.json();
-    let {
+    const {
       name,
       email,
       type,
@@ -45,18 +50,13 @@ export async function POST(request: Request) {
       artistic_name,
       management_entity,
       ipi,
-      user_id // Added user_id
+      user_id
     } = body;
 
     // Basic validation
     if (!name || !type) {
       return NextResponse.json({ error: 'Name and type are required fields.' }, { status: 400 });
     }
-
-    // Convert empty string to null for optional fields
-    if (bank_info === "") bank_info = null;
-    if (user_id === "") user_id = null;
-
 
     client = await pool.connect();
     const query = `
@@ -68,8 +68,18 @@ export async function POST(request: Request) {
       RETURNING *;
     `;
     const values = [
-      name, email, type, id_number, address, country, phone, bank_info,
-      artistic_name, management_entity, ipi, user_id
+      name,
+      email ?? null,
+      type,
+      id_number ?? null,
+      address ?? null,
+      country ?? null,
+      phone ?? null,
+      bank_info ?? null,
+      artistic_name ?? null,
+      management_entity ?? null,
+      ipi ?? null,
+      user_id ?? null
     ];
 
     const { rows } = await client.query(query, values);
@@ -79,7 +89,6 @@ export async function POST(request: Request) {
     return NextResponse.json(rows[0], { status: 201 });
   } catch (error) {
     console.error('Database Error on POST:', error);
-    console.error(error);
     return NextResponse.json({ error: 'Failed to create participant' }, { status: 500 });
   } finally {
     if (client) {

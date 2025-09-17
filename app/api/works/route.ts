@@ -11,7 +11,18 @@ export async function GET(request: Request) {
   let client;
   try {
     client = await pool.connect();
-    const { rows } = await client.query('SELECT * FROM public.projects');
+    const { searchParams } = new URL(request.url);
+    const name = searchParams.get('name');
+
+    let query = 'SELECT * FROM public.projects';
+    const values = [];
+
+    if (name) {
+      query += ' WHERE name ILIKE $1';
+      values.push(`%${name}%`);
+    }
+
+    const { rows } = await client.query(query, values);
     return NextResponse.json(rows);
   } catch (error) {
     console.error('Database Error:', error);
