@@ -1,33 +1,31 @@
+import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import { Client } from 'pg';
-
-// Debido a un bug persistente en la caché de la API local de Supabase,
-// nos conectamos directamente a la base de datos, ignorando el cliente de Supabase.
-const connectionString = process.env.SUPABASE_DB_CONNECTION_STRING;
+import { type User } from '@supabase/supabase-js';
 
 export async function GET() {
-  const client = new Client({ connectionString });
+  const supabase = await createClient();
 
   try {
-    await client.connect();
+    // Supabase admin client is needed to query auth.users
+    // The createClient from /lib/supabase/server should be an admin client.
+    const { data: { users }, error } = await supabase.auth.admin.listUsers();
 
-    // Ejecutamos la consulta SQL directamente contra el esquema 'auth'
-    const res = await client.query('SELECT id, email, raw_user_meta_data FROM auth.users;');
-    const users = res.rows;
+    if (error) {
+      throw new Error(`Error fetching users: ${error.message}`);
+    }
 
-    const formattedUsers = users.map(user => ({
-      id: user.id,
-      email: user.email,
-      name: user.raw_user_meta_data?.full_name || user.email,
+    // We only return non-sensitive user data
+    const safeUsers = users.map((user: User) => ({
+        id: user.id,
+        email: user.email,
+        created_at: user.created_at,
+        last_sign_in_at: user.last_sign_in_at
     }));
 
-    return NextResponse.json(formattedUsers, { status: 200 });
+    return NextResponse.json(safeUsers);
 
   } catch (error: any) {
-    console.error('Error en la conexión directa a la BD:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  } finally {
-    // Nos aseguramos de cerrar la conexión
-    await client.end();
+    console.error('[API /users Error]', error);
+    return NextResponse.json({ error: `Server error: ${error.message}` }, { status: 500 });
   }
 }

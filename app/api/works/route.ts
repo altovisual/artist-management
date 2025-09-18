@@ -1,114 +1,28 @@
+import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import { revalidatePath } from 'next/cache';
-import { Pool } from 'pg';
-
-// Create a connection pool to the database
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL_POOLER,
-});
 
 export async function GET(request: Request) {
-  let client;
-  try {
-    client = await pool.connect();
-    const { searchParams } = new URL(request.url);
-    const name = searchParams.get('name');
+  const supabase = await createClient();
+  const { searchParams } = new URL(request.url);
+  const name = searchParams.get('name');
 
-    let query = 'SELECT * FROM public.projects';
-    const values = [];
+  try {
+    let query = supabase.from('projects').select('*');
 
     if (name) {
-      query += ' WHERE name ILIKE $1';
-      values.push(`%${name}%`);
+      query = query.ilike('name', `%${name}%`);
     }
 
-    const { rows } = await client.query(query, values);
-    return NextResponse.json(rows);
-  } catch (error) {
-    console.error('Database Error:', error);
-    return NextResponse.json({ error: 'Failed to fetch works' }, { status: 500 });
-  } finally {
-    if (client) {
-      try {
-        client.release();
-      } catch (releaseError) {
-        console.error('Error releasing client:', releaseError);
-      }
-    }
-  }
-}
+    const { data, error } = await query;
 
-export async function POST(request: Request) {
-  let client;
-  try {
-    client = await pool.connect();
-    const body = await request.json();
-    const {
-      name,
-      type,
-      artist_id,
-      status = 'planning',
-      release_date,
-      description,
-      isrc,
-      upc,
-      genre,
-      duration,
-      alternative_title, // New field
-      iswc,              // New field
-      participant_ids
-    } = body;
-
-    // Basic validation, now including artist_id
-    if (!name || !type || !artist_id) {
-      return NextResponse.json({ error: 'Name, type, and artist_id are required fields.' }, { status: 400 });
+    if (error) {
+      throw new Error(`Error fetching works: ${error.message}`);
     }
 
-    await client.query('BEGIN');
+    return NextResponse.json(data);
 
-    // 1. Insert the work into the projects table
-    const projectQuery = `
-      INSERT INTO public.projects (
-        name, type, artist_id, status, release_date, description, isrc, upc, genre, duration,
-        alternative_title, iswc
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-      RETURNING *;
-    `;
-    const projectValues = [
-      name, type, artist_id, status, release_date, description, isrc, upc, genre, duration,
-      alternative_title, iswc
-    ];
-    const projectResult = await client.query(projectQuery, projectValues);
-    const newWork = projectResult.rows[0];
-
-    // 2. Insert author/owner relationships into the join table
-    if (participant_ids && participant_ids.length > 0) {
-      const participantQuery = 'INSERT INTO public.work_participants (project_id, participant_id) VALUES ($1, $2)';
-      for (const participantId of participant_ids) {
-        await client.query(participantQuery, [newWork.id, participantId]);
-      }
-    }
-
-    await client.query('COMMIT');
-    revalidatePath('/management/works');
-
-    return NextResponse.json(newWork, { status: 201 });
-
-  } catch (error) {
-    if (client) {
-      await client.query('ROLLBACK');
-    }
-    console.error('Database Error on POST /api/works:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return NextResponse.json({ error: 'Failed to create work', details: errorMessage }, { status: 500 });
-  } finally {
-    if (client) {
-      try {
-        client.release();
-      } catch (releaseError) {
-        console.error('Error releasing client:', releaseError);
-      }
-    }
+  } catch (error: any) {
+    console.error('[API /works Error]', error);
+    return NextResponse.json({ error: `Server error: ${error.message}` }, { status: 500 });
   }
 }
