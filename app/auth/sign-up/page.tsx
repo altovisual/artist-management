@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
 import dynamic from 'next/dynamic'
 import IconoX from '@/public/icono-x.svg'
+import { DatePickerField } from '@/components/ui/datepicker'
 
 import { AnimatedTitle } from '@/components/animated-title';
 
@@ -21,6 +22,7 @@ export default function SignUpPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>()
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
@@ -40,6 +42,11 @@ export default function SignUpPage() {
       const { error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            date_of_birth: dateOfBirth,
+          },
+        },
       })
       if (error) {
         toast({ title: "Sign Up Error", description: error.message, variant: "destructive" })
@@ -97,6 +104,10 @@ export default function SignUpPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full p-3 border border-zinc-300 rounded-lg text-base focus:ring-2 focus:ring-[#e1348f] focus:border-transparent"
               />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="dateOfBirth" className="text-left text-zinc-800 font-semibold text-base">Fecha de Nacimiento</Label>
+              <DatePickerField date={dateOfBirth} onDateChange={setDateOfBirth} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password" className="text-left text-zinc-800 font-semibold text-base">Password</Label>

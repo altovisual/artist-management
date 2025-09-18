@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import IconoX from '@/public/icono-x.svg'
+import { DatePickerField } from '@/components/ui/datepicker'
 
 const AnimatedLogo = dynamic(() => import('@/components/animated-logo').then(mod => mod.AnimatedLogo), {
   ssr: false,
@@ -24,6 +25,7 @@ export default function ArtistSignUpPage() {
   const [genre, setGenre] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
+  const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>()
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
@@ -44,6 +46,11 @@ export default function ArtistSignUpPage() {
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            date_of_birth: dateOfBirth,
+          },
+        },
       })
 
       if (signUpError) {
@@ -150,6 +157,10 @@ export default function ArtistSignUpPage() {
                 onChange={(e) => setLastName(e.target.value)}
                 className="w-full p-3 border border-zinc-300 rounded-lg text-base focus:ring-2 focus:ring-[#e1348f] focus:border-transparent"
               />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="dateOfBirth" className="text-left text-zinc-800 font-semibold text-base">Fecha de Nacimiento</Label>
+              <DatePickerField date={dateOfBirth} onDateChange={setDateOfBirth} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="genre" className="text-left text-zinc-800 font-semibold text-base">Genre</Label>

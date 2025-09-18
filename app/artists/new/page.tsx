@@ -18,6 +18,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { Separator } from "@/components/ui/separator";
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { AnimatedTitle } from "@/components/animated-title"
+import { DatePickerField } from "@/components/ui/datepicker"
 
 interface SocialAccount {
   platform: string
@@ -51,6 +52,7 @@ export default function NewArtistPage() {
   const [bio, setBio] = useState("")
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
+  const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>()
   const [profileImage, setProfileImage] = useState<File | null>(null)
 
   // New participant-related fields
@@ -152,6 +154,7 @@ export default function NewArtistPage() {
           monthly_listeners: 0,
           first_name: firstName,
           last_name: lastName,
+          date_of_birth: dateOfBirth,
           // New participant-related fields
           id_number: idNumber || null,
           address: address || null,
@@ -288,6 +291,10 @@ export default function NewArtistPage() {
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder="Artist's last name"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dateOfBirth">Fecha de Nacimiento</Label>
+                  <DatePickerField date={dateOfBirth} onDateChange={setDateOfBirth} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="genre">Genre *</Label>

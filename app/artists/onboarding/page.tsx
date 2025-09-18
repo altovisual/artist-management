@@ -14,6 +14,7 @@ import { Save } from "lucide-react" // Only Save icon needed
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 import { AnimatedTitle } from '@/components/animated-title';
+import { DatePickerField } from "@/components/ui/datepicker"
 
 // Helper function to extract Spotify Artist ID from URL
 const extractSpotifyArtistId = (url: string): string | null => {
@@ -43,6 +44,7 @@ export default function ArtistOnboardingPage() {
   const [bio, setBio] = useState("")
   const [profileImage, setProfileImage] = useState<File | null>(null)
   const [spotifyUrl, setSpotifyUrl] = useState("")
+  const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>()
 
   // State to hold the authenticated user's ID
   const [userId, setUserId] = useState<string | null>(null);
@@ -109,6 +111,7 @@ export default function ArtistOnboardingPage() {
           total_streams: 0, // Default values
           monthly_listeners: 0, // Default values
           spotify_artist_id: spotifyArtistId, // Add Spotify Artist ID
+          date_of_birth: dateOfBirth,
         })
         .select()
         .single()
@@ -204,6 +207,10 @@ export default function ArtistOnboardingPage() {
                     onChange={(e) => setLocation(e.target.value)}
                     placeholder="City, Country"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dateOfBirth">Fecha de Nacimiento</Label>
+                  <DatePickerField date={dateOfBirth} onDateChange={setDateOfBirth} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="spotify-url">Spotify Profile URL</Label>
