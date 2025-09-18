@@ -37,7 +37,7 @@ import {
   Users,
   FolderKanban,
   LayoutGrid,
-  BarChart // Added BarChart import
+  BarChart
 } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
@@ -52,10 +52,11 @@ import {
 import Image from "next/image"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { useIsMobile } from "@/components/ui/use-mobile"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import ArtistDetailPageSkeleton from "./artist-detail-skeleton"
 import { AnimatedTitle } from "@/components/animated-title"
 import { ArtistAnalyticsDashboard } from '@/components/artist-analytics-dashboard'
+import { decrypt } from "@/lib/crypto"
 
 // --- Helper Functions ---
 const getExt = (url?: string) => {
@@ -111,7 +112,6 @@ export default function ArtistDetailPage() {
   const params = useParams()
   const router = useRouter()
   const isMobile = useIsMobile()
-  const { toast } = useToast()
   const supabase = createClient()
   const [artist, setArtist] = useState<any>(null)
   const [socialAccounts, setSocialAccounts] = useState<any[]>([])
@@ -119,6 +119,48 @@ export default function ArtistDetailPage() {
   const [projects, setProjects] = useState<any[]>([])
   const [assets, setAssets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [isCopyingPassword, setIsCopyingPassword] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string | null, successMessage: string) => {
+    if (!text) {
+      toast.info("No hay datos para copiar.");
+      return;
+    }
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success("¡Copiado!", { description: successMessage });
+    }).catch(() => {
+      toast.error("Error al copiar", { description: "No se pudo copiar al portapapeles." });
+    });
+  };
+
+  const handleCopyPassword = async (account: any) => {
+    if (!account.password) {
+      toast.info("No hay contraseña guardada para esta cuenta.");
+      return;
+    }
+    setIsCopyingPassword(account.id);
+    try {
+      const { data, error } = await supabase
+        .from('social_accounts')
+        .select('password')
+        .eq('id', account.id)
+        .single();
+
+      if (error || !data || !data.password) {
+        throw new Error('No credential found for this account.');
+      }
+
+      const { encrypted, iv } = JSON.parse(data.password);
+      const decrypted = await decrypt(encrypted, iv);
+      
+      copyToClipboard(decrypted, "La contraseña ha sido copiada al portapapeles.");
+
+    } catch (error: any) {
+      toast.error("Error al copiar la contraseña", { description: error.message });
+    } finally {
+      setIsCopyingPassword(null);
+    }
+  };
 
   useEffect(() => {
     const fetchArtistData = async () => {
@@ -192,11 +234,11 @@ export default function ArtistDetailPage() {
   const handleDeleteArtist = async () => {
     try {
       await supabase.from("artists").delete().eq("id", artist.id)
-      toast({ title: "Success", description: "Artist deleted successfully." })
+      toast.success("Artista eliminado", { description: "El artista ha sido eliminado correctamente." });
       router.push("/dashboard")
     } catch (error) {
       console.error("Error deleting artist:", error)
-      toast({ title: "Error", description: "Failed to delete artist.", variant: "destructive" })
+      toast.error("Error al eliminar", { description: "No se pudo eliminar el artista." });
     }
   }
 
@@ -219,11 +261,11 @@ export default function ArtistDetailPage() {
 
       // 3. Update state
       setAssets(assets.filter(a => a.id !== assetId));
-      toast({ title: "Success", description: `Asset "${assetToDelete.name}" deleted.` });
+      toast.success("Activo eliminado", { description: `El activo "${assetToDelete.name}" ha sido eliminado.` });
 
     } catch (error: any) {
       console.error("Error deleting asset:", error);
-      toast({ title: "Error", description: error.message || "Failed to delete asset.", variant: "destructive" });
+      toast.error("Error al eliminar el activo", { description: error.message || "No se pudo eliminar el activo." });
     }
   };
 
@@ -343,36 +385,43 @@ export default function ArtistDetailPage() {
             </div>
           </div>
         );
-      case 'social':
-        return (
-          <Card>
-            <CardHeader><CardTitle>Social Media Accounts</CardTitle></CardHeader>
-            <CardContent>
-              {socialAccounts.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {socialAccounts.map((account: any) => (
-                    <div key={account.id} className="p-4 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        {getPlatformIcon(account.platform)}
-                        <div>
-                          <p className="font-medium">{account.platform}</p>
-                          <p className="text-sm text-muted-foreground">{account.handle}</p>
+        case 'social':
+          return (
+            <Card>
+              <CardHeader><CardTitle>Social Media Accounts</CardTitle></CardHeader>
+              <CardContent>
+                {socialAccounts.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {socialAccounts.map((account: any) => (
+                      <div key={account.id} className="p-4 border rounded-lg flex items-center justify-between gap-4">
+                        <div className="flex-grow">
+                          <a href={account.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-3 group">
+                            {getPlatformIcon(account.platform)}
+                            <div>
+                              <p className="font-semibold group-hover:underline">{account.platform}</p>
+                              <p className="text-sm text-muted-foreground">{account.username || 'No username'}</p>
+                            </div>
+                          </a>
+                        </div>
+                        <div className="flex-shrink-0 flex flex-col gap-2 w-28">
+                          <Button variant="outline" size="sm" className="w-full" onClick={() => copyToClipboard(account.username, 'El nombre de usuario ha sido copiado.')}>
+                            Copy User
+                          </Button>
+                          {account.password && (
+                            <Button variant="secondary" size="sm" className="w-full" onClick={() => handleCopyPassword(account)} disabled={isCopyingPassword === account.id}>
+                              {isCopyingPassword === account.id ? 'Copying...' : 'Copy Pass'}
+                            </Button>
+                          )}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium">{account.username}</p>
-                        <p className="text-sm text-muted-foreground">username</p>
-                      </div>
-                      {account.password && <ViewCredentialManager accountId={account.id} tableName="social_accounts" />}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-center py-8">No social media accounts added yet.</p>
-              )}
-            </CardContent>
-          </Card>
-        );
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-8">No social media accounts added yet.</p>
+                )}
+              </CardContent>
+            </Card>
+          );
       case 'distribution':
         return (
           <Card>
