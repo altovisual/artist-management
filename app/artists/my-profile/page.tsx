@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/use-toast"
 import Image from "next/image"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { ProfileSkeleton } from "./profile-skeleton"
+import { DatePickerField } from "@/components/ui/datepicker"
 
 const extractSpotifyId = (urlOrId: string): string | null => {
   const trimmedUrl = urlOrId.trim()
@@ -68,6 +69,7 @@ export default function MyProfilePage() {
   const [bio, setBio] = useState("")
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
+  const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>()
   const [spotifyInput, setSpotifyInput] = useState("")
   const [newProfileImage, setNewProfileImage] = useState<File | null>(null)
   const [idNumber, setIdNumber] = useState("")
@@ -108,6 +110,9 @@ export default function MyProfilePage() {
       setBio(artistData.bio || "");
       setFirstName(artistData.first_name || "");
       setLastName(artistData.last_name || "");
+      if (artistData.date_of_birth) {
+        setDateOfBirth(new Date(artistData.date_of_birth));
+      }
       setSpotifyInput(artistData.spotify_artist_id || "");
       setIdNumber(artistData.id_number || "");
       setAddress(artistData.address || "");
@@ -181,6 +186,7 @@ export default function MyProfilePage() {
         spotify_artist_id: finalSpotifyId,
         first_name: firstName,
         last_name: lastName,
+        date_of_birth: dateOfBirth ? dateOfBirth.toISOString() : null,
         id_number: idNumber || null,
         address: address || null,
         phone: phone || null,
@@ -270,6 +276,10 @@ export default function MyProfilePage() {
                 <div className="space-y-2">
                   <Label htmlFor="lastName">Last Name</Label>
                   <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Your last name" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dateOfBirth">Fecha de Nacimiento</Label>
+                  <DatePickerField date={dateOfBirth} onDateChange={setDateOfBirth} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="genre">Genre *</Label>

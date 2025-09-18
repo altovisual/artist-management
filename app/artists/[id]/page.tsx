@@ -285,6 +285,7 @@ export default function ArtistDetailPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div><label className="text-sm font-medium text-muted-foreground">First Name</label><p className="mt-1">{artist.first_name || "N/A"}</p></div>
                     <div><label className="text-sm font-medium text-muted-foreground">Last Name</label><p className="mt-1">{artist.last_name || "N/A"}</p></div>
+                    <div><label className="text-sm font-medium text-muted-foreground">Date of Birth</label><p className="mt-1">{artist.date_of_birth ? new Date(artist.date_of_birth).toLocaleDateString() : "N/A"}</p></div>
                     <div><label className="text-sm font-medium text-muted-foreground">Genre</label><p className="mt-1">{artist.genre || "N/A"}</p></div>
                     <div><label className="text-sm font-medium text-muted-foreground">Country</label><p className="mt-1">{artist.country || "N/A"}</p></div>
                     <div><label className="text-sm font-medium text-muted-foreground">ID Number</label><p className="mt-1">{artist.id_number || "N/A"}</p></div>
