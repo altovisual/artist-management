@@ -13,33 +13,29 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const name = searchParams.get('name');
 
-  if (!name) {
-    return NextResponse.json({ error: 'Search name is required' }, { status: 400 });
-  }
+  
 
   const supabase = await createClient();
-  const searchPattern = `%${name}%`;
 
   try {
+    // Define queries
+    let artistsQuery = supabase.from('artists').select('id, name, first_name, last_name');
+    let participantsQuery = supabase.from('participants').select('id, name, artistic_name, email');
+    let usersQuery = supabase.from('users_view').select('id, email, raw_user_meta_data');
+
+    // If a search name is provided, add the search filters
+    if (name) {
+      const searchPattern = `%${name}%`;
+      artistsQuery = artistsQuery.or(`name.ilike.${searchPattern},first_name.ilike.${searchPattern},last_name.ilike.${searchPattern}`);
+      participantsQuery = participantsQuery.or(`name.ilike.${searchPattern},artistic_name.ilike.${searchPattern}`);
+      usersQuery = usersQuery.ilike('email', searchPattern);
+    }
+
     // Perform searches in parallel
     const [artistsRes, participantsRes, usersRes] = await Promise.all([
-      // Search in artists by name, first_name, or last_name
-      supabase
-        .from('artists')
-        .select('id, name, first_name, last_name')
-        .or(`name.ilike.${searchPattern},first_name.ilike.${searchPattern},last_name.ilike.${searchPattern}`),
-
-      // Search in participants by name or artistic_name
-      supabase
-        .from('participants')
-        .select('id, name, artistic_name, email')
-        .or(`name.ilike.${searchPattern},artistic_name.ilike.${searchPattern}`),
-      
-      // Search in auth.users by email
-      supabase
-        .from('users')
-        .select('id, email, raw_user_meta_data')
-        .ilike('email', searchPattern)
+      artistsQuery,
+      participantsQuery,
+      usersQuery
     ]);
 
     if (artistsRes.error) throw new Error(`Error fetching artists: ${artistsRes.error.message}`);

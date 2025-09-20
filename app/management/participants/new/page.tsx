@@ -121,7 +121,9 @@ export default function NewParticipantPage() {
     if (res.ok) {
       router.push("/management/participants");
     } else {
-      console.error("Failed to create participant");
+      // Log the detailed error from the API response
+      const errorDetails = await res.json();
+      console.error("Failed to create participant:", errorDetails);
     }
   }
 
@@ -162,7 +164,30 @@ export default function NewParticipantPage() {
           <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Participant Name</FormLabel><FormControl><Input placeholder="Participant's full legal name" {...field} /></FormControl><FormMessage /></FormItem>)} />
           <FormField control={form.control} name="artistic_name" render={({ field }) => (<FormItem><FormLabel>Artistic Name</FormLabel><FormControl><Input placeholder="Artistic name (if different)" {...field} /></FormControl><FormMessage /></FormItem>)} />
           <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input placeholder="participant@example.com" {...field} /></FormControl><FormMessage /></FormItem>)} />
-          <FormField control={form.control} name="type" render={({ field }) => (<FormItem><FormLabel>Type</FormLabel><FormControl><Input placeholder="e.g., artist, producer" {...field} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField
+            control={form.control}
+            name="type"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Type</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a participant type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="ARTISTA">Artista</SelectItem>
+                    <SelectItem value="PRODUCTOR">Productor</SelectItem>
+                    <SelectItem value="COMPOSITOR">Compositor</SelectItem>
+                    <SelectItem value="MANAGER">Manager</SelectItem>
+                    <SelectItem value="LAWYER">Lawyer</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <FormField control={form.control} name="country" render={({ field }) => (<FormItem><FormLabel>Country</FormLabel><FormControl><Input placeholder="Country of residence" {...field} /></FormControl><FormMessage /></FormItem>)} />
           <FormField control={form.control} name="id_number" render={({ field }) => (<FormItem><FormLabel>ID Number</FormLabel><FormControl><Input placeholder="Identification number" {...field} /></FormControl><FormMessage /></FormItem>)} />
           <FormField control={form.control} name="address" render={({ field }) => (<FormItem><FormLabel>Address</FormLabel><FormControl><Input placeholder="Participant's address" {...field} /></FormControl><FormMessage /></FormItem>)} />

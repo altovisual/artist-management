@@ -1,98 +1,62 @@
+import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import { Pool } from 'pg';
 import { revalidatePath } from 'next/cache';
 
-// Create a connection pool to the database
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL_POOLER,
-});
-
 export async function GET(request: Request) {
-  let client;
+  const supabase = await createClient();
   try {
-    client = await pool.connect();
     const { searchParams } = new URL(request.url);
     const name = searchParams.get('name');
 
-    let query = 'SELECT * FROM public.participants';
-    const values = [];
+    let query = supabase.from('participants').select('*');
 
     if (name) {
-      query += ' WHERE name ILIKE $1';
-      values.push(`%${name}%`);
+      query = query.ilike('name', `%${name}%`);
     }
 
-    const { rows } = await client.query(query, values);
-    return NextResponse.json(rows);
-  } catch (error) {
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    return NextResponse.json(data);
+  } catch (error: any) {
     console.error('Database Error:', error);
     return NextResponse.json({ error: 'Failed to fetch participants from the database' }, { status: 500 });
-  } finally {
-    if (client) {
-      client.release();
-    }
   }
 }
 
 export async function POST(request: Request) {
-  let client;
+  const supabase = await createClient();
   try {
     const body = await request.json();
-    const {
-      name,
-      email,
-      type,
-      id_number,
-      address,
-      country,
-      phone,
-      bank_info,
-      artistic_name,
-      management_entity,
-      ipi,
-      user_id
-    } = body;
 
-    // Basic validation
-    if (!name || !type) {
-      return NextResponse.json({ error: 'Name and type are required fields.' }, { status: 400 });
+    // FIX: If user_id is an empty string from the form, convert it to null for the DB
+    if (body.user_id === '') {
+      body.user_id = null;
     }
 
-    client = await pool.connect();
-    const query = `
-      INSERT INTO public.participants (
-        name, email, type, id_number, address, country, phone, bank_info,
-        artistic_name, management_entity, ipi, user_id
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-      RETURNING *;
-    `;
-    const values = [
-      name,
-      email ?? null,
-      type,
-      id_number ?? null,
-      address ?? null,
-      country ?? null,
-      phone ?? null,
-      bank_info ?? null,
-      artistic_name ?? null,
-      management_entity ?? null,
-      ipi ?? null,
-      user_id ?? null
-    ];
+    // The RLS policy will handle the admin check automatically.
+    const { data, error } = await supabase
+      .from('participants')
+      .insert(body) // Pass the body directly, Supabase client handles mapping
+      .select()
+      .single();
 
-    const { rows } = await client.query(query, values);
+    if (error) {
+      console.error('Supabase error creating participant:', error); // Log the whole error object
+      // Return the detailed error to the client for debugging
+      return NextResponse.json({
+        message: error.message,
+        details: error.details,
+        code: error.code,
+      }, { status: 400 });
+    }
 
     revalidatePath('/management/participants');
+    return NextResponse.json(data, { status: 201 });
 
-    return NextResponse.json(rows[0], { status: 201 });
-  } catch (error) {
-    console.error('Database Error on POST:', error);
-    return NextResponse.json({ error: 'Failed to create participant' }, { status: 500 });
-  } finally {
-    if (client) {
-      client.release();
-    }
+  } catch (e: any) {
+    console.error('Unexpected error creating participant:', e.message);
+    return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
