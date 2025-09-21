@@ -50,7 +50,7 @@ const formSchema = z.object({
   participants: z.array(
     z.object({
       id: z.string().min(1, { message: "Debe seleccionar un participante." }),
-      role: participantRoles,
+      role: participantRoles.optional(),
       percentage: z.preprocess(
         (val) => (val === "" ? undefined : Number(val)),
         z.number({ required_error: "El porcentaje es requerido." }).min(0, "El porcentaje no puede ser negativo.").max(100, "El porcentaje no puede ser mayor a 100.")
@@ -133,7 +133,7 @@ export default function NewContractPage() {
         if (res.ok) {
           const data = await res.json();
           if (data.participants && data.participants.length > 0) {
-            const workParticipants = data.participants.map((p: any) => ({ id: p.id, role: "", percentage: undefined }));
+            const workParticipants = data.participants.map((p: any) => ({ id: p.id, role: undefined, percentage: undefined }));
             replace(workParticipants);
           } else {
             replace([]);
@@ -430,7 +430,7 @@ export default function NewContractPage() {
               variant="outline"
               size="sm"
               className="mt-2"
-              onClick={() => append({ id: "", role: "", percentage: 0 })}
+              onClick={() => append({ id: "", role: undefined, percentage: 0 })}
             >
               Añadir participante
             </Button>
