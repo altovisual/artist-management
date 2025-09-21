@@ -16,6 +16,9 @@ export async function GET(request: Request) {
     let query = `
       SELECT
         c.*,
+        w.name as work_name,
+        t.type as template_type,
+        t.version as template_version,
         json_agg(
           json_build_object(
             'id', p.id,
@@ -24,6 +27,8 @@ export async function GET(request: Request) {
           )
         ) as participants
       FROM public.contracts c
+      LEFT JOIN public.projects w ON c.project_id = w.id
+      LEFT JOIN public.templates t ON c.template_id = t.id
       LEFT JOIN public.contract_participants cp ON c.id = cp.contract_id
       LEFT JOIN public.participants p ON cp.participant_id = p.id
     `;
@@ -34,7 +39,7 @@ export async function GET(request: Request) {
       queryParams.push(userId);
     }
 
-    query += ` GROUP BY c.id;`;
+    query += ` GROUP BY c.id, w.name, t.type, t.version;`;
 
     const { rows } = await client.query(query, queryParams);
     return NextResponse.json(rows);
@@ -91,7 +96,7 @@ export async function POST(request: Request) {
 
     const contractQuery = `
       INSERT INTO public.contracts (
-        work_id, template_id, status,
+        project_id, template_id, status,
         internal_reference, signing_location, additional_notes,
         publisher, publisher_percentage, co_publishers, publisher_admin
       )
@@ -127,6 +132,9 @@ export async function POST(request: Request) {
     const refetchQuery = `
       SELECT
         c.*,
+        w.name as work_name,
+        t.type as template_type,
+        t.version as template_version,
         json_agg(
           json_build_object(
             'id', p.id,
@@ -136,10 +144,12 @@ export async function POST(request: Request) {
           )
         ) as participants
       FROM public.contracts c
+      LEFT JOIN public.projects w ON c.project_id = w.id
+      LEFT JOIN public.templates t ON c.template_id = t.id
       LEFT JOIN public.contract_participants cp ON c.id = cp.contract_id
       LEFT JOIN public.participants p ON cp.participant_id = p.id
       WHERE c.id = $1
-      GROUP BY c.id;
+      GROUP BY c.id, w.name, t.type, t.version;
     `;
     const { rows } = await client.query(refetchQuery, [newContract.id]);
     console.log("POST /api/contracts: Refetched contract. Sending response.");

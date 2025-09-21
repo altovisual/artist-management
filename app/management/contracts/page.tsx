@@ -113,8 +113,8 @@ export default function ContractsPage() {
         <TableBody>
           {contracts.map((contract: any) => (
             <TableRow key={contract.id} ref={el => { rowRefs.current[contract.id] = el; }}>
-              <TableCell>{contract.work_id}</TableCell>
-              <TableCell>{contract.template_id}</TableCell>
+              <TableCell>{contract.work_name}</TableCell>
+              <TableCell>{`${contract.template_type} v${contract.template_version}`}</TableCell>
               <TableCell>{contract.status}</TableCell>
               <TableCell>
                 <div className="flex space-x-2">

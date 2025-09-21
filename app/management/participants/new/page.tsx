@@ -42,10 +42,17 @@ const formSchema = z.object({
 interface LinkableEntity {
   id: string;
   name: string;
-  type: 'user' | 'artist';
+  type: 'user' | 'artist' | 'participant';
   email: string | null;
   country: string | null;
   user_id: string | null;
+  id_number: string | null;
+  address: string | null;
+  phone: string | null;
+  bank_info: any | null;
+  artistic_name: string | null;
+  management_entity: string | null;
+  ipi: string | null;
 }
 
 export default function NewParticipantPage() {
@@ -91,23 +98,30 @@ export default function NewParticipantPage() {
     if (selectedEntityId) {
       const entity = linkableEntities.find(e => e.id === selectedEntityId);
       if (entity) {
+        form.setValue("name", entity.name, { shouldValidate: true });
+        form.setValue("artistic_name", entity.artistic_name || entity.name, { shouldValidate: true });
+        form.setValue("country", entity.country || '', { shouldValidate: true });
+        form.setValue("email", entity.email || '', { shouldValidate: true });
+        form.setValue("id_number", entity.id_number || '', { shouldValidate: true });
+        form.setValue("address", entity.address || '', { shouldValidate: true });
+        form.setValue("phone", entity.phone || '', { shouldValidate: true });
+        form.setValue("bank_info", entity.bank_info ? JSON.stringify(entity.bank_info, null, 2) : '', { shouldValidate: true });
+        form.setValue("management_entity", entity.management_entity || '', { shouldValidate: true });
+        form.setValue("ipi", entity.ipi || '', { shouldValidate: true });
+        if (entity.user_id) {
+          form.setValue("user_id", entity.user_id, { shouldValidate: true });
+        }
         if (entity.type === 'artist') {
-          form.setValue("name", entity.name, { shouldValidate: true });
-          form.setValue("artistic_name", entity.name, { shouldValidate: true });
-          form.setValue("country", entity.country || '', { shouldValidate: true });
-          form.setValue("email", entity.email || '', { shouldValidate: true });
-          if (entity.user_id) {
-            form.setValue("user_id", entity.user_id, { shouldValidate: true });
-          }
+          form.setValue("type", "ARTISTA", { shouldValidate: true });
         } else if (entity.type === 'user') {
-          form.setValue("name", entity.name, { shouldValidate: true });
-          form.setValue("email", entity.email || '', { shouldValidate: true });
-          form.setValue("user_id", entity.id, { shouldValidate: true });
+          // Maybe set a default type for user?
+        } else if (entity.type === 'participant') {
+          // What to do here? A participant can have a type already
         }
       }
     } else {
       // Reset fields when selection is cleared
-      form.reset({ ...form.getValues(), name: '', artistic_name: '', country: '', email: '', user_id: '' });
+      form.reset({ ...form.getValues(), name: '', artistic_name: '', country: '', email: '', user_id: '', id_number: '', address: '', phone: '', bank_info: '', management_entity: '', ipi: '' });
     }
   }, [selectedEntityId, linkableEntities, form]);
 

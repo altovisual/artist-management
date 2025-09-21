@@ -10,6 +10,7 @@ const navLinks = [
   { href: "/management/works", label: "Works" },
   { href: "/management/templates", label: "Templates" },
   { href: "/management/contracts", label: "Contracts" },
+  { href: "/management/contracts/signed", label: "Signed Contracts" },
   { href: "/management/signatures", label: "Signatures" },
 ];
 

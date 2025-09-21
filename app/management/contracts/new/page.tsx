@@ -27,6 +27,8 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { redirect } from "next/navigation";
 
+const participantRoles = z.enum(["ARTISTA", "PRODUCTOR", "COMPOSITOR", "MANAGER", "LAWYER"]);
+
 const formSchema = z.object({
   work_id: z.string({
     required_error: "Por favor seleccione una obra.",
@@ -48,20 +50,13 @@ const formSchema = z.object({
   participants: z.array(
     z.object({
       id: z.string().min(1, { message: "Debe seleccionar un participante." }),
-      role: z.string().min(2, { message: "El rol debe tener al menos 2 caracteres." }),
+      role: participantRoles,
       percentage: z.preprocess(
         (val) => (val === "" ? undefined : Number(val)),
         z.number({ required_error: "El porcentaje es requerido." }).min(0, "El porcentaje no puede ser negativo.").max(100, "El porcentaje no puede ser mayor a 100.")
       ),
     })
   ),
-}).refine(data => {
-    const totalPercentage = data.participants.reduce((acc, participant) => acc + (participant.percentage || 0), 0);
-    // Allow for small floating point inaccuracies
-    return Math.abs(totalPercentage - 100) < 0.001;
-}, {
-    message: "La suma de los porcentajes de los participantes debe ser exactamente 100%.",
-    path: ["participants"],
 });
 
 export default function NewContractPage() {
@@ -395,9 +390,20 @@ export default function NewContractPage() {
                   name={`participants.${index}.role`}
                   render={({ field }) => (
                     <FormItem>
-                      <FormControl>
-                        <Input placeholder="Rol" {...field} value={field.value ?? ""} />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccione un rol" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {participantRoles.options.map((role) => (
+                            <SelectItem key={role} value={role}>
+                              {role}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

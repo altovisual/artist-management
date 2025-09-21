@@ -8,6 +8,7 @@ const pool = new Pool({
 });
 
 export async function GET(request: Request) {
+  console.log('POSTGRES_URL_POOLER:', process.env.POSTGRES_URL_POOLER);
   let client;
   try {
     // Get a client from the pool
