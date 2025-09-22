@@ -14,9 +14,19 @@ import Link from "next/link";
 import { DeleteButton } from "../DeleteButton";
 import { AnimatedTitle } from '@/components/animated-title';
 import { ParticipantsTableSkeleton } from './participants-table';
+import { Badge } from "@/components/ui/badge";
+
+// Definimos un tipo más estricto para el participante
+interface Participant {
+  id: string;
+  name: string;
+  email: string;
+  type: string;
+  verification_status: 'verified' | 'pending' | 'rejected' | 'not_verified' | null;
+}
 
 export default function ParticipantsPage() {
-  const [participants, setParticipants] = useState<any[]>([]);
+  const [participants, setParticipants] = useState<Participant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
 
@@ -79,15 +89,27 @@ export default function ParticipantsPage() {
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Type</TableHead>
+            <TableHead>Verification Status</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {participants.map((participant: any) => (
+          {participants.map((participant) => (
             <TableRow key={participant.id} ref={el => { rowRefs.current[participant.id] = el; }}>
               <TableCell>{participant.name}</TableCell>
               <TableCell>{participant.email}</TableCell>
               <TableCell>{participant.type}</TableCell>
+              <TableCell>
+                {participant.verification_status && (
+                  <Badge variant={
+                    participant.verification_status === 'verified' ? 'default' :
+                    participant.verification_status === 'pending' ? 'secondary' :
+                    participant.verification_status === 'rejected' ? 'destructive' : 'outline'
+                  }>
+                    {participant.verification_status}
+                  </Badge>
+                )}
+              </TableCell>
               <TableCell>
                 <div className="flex space-x-2">
                   <Button asChild variant="outline" size="sm">

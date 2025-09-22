@@ -57,8 +57,8 @@ WHERE c.id = $1
 GROUP BY c.id, w.id, t.id;
 `;
 
-export async function GET(request: Request, context: any) {
-  const { id } = context.params;
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   let client;
 
   try {
@@ -85,8 +85,8 @@ export async function GET(request: Request, context: any) {
   }
 }
 
-export async function PATCH(request: Request, context: any) {
-  const { id } = context.params;
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   let client;
 
   try {
@@ -175,8 +175,8 @@ export async function PATCH(request: Request, context: any) {
   }
 }
 
-export async function DELETE(request: Request, context: any) {
-  const { id } = context.params;
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   let client;
 
   try {

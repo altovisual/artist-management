@@ -14,7 +14,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea"; // Import Textarea
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { AucoSignatureButton } from "@/components/auco/AucoSignatureButton";
 
 const formSchema = z.object({
   work_id: z.string({
@@ -83,6 +84,10 @@ export default function EditContractPage() {
     name: "participants",
   });
 
+  const watchedParticipants = form.watch('participants');
+  const watchedWorkId = form.watch('work_id');
+  const selectedWork = works.find(w => w.id === watchedWorkId);
+
   useEffect(() => {
     async function fetchData() {
       const [worksRes, templatesRes, participantsRes] = await Promise.all([
@@ -116,18 +121,17 @@ export default function EditContractPage() {
             ...data,
             template_id: data.template_id.toString(),
             publisher_percentage: data.publisher_percentage !== null ? Number(data.publisher_percentage) : undefined,
-            // Convert nulls to empty strings for optional text fields
             internal_reference: data.internal_reference || "",
             signing_location: data.signing_location || "",
             additional_notes: data.additional_notes || "",
             publisher: data.publisher || "",
             co_publishers: data.co_publishers || "",
             publisher_admin: data.publisher_admin || "",
-            status: data.status || "", // Ensure status is also handled
+            status: data.status || "",
           });
           const contractParticipants = data.participants.map((p: any) => ({
             id: p.id,
-            role: p.role || "", // Ensure role is also handled
+            role: p.role || "",
             percentage: p.percentage !== null ? Number(p.percentage) : undefined,
           }));
           replace(contractParticipants);
@@ -138,25 +142,40 @@ export default function EditContractPage() {
   }, [id, form, replace]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const res = await fetch(`/api/contracts/${id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(values),
-    });
+    try {
+      const res = await fetch(`/api/contracts/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(values),
+      });
 
-    if (res.ok) {
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Update failed: ${res.status} ${res.statusText} — ${text}`);
+      }
+
       router.push("/management/contracts");
-    } else {
-      // Handle error
-      console.error("Failed to update contract");
+    } catch (err: any) {
+      console.error(err);
+      // You can use a toast library to show the error message to the user.
+      // For example: toast.error(err.message);
     }
   }
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Edit Contract</h1>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Edit Contract</h1>
+        {id && watchedParticipants && selectedWork && (
+          <AucoSignatureButton 
+            contractId={id as string} 
+            participants={watchedParticipants} 
+            workName={selectedWork.name}
+          />
+        )}
+      </div>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           <FormField

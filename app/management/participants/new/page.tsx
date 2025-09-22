@@ -23,6 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { AucoSDK } from "auco-sdk-integration";
+import { Badge } from "@/components/ui/badge";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -37,6 +39,8 @@ const formSchema = z.object({
   management_entity: z.string().optional(),
   ipi: z.string().optional(),
   user_id: z.string().optional(),
+  auco_verification_id: z.string().optional(),
+  verification_status: z.string().optional(),
 });
 
 interface LinkableEntity {
@@ -59,6 +63,8 @@ export default function NewParticipantPage() {
   const router = useRouter();
   const [linkableEntities, setLinkableEntities] = useState<LinkableEntity[]>([]);
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [unmountAuco, setUnmountAuco] = useState<(() => void) | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -75,8 +81,20 @@ export default function NewParticipantPage() {
       management_entity: "",
       ipi: "",
       user_id: "",
+      auco_verification_id: "",
+      verification_status: "not_verified",
     },
   });
+
+  const verificationStatus = form.watch("verification_status");
+
+  useEffect(() => {
+    return () => {
+      if (unmountAuco) {
+        unmountAuco();
+      }
+    };
+  }, [unmountAuco]);
 
   useEffect(() => {
     async function fetchLinkableEntities() {
@@ -113,17 +131,79 @@ export default function NewParticipantPage() {
         }
         if (entity.type === 'artist') {
           form.setValue("type", "ARTISTA", { shouldValidate: true });
-        } else if (entity.type === 'user') {
-          // Maybe set a default type for user?
-        } else if (entity.type === 'participant') {
-          // What to do here? A participant can have a type already
         }
       }
     } else {
-      // Reset fields when selection is cleared
       form.reset({ ...form.getValues(), name: '', artistic_name: '', country: '', email: '', user_id: '', id_number: '', address: '', phone: '', bank_info: '', management_entity: '', ipi: '' });
     }
   }, [selectedEntityId, linkableEntities, form]);
+
+  async function handleVerification() {
+    setIsVerifying(true);
+    form.setValue("verification_status", "pending");
+
+    try {
+      const { name, email, id_number } = form.getValues();
+      const response = await fetch('/api/auco/start-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, id_number }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to start verification process from backend.');
+      }
+
+      const { document_code } = await response.json();
+      form.setValue("auco_verification_id", document_code);
+
+      setTimeout(() => {
+        const unmount = AucoSDK({
+          sdkType: 'validation',
+          iframeId: 'auco-sdk-container',
+          language: 'es',
+          env: 'DEV',
+          sdkData: {
+            document: document_code,
+            uxOptions: {
+              primaryColor: "#3B82F6",
+              alternateColor: "#FFFFFF",
+            }
+          },
+          events: {
+            onSDKReady: () => console.log('Auco SDK is ready.'),
+            onSDKClose: (similarity, status) => {
+              console.log('Auco flow closed by user.', { similarity, status });
+              if (status !== 'success' && form.getValues("verification_status") === "pending") {
+                form.setValue("verification_status", "not_verified");
+              }
+              setIsVerifying(false);
+              if (unmount) unmount();
+              setUnmountAuco(null);
+            }
+          }
+        });
+        setUnmountAuco(() => unmount);
+
+        // --- SIMULACIÓN FINAL ---
+        console.log("Iniciando temporizador de simulación (4 segundos)...");
+        setTimeout(() => {
+            console.log("Simulando la llegada del Webhook: ¡Verificación exitosa!");
+            form.setValue("verification_status", "verified");
+            setIsVerifying(false);
+            if (unmount) unmount();
+            setUnmountAuco(null);
+        }, 4000);
+        // --- FIN SIMULACIÓN FINAL ---
+
+      }, 0);
+
+    } catch (error) {
+      console.error("Error during verification process:", error);
+      form.setValue("verification_status", "error");
+      setIsVerifying(false);
+    }
+  }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const res = await fetch("/api/participants", {
@@ -135,7 +215,6 @@ export default function NewParticipantPage() {
     if (res.ok) {
       router.push("/management/participants");
     } else {
-      // Log the detailed error from the API response
       const errorDetails = await res.json();
       console.error("Failed to create participant:", errorDetails);
     }
@@ -148,7 +227,7 @@ export default function NewParticipantPage() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           <FormField
             control={form.control}
-            name="user_id" // Field is repurposed for selection, value is the entity ID
+            name="user_id"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Link to User or Artist</FormLabel>
@@ -178,6 +257,28 @@ export default function NewParticipantPage() {
           <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Participant Name</FormLabel><FormControl><Input placeholder="Participant's full legal name" {...field} /></FormControl><FormMessage /></FormItem>)} />
           <FormField control={form.control} name="artistic_name" render={({ field }) => (<FormItem><FormLabel>Artistic Name</FormLabel><FormControl><Input placeholder="Artistic name (if different)" {...field} /></FormControl><FormMessage /></FormItem>)} />
           <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input placeholder="participant@example.com" {...field} /></FormControl><FormMessage /></FormItem>)} />
+          
+          <div className="p-4 border rounded-md">
+            <div className="flex items-end space-x-4">
+              <FormField control={form.control} name="id_number" render={({ field }) => (<FormItem className="flex-grow"><FormLabel>ID Number</FormLabel><FormControl><Input placeholder="Identification number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <Button type="button" onClick={handleVerification} disabled={isVerifying || verificationStatus === 'verified'}>
+                {isVerifying ? "Verifying..." : "Verify Identity with Auco"}
+              </Button>
+              {verificationStatus && (
+                <Badge variant={
+                  verificationStatus === 'verified' ? 'default' :
+                  verificationStatus === 'pending' ? 'secondary' :
+                  verificationStatus === 'error' ? 'destructive' : 'outline'
+                }>
+                  {verificationStatus}
+                </Badge>
+              )}
+            </div>
+            {isVerifying && (
+              <div id="auco-sdk-container" className="w-full h-[500px] mt-4 rounded-md border"></div>
+            )}
+          </div>
+
           <FormField
             control={form.control}
             name="type"
@@ -203,14 +304,13 @@ export default function NewParticipantPage() {
             )}
           />
           <FormField control={form.control} name="country" render={({ field }) => (<FormItem><FormLabel>Country</FormLabel><FormControl><Input placeholder="Country of residence" {...field} /></FormControl><FormMessage /></FormItem>)} />
-          <FormField control={form.control} name="id_number" render={({ field }) => (<FormItem><FormLabel>ID Number</FormLabel><FormControl><Input placeholder="Identification number" {...field} /></FormControl><FormMessage /></FormItem>)} />
           <FormField control={form.control} name="address" render={({ field }) => (<FormItem><FormLabel>Address</FormLabel><FormControl><Input placeholder="Participant's address" {...field} /></FormControl><FormMessage /></FormItem>)} />
           <FormField control={form.control} name="phone" render={({ field }) => (<FormItem><FormLabel>Phone</FormLabel><FormControl><Input placeholder="Participant's phone number" {...field} /></FormControl><FormMessage /></FormItem>)} />
           <FormField control={form.control} name="bank_info" render={({ field }) => (<FormItem><FormLabel>Bank Info</FormLabel><FormControl><Input placeholder="Bank account details" {...field} /></FormControl><FormMessage /></FormItem>)} />
           <FormField control={form.control} name="management_entity" render={({ field }) => (<FormItem><FormLabel>Management Entity</FormLabel><FormControl><Input placeholder="e.g., PRO, publisher" {...field} /></FormControl><FormMessage /></FormItem>)} />
           <FormField control={form.control} name="ipi" render={({ field }) => (<FormItem><FormLabel>IPI</FormLabel><FormControl><Input placeholder="IPI number" {...field} /></FormControl><FormMessage /></FormItem>)} />
           
-          <Button type="submit">Submit</Button>
+          <Button type="submit" disabled={verificationStatus !== 'verified'}>Submit</Button>
         </form>
       </Form>
     </div>

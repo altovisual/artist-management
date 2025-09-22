@@ -14,6 +14,7 @@ import Link from "next/link";
 import { DeleteButton } from "../DeleteButton";
 import { AnimatedTitle } from '@/components/animated-title';
 import { Skeleton } from "@/components/ui/skeleton";
+import { AucoSignatureButton } from '@/components/auco/AucoSignatureButton';
 
 function ContractsTableSkeleton() {
   return (
@@ -118,6 +119,11 @@ export default function ContractsPage() {
               <TableCell>{contract.status}</TableCell>
               <TableCell>
                 <div className="flex space-x-2">
+                  <AucoSignatureButton 
+                    contractId={contract.id} 
+                    participants={contract.participants} 
+                    workName={contract.work_name}
+                  />
                   <Button asChild variant="outline" size="sm">
                     <Link href={`/management/contracts/${contract.id}/edit`}>Edit</Link>
                   </Button>

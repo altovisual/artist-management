@@ -31,6 +31,7 @@ const formSchema = z.object({
   version: z.string().min(1, {
     message: "Version is required.",
   }),
+  
 });
 
 export default function EditTemplatePage() {
@@ -45,6 +46,7 @@ export default function EditTemplatePage() {
       language: "",
       template_html: "",
       version: "",
+      
     },
   });
 
@@ -99,6 +101,7 @@ export default function EditTemplatePage() {
               </FormItem>
             )}
           />
+          
           <FormField
             control={form.control}
             name="language"
