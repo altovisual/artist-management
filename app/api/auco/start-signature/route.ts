@@ -10,7 +10,6 @@ const pool = new Pool({
   connectionString: process.env.POSTGRES_URL_POOLER,
 });
 
-// --------------------- SQL ---------------------
 const contractDataQuery = `
 SELECT
   c.id as contract_id,
@@ -51,54 +50,82 @@ WHERE c.id = $1
 GROUP BY c.id, w.id, t.id;
 `;
 
-// --------------------- Utils ---------------------
+// ---------- utils ----------
 function renderTemplate(html: string, data: any): string {
   let renderedHtml = html;
-
   for (const key in data) {
     if (typeof data[key] === 'object' && data[key] !== null) {
       for (const nestedKey in data[key]) {
-        const placeholder = new RegExp(`{{${key}\\.${nestedKey}}}`, 'g');
+        const ph = new RegExp(`{{${key}\.${nestedKey}}}`, 'g');
         renderedHtml = renderedHtml.replace(
-          placeholder,
+          ph,
           data[key][nestedKey] != null && data[key][nestedKey] !== '' ? String(data[key][nestedKey]) : 'N/A'
         );
       }
     } else {
-      const placeholder = new RegExp(`{{${key}}}`, 'g');
+      const ph = new RegExp(`{{${key}}}`, 'g');
       renderedHtml = renderedHtml.replace(
-        placeholder,
+        ph,
         data[key] != null && data[key] !== '' ? String(data[key]) : 'N/A'
       );
     }
   }
-
   return renderedHtml;
 }
 
-/** Verifica que el Buffer sea un PDF válido (evita FILE_NOT_VALID) */
+async function normalizeToBuffer(maybePdf: any): Promise<Buffer> {
+  if (Buffer.isBuffer(maybePdf)) return maybePdf;
+  if (maybePdf instanceof Uint8Array) return Buffer.from(maybePdf);
+  if (typeof maybePdf === 'object' && maybePdf?.byteLength && maybePdf.constructor?.name === 'ArrayBuffer') {
+    return Buffer.from(new Uint8Array(maybePdf as ArrayBuffer));
+  }
+  if (typeof Blob !== 'undefined' && maybePdf instanceof Blob) {
+    const ab = await maybePdf.arrayBuffer();
+    return Buffer.from(new Uint8Array(ab));
+  }
+  if (maybePdf && typeof maybePdf.arrayBuffer === 'function' && typeof maybePdf.text === 'function') {
+    const ab = await maybePdf.arrayBuffer();
+    return Buffer.from(new Uint8Array(ab));
+  }
+  if (typeof maybePdf === 'string') {
+    const s = maybePdf.trim();
+    const b64 = s.startsWith('data:application/pdf;base64,') ? s.replace(/^data:application\/pdf;base64,/, '') : s;
+    return Buffer.from(b64, 'base64');
+  }
+  throw new Error('No se pudo convertir el PDF a Buffer (tipo no soportado)');
+}
+
 function assertPdfBuffer(pdf: Buffer) {
-  if (!Buffer.isBuffer(pdf)) throw new Error('PDF no es Buffer');
-  const head = pdf.subarray(0, 5).toString('utf8'); // %PDF-
-  const tail = pdf.subarray(-32).toString('utf8');  // ...%%EOF
+  const head = pdf.subarray(0, 5).toString('utf8');
+  const tail = pdf.subarray(-32).toString('utf8');
   if (!head.startsWith('%PDF-')) throw new Error('PDF inválido: falta cabecera %PDF-');
   if (!/%%EOF\s*$/.test(tail)) throw new Error('PDF inválido: falta marcador %%EOF al final');
   if (pdf.length < 1024) throw new Error('PDF demasiado pequeño (posible truncado)');
 }
 
-/** Convierte a Base64 “puro” (sin data:) tras validar el PDF */
 function toPdfBase64Strict(pdf: Buffer) {
   assertPdfBuffer(pdf);
-  return pdf.toString('base64'); // sin data:application/pdf;base64,
+  return pdf.toString('base64');
 }
 
-/** Normaliza el teléfono a string y quita espacios. (E.164 esperado por Auco) */
 function normalizePhone(p: any): string {
   if (p == null) return '';
   return String(p).trim();
 }
 
-// --------------------- Handler ---------------------
+async function saveSignatureRequests(dbClient: any, contractId: string, participants: any[], aucoCode: string) {
+  const insertQuery = `
+    INSERT INTO public.signatures (contract_id, signer_email, signature_request_id, status)
+    VALUES ($1, $2, $3, 'sent');
+  `;
+  for (const participant of participants) {
+    if (participant.email) {
+      await dbClient.query(insertQuery, [contractId, participant.email, aucoCode]);
+    }
+  }
+}
+
+// ---------- handler ----------
 export async function POST(req: Request) {
   let dbClient;
   try {
@@ -115,7 +142,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 1) Obtener datos de contrato/obra/participantes/plantilla
+    // 1) Datos
     dbClient = await pool.connect();
     const { rows } = await dbClient.query(contractDataQuery, [contractId]);
     if (rows.length === 0) {
@@ -127,7 +154,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'La plantilla del contrato no contiene código HTML.' }, { status: 400 });
     }
 
-    // 2) Renderizar HTML de contrato
+    // 2) Render
     const templateRenderData = {
       contract: {
         status: contractData.contract_status,
@@ -159,61 +186,82 @@ export async function POST(req: Request) {
 
     let renderedHtml = renderTemplate(contractData.template_html, templateRenderData);
 
-    // 2.1) Añadir etiquetas de firma (labels) para cada participante
-    //      Auco las detecta con {{signature:N}} => para usar con "label: true"
+    // Agregar labels {{signature:N}} para cada participante (para usar label:true)
     const signatureTags = contractData.participants
       .map((p: any, index: number) => `<br/><p>Firma de ${p.name || 'Firmante'}: {{signature:${index}}}</p>`)
       .join('');
     renderedHtml += signatureTags;
 
-    // 3) Generar PDF (Buffer) desde HTML (tu lib debe devolver Buffer real del PDF)
-    const pdfBuffer: Buffer = await generatePdfFromHtml(renderedHtml);
-
-    // 3.1) Validar PDF y convertir a Base64 puro
+    // 3) PDF
+    const maybePdf = await generatePdfFromHtml(renderedHtml);
+    const pdfBuffer = await normalizeToBuffer(maybePdf);
     const base64Pdf = toPdfBase64Strict(pdfBuffer);
 
-    // 4) Construir signProfile (usar labels)
+    // 4) signProfile
     const signProfile = contractData.participants.map((p: any) => ({
       name: p.name,
       email: p.email,
-      phone: normalizePhone(p.phone), // string; se espera E.164 ("+549...")
-      label: true,                    // usamos las etiquetas agregadas al PDF
+      phone: normalizePhone(p.phone),
+      label: true,
     }));
 
-    // 5) Payload para Auco (/document/upload) — ¡sin "sign"!
-    const aucoRequestBody = {
-      email: ownerEmail,                                  // OWNER del tenant Auco (producción)
+    // 5) Paso 1: subir (upload) SIN "sign"
+    const uploadBody = {
+      email: ownerEmail, // owner del tenant en Auco PROD
       name: `Contrato: ${contractData.work_name || 'Sin título'}`,
       subject: `Firma requerida: Contrato para ${contractData.work_name || 'Obra'}`,
       message: `Hola, por favor revisa y firma este documento para la obra ${contractData.work_name || ''}.`,
       notification: true,
       remember: 6,
       signProfile,
-      file: base64Pdf,                                    // Base64 del binario del PDF (válido)
+      file: base64Pdf,
     };
 
-    // 6) Llamar a Auco
-    //    diagnose:true hace un ping GET previo para validar entorno/PUK (ayuda a detectar mismatches dev/prod)
-    const aucoData = await aucoFetch('/document/upload', 'POST', aucoRequestBody, { diagnose: true });
+    const uploadResp = await aucoFetch('/document/upload', 'POST', uploadBody, { diagnose: true });
 
-    // 7) Validar respuesta y devolver código de sesión
-    if (!aucoData?.code) {
-      console.error('Respuesta inesperada de Auco (sin "code"):', aucoData);
-      return NextResponse.json(
-        { error: 'Respuesta inesperada de la API de Auco', details: aucoData },
-        { status: 502 }
-      );
+    // 6) Si el upload NO devuelve code (sino {document}), hacemos Paso 2: iniciar firma
+    if (!uploadResp?.code) {
+      if (!uploadResp?.document) {
+        return NextResponse.json(
+          { error: 'Respuesta inesperada de la API de Auco en /document/upload', details: uploadResp },
+          { status: 502 }
+        );
+      }
+
+      const startBody = {
+        email: ownerEmail,
+        document: uploadResp.document, // ID retornado por upload
+        sign: true,                    // inicia la sesión de firma
+        name: `Contrato: ${contractData.work_name || 'Sin título'}`,
+        subject: `Firma requerida: Contrato para ${contractData.work_name || 'Obra'}`,
+        message: `Hola, por favor revisa y firma este documento para la obra ${contractData.work_name || ''}.`,
+                           
+        data: []                       // opcional
+      };
+
+      const saveResp = await aucoFetch('/document/save', 'POST', startBody);
+      if (!saveResp?.code) {
+        return NextResponse.json(
+          { error: 'Respuesta inesperada de la API de Auco en /document/save', details: saveResp },
+          { status: 502 }
+        );
+      }
+      
+      await saveSignatureRequests(dbClient, contractId, contractData.participants, saveResp.code);
+
+      return NextResponse.json({ session_code: saveResp.code }, { status: 200 });
     }
 
-    return NextResponse.json({ session_code: aucoData.code }, { status: 200 });
+    // Si upload ya trajo code (algunas cuentas lo devuelven), úsalo
+    await saveSignatureRequests(dbClient, contractId, contractData.participants, uploadResp.code);
+    return NextResponse.json({ session_code: uploadResp.code }, { status: 200 });
 
   } catch (err: any) {
-    // Propaga mensajes útiles (400/401) y evita 500 genéricos cuando sea validación
     const msg = err?.message ?? 'Error desconocido';
     const status =
       msg.includes('401') ? 401 :
-      msg.includes('PDF inválido') ? 400 :
-      msg.includes('contrato') ? 404 :
+      msg.startsWith('PDF inválido') || msg.includes('Buffer') ? 400 :
+      msg.includes('Contrato no encontrado') ? 404 :
       500;
 
     console.error('Error al iniciar la sesión de firma de Auco:', msg);
@@ -222,6 +270,7 @@ export async function POST(req: Request) {
       { status }
     );
   } finally {
-    if (dbClient) dbClient.release();
+    // @ts-ignore
+    dbClient?.release?.();
   }
 }

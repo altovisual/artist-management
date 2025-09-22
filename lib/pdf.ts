@@ -16,12 +16,12 @@ export async function generatePdfFromHtml(html: string): Promise<Buffer> {
     const page = await browser.newPage();
 
     console.log('Setting page content...');
-    await page.setContent(html, { waitUntil: 'domcontentloaded' });
+    await page.setContent(html, { waitUntil: 'networkidle0' });
 
     console.log('Generating PDF...');
     const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
 
-    return pdfBuffer;
+    return Buffer.from(pdfBuffer);
   } catch (error) {
     console.error('Error generating PDF with Puppeteer:', error);
     throw new Error('Failed to generate PDF from HTML.');
