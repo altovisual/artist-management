@@ -157,46 +157,35 @@ export default function NewParticipantPage() {
       const { document_code } = await response.json();
       form.setValue("auco_verification_id", document_code);
 
-      setTimeout(() => {
-        const unmount = AucoSDK({
-          sdkType: 'validation',
-          iframeId: 'auco-sdk-container',
-          language: 'es',
-          env: 'DEV',
-          sdkData: {
-            document: document_code,
-            uxOptions: {
-              primaryColor: "#3B82F6",
-              alternateColor: "#FFFFFF",
-            }
-          },
-          events: {
-            onSDKReady: () => console.log('Auco SDK is ready.'),
-            onSDKClose: (similarity, status) => {
-              console.log('Auco flow closed by user.', { similarity, status });
-              if (status !== 'success' && form.getValues("verification_status") === "pending") {
-                form.setValue("verification_status", "not_verified");
-              }
-              setIsVerifying(false);
-              if (unmount) unmount();
-              setUnmountAuco(null);
-            }
+      const unmount = AucoSDK({
+        sdkType: 'validation',
+        iframeId: 'auco-sdk-container',
+        language: 'es',
+        env: 'DEV',
+        sdkData: {
+          document: document_code,
+          uxOptions: {
+            primaryColor: "#3B82F6",
+            alternateColor: "#FFFFFF",
           }
-        });
-        setUnmountAuco(() => unmount);
-
-        // --- SIMULACIÓN FINAL ---
-        console.log("Iniciando temporizador de simulación (4 segundos)...");
-        setTimeout(() => {
-            console.log("Simulando la llegada del Webhook: ¡Verificación exitosa!");
-            form.setValue("verification_status", "verified");
+        },
+        events: {
+          onSDKReady: () => console.log('Auco SDK is ready.'),
+          onSDKClose: (similarity, status) => {
+            console.log('Auco flow closed by user.', { similarity, status });
+            if (status !== 'success' && form.getValues("verification_status") === "pending") {
+              form.setValue("verification_status", "not_verified");
+            }
+            // The final status will be updated by the webhook.
+            // We can close the UI now.
             setIsVerifying(false);
             if (unmount) unmount();
             setUnmountAuco(null);
-        }, 4000);
-        // --- FIN SIMULACIÓN FINAL ---
-
-      }, 0);
+          }
+        }
+      });
+      setUnmountAuco(() => unmount);
+      console.log("Auco SDK initialized. Waiting for user interaction and webhook for final status.");
 
     } catch (error) {
       console.error("Error during verification process:", error);
@@ -268,7 +257,7 @@ export default function NewParticipantPage() {
                 <Badge variant={
                   verificationStatus === 'verified' ? 'default' :
                   verificationStatus === 'pending' ? 'secondary' :
-                  verificationStatus === 'error' ? 'destructive' : 'outline'
+                  verificationStatu === 'error' ? 'destructive' : 'outline'
                 }>
                   {verificationStatus}
                 </Badge>
@@ -289,7 +278,7 @@ export default function NewParticipantPage() {
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a participant type" />
-                    </SelectTrigger>
+                    </Trigger>
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="ARTISTA">Artista</SelectItem>

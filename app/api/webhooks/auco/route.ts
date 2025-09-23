@@ -1,72 +1,66 @@
+// app/api/webhooks/auco/route.ts
+import { NextResponse } from 'next/server';
+import { Pool } from 'pg';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import crypto from 'crypto';
+const pool = new Pool({
+  connectionString: process.env.POSTGRES_URL_POOLER,
+});
 
-// Asumimos que Auco envía un evento con esta estructura.
-// Esto debería ser ajustado según la documentación real de Auco.
-interface AucoWebhookPayload {
-  event: string;
-  data: {
-    verification_id: string;
-    status: 'verified' | 'pending' | 'rejected';
-    // ... otros campos que Auco pueda enviar
-  };
+const AUCO_WEBHOOK_TOKEN = process.env.AUCO_WEBHOOK_TOKEN;
+
+async function verifyWebhook(request: Request) {
+  if (!AUCO_WEBHOOK_TOKEN) {
+    throw new Error('AUCO_WEBHOOK_TOKEN is not set');
+  }
+
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader) {
+    throw new Error('Missing Authorization header');
+  }
+
+  const [scheme, token] = authHeader.split(' ');
+  if (scheme !== 'Bearer' || token !== AUCO_WEBHOOK_TOKEN) {
+    throw new Error('Invalid authorization token');
+  }
+
+  return await request.json();
 }
 
-export async function POST(req: NextRequest) {
-  console.log('Webhook de Auco recibido.');
-
+export async function POST(request: Request) {
+  let dbClient;
   try {
-    const signature = req.headers.get('X-Auco-Signature');
-    const secret = process.env.AUCO_WEBHOOK_SECRET;
+    const payload = await verifyWebhook(request);
 
-    if (!secret) {
-      console.error('El secreto del webhook de Auco no está configurado.');
-      return NextResponse.json({ error: 'Configuración de servidor incorrecta.' }, { status: 500 });
+    // Assuming payload structure from Auco for verification
+    const verificationId = payload?.validation?.id; // e.g., the document_code
+    const status = payload?.event?.type; // e.g., 'validation_completed', 'validation_failed'
+
+    if (!verificationId || !status) {
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
     }
 
-    const rawBody = await req.text();
+    // Map Auco status to our internal status
+    const newStatus = status === 'validation_completed' ? 'verified' : 'error';
 
-    // Verificar la firma del webhook
-    const hmac = crypto.createHmac('sha256', secret);
-    hmac.update(rawBody);
-    const expectedSignature = hmac.digest('hex');
+    dbClient = await pool.connect();
+    const updateQuery = `
+      UPDATE public.participants
+      SET verification_status = $1, updated_at = NOW()
+      WHERE auco_verification_id = $2;
+    `;
+    const { rowCount } = await dbClient.query(updateQuery, [newStatus, verificationId]);
 
-    if (signature !== expectedSignature) {
-      console.warn('Firma de webhook inválida.');
-      return NextResponse.json({ error: 'No autorizado.' }, { status: 401 });
+    if (rowCount === 0) {
+        console.warn(`Auco webhook: No participant found with auco_verification_id: ${verificationId}`);
     }
 
-    console.log('Firma de webhook verificada.');
-
-    const payload = JSON.parse(rawBody) as AucoWebhookPayload;
-
-    // Lógica para procesar el evento
-    const { verification_id, status } = payload.data;
-
-    if (!verification_id || !status) {
-        console.error('Payload del webhook incompleto.');
-        return NextResponse.json({ error: 'Payload incompleto.' }, { status: 400 });
-    }
-
-    const supabase = await createClient();
-
-    const { error } = await supabase
-      .from('participants')
-      .update({ verification_status: status })
-      .eq('auco_verification_id', verification_id);
-
-    if (error) {
-      console.error('Error al actualizar el participante:', error);
-      return NextResponse.json({ error: 'Error en la base de datos.' }, { status: 500 });
-    }
-
-    console.log(`Participante ${verification_id} actualizado al estado: ${status}`);
-    return NextResponse.json({ received: true });
-
-  } catch (error) {
-    console.error('Error al procesar el webhook de Auco:', error);
-    return NextResponse.json({ error: 'Error interno del servidor.' }, { status: 500 });
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Error handling Auco verification webhook:', error.message);
+    const status = error.message.includes('token') || error.message.includes('header') ? 401 : 500;
+    return NextResponse.json({ error: error.message }, { status });
+  } finally {
+    // @ts-ignore
+    dbClient?.release?.();
   }
 }
