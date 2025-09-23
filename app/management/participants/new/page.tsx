@@ -28,13 +28,10 @@ import { Badge } from '@/components/ui/badge';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-  email: z
-    .string()
-    .email({ message: 'Please enter a valid email.' })
-    .optional()
-    .or(z.literal('')),
+  email: z.string().email({ message: 'Please enter a valid email.' }).optional().or(z.literal('')),
   type: z.string().min(2, { message: 'Type must be at least 2 characters.' }),
   id_number: z.string().optional(),
+  document_type: z.string().optional(), // UI-only; se mapea a `type` para el backend
   address: z.string().optional(),
   country: z.string().optional(),
   phone: z.string().optional(),
@@ -77,6 +74,7 @@ export default function NewParticipantPage() {
       email: '',
       type: 'ARTISTA',
       id_number: '',
+      document_type: '',
       address: '',
       country: '',
       phone: '',
@@ -91,6 +89,9 @@ export default function NewParticipantPage() {
   });
 
   const verificationStatus = form.watch('verification_status');
+  const { email, document_type, country, id_number, phone, name } = form.watch();
+  const isVerificationDisabled = !email || !document_type || !country || !id_number || !phone || !name;
+
 
   useEffect(() => {
     return () => {
@@ -155,57 +156,71 @@ export default function NewParticipantPage() {
   }, [selectedEntityId, linkableEntities]);
 
   async function handleVerification() {
-    setIsVerifying(true);
-    form.setValue('verification_status', 'pending');
+  setIsVerifying(true);
+  form.setValue('verification_status', 'pending');
 
-    try {
-      const { name, email, id_number } = form.getValues();
-      const response = await fetch('/api/auco/start-verification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, id_number }),
-      });
+  try {
+    const { name, email, id_number, country, document_type, phone } = form.getValues();
 
-      if (!response.ok) {
-        throw new Error('Failed to start verification process from backend.');
-      }
+    const payload = {
+      name,
+      email,
+      id_number,
+      country,
+      document_type,
+      phone,
+    };
 
-      const { document_code } = await response.json();
-      form.setValue('auco_verification_id', document_code);
+    const response = await fetch('/api/auco/start-verification', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(payload),
+});
 
-      const unmount = AucoSDK({
-        sdkType: 'validation',
-        iframeId: 'auco-sdk-container',
-        language: 'es',
-        env: 'DEV',
-        sdkData: {
-          document: document_code,
-          uxOptions: {
-            primaryColor: '#3B82F6',
-            alternateColor: '#FFFFFF',
-          },
+if (!response.ok) {
+  // lee texto crudo para ver exactamente qué devolvió el backend
+  const raw = await response.text();
+  throw new Error(
+    `Backend /api/auco/start-verification ${response.status} ${response.statusText} — ${raw}`
+  );
+}
+
+    const { document_code } = await response.json();
+    form.setValue('auco_verification_id', document_code);
+
+    const unmount = AucoSDK({
+      sdkType: 'validation',
+      iframeId: 'auco-sdk-container',
+      language: 'es',
+      keyPublic: process.env.NEXT_PUBLIC_AUCO_PUK as string,
+      env: (process.env.NEXT_PUBLIC_AUCO_ENV === 'dev') ? 'DEV' : 'PROD',
+      sdkData: {
+        document: document_code,
+        uxOptions: { primaryColor: '#3B82F6', alternateColor: '#FFFFFF' },
+      },
+      events: {
+        onSDKReady: () => console.log('Auco SDK is ready.'),
+        onSDKClose: (similarity, status) => {
+          console.log('Auco flow closed by user.', { similarity, status });
+          if (status !== 'success' && form.getValues('verification_status') === 'pending') {
+            form.setValue('verification_status', 'not_verified');
+          }
+          setIsVerifying(false);
+          if (unmount) unmount();
+          setUnmountAuco(null);
         },
-        events: {
-          onSDKReady: () => console.log('Auco SDK is ready.'),
-          onSDKClose: (similarity, status) => {
-            console.log('Auco flow closed by user.', { similarity, status });
-            if (status !== 'success' && form.getValues('verification_status') === 'pending') {
-              form.setValue('verification_status', 'not_verified');
-            }
-            setIsVerifying(false);
-            if (unmount) unmount();
-            setUnmountAuco(null);
-          },
-        },
-      });
-      setUnmountAuco(() => unmount);
-      console.log('Auco SDK initialized. Waiting for user interaction and webhook for final status.');
-    } catch (error) {
-      console.error('Error during verification process:', error);
-      form.setValue('verification_status', 'error');
-      setIsVerifying(false);
-    }
+      },
+    });
+    setUnmountAuco(() => unmount);
+  } catch (error: any) {
+    console.error('Error during verification process:', error);
+    alert(error?.message || 'Verification failed');
+    form.setValue('verification_status', 'error');
+    setIsVerifying(false);
   }
+}
+
+
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const res = await fetch('/api/participants', {
@@ -239,7 +254,7 @@ export default function NewParticipantPage() {
                   value={field.value || ''}
                   onValueChange={(val) => {
                     setSelectedEntityId(val);
-                    field.onChange(val); // asegura que user_id se setee en el form
+                    field.onChange(val);
                   }}
                 >
                   <FormControl>
@@ -306,7 +321,41 @@ export default function NewParticipantPage() {
 
           {/* Verificación de identidad */}
           <div className="p-4 border rounded-md">
-            <div className="flex items-end space-x-4">
+            <div className="flex items-start space-x-4">
+              <FormField
+                control={form.control}
+                name="country"
+                render={({ field }) => (
+                  <FormItem className="w-1/4">
+                    <FormLabel>Country Code</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., ES, CO" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="document_type"
+                render={({ field }) => (
+                  <FormItem className="w-1/4">
+                    <FormLabel>Document Type</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a document type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="DNI">DNI (España)</SelectItem>
+                        <SelectItem value="CC">Cédula (Colombia)</SelectItem>
+                        <SelectItem value="PASSPORT">Pasaporte</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="id_number"
@@ -320,10 +369,27 @@ export default function NewParticipantPage() {
                   </FormItem>
                 )}
               />
+            </div>
+
+            <div className="flex items-end space-x-4 mt-4">
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem className="w-1/3">
+                    <FormLabel>Phone (with country code)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="+573003003030" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex-grow" />
               <Button
                 type="button"
                 onClick={handleVerification}
-                disabled={isVerifying || verificationStatus === 'verified'}
+                disabled={isVerifying || verificationStatus === 'verified' || isVerificationDisabled}
               >
                 {isVerifying ? 'Verifying...' : 'Verify Identity with Auco'}
               </Button>
@@ -343,10 +409,11 @@ export default function NewParticipantPage() {
                 </Badge>
               )}
             </div>
+
             {isVerifying && <div id="auco-sdk-container" className="w-full h-[500px] mt-4 rounded-md border" />}
           </div>
 
-          {/* Tipo */}
+          {/* Tipo (rol del participante) */}
           <FormField
             control={form.control}
             name="type"
@@ -374,40 +441,12 @@ export default function NewParticipantPage() {
 
           <FormField
             control={form.control}
-            name="country"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Country</FormLabel>
-                <FormControl>
-                  <Input placeholder='Country of residence' {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
             name="address"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Address</FormLabel>
                 <FormControl>
                   <Input placeholder="Participant's address" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="phone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Phone</FormLabel>
-                <FormControl>
-                  <Input placeholder="Participant's phone number" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
