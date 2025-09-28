@@ -17,6 +17,21 @@ export const metadata: Metadata = {
   description: "Manage your artists and their social media accounts",
   generator: "v0.app",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: 'cover'
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Artist Management'
+  },
+  formatDetection: {
+    telephone: false
+  }
 };
 
 // --- AQUÍ ESTÁ LA PARTE IMPORTANTE ---
@@ -29,6 +44,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={GeistSans.className} suppressHydrationWarning>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#000000" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Artist Management" />
+        <link rel="apple-touch-icon" href="/favicon.ico" />
+      </head>
       <body>
         <Script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" strategy="beforeInteractive" />
         <ThemeProvider

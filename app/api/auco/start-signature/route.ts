@@ -360,7 +360,11 @@ export async function POST(req: Request) {
 
     console.log('Making request to Auco API...');
     const uploadResp = await aucoFetch('/document/upload', 'POST', uploadBody, { diagnose: true });
-    console.log('Auco API response:', uploadResp);
+    console.log('Auco API response received:', {
+      success: !!uploadResp,
+      hasCode: !!(uploadResp?.code || uploadResp?.document),
+      responseKeys: Object.keys(uploadResp || {})
+    });
 
     const documentCode = uploadResp?.code || uploadResp?.document;
     if (!documentCode) {
@@ -375,14 +379,24 @@ export async function POST(req: Request) {
 
     // Consultar detalles del documento para obtener los IDs de firmantes (2 caracteres)
     console.log('Fetching document details to resolve signer IDs...');
-    const details: any = await aucoFetch(`/document/get?code=${documentCode}`, 'GET');
-    console.log('Document details:', {
-      hasData: !!details?.data,
-      signers: details?.data?.signProfile?.length || details?.signProfile?.length || 0
-    });
-
-    const signers = (details?.data?.signProfile || details?.signProfile || []) as Array<{ id?: string; name?: string; email?: string; status?: string }>;
-    const signerIds = signers.map(s => s?.id).filter(Boolean) as string[];
+    let details: any = null;
+    let signers: Array<{ id?: string; name?: string; email?: string; status?: string }> = [];
+    let signerIds: string[] = [];
+    
+    try {
+      details = await aucoFetch(`/document/get?code=${documentCode}`, 'GET');
+      console.log('Document details received:', {
+        hasData: !!details?.data,
+        signers: details?.data?.signProfile?.length || details?.signProfile?.length || 0
+      });
+      
+      signers = (details?.data?.signProfile || details?.signProfile || []) as Array<{ id?: string; name?: string; email?: string; status?: string }>;
+      signerIds = signers.map(s => s?.id).filter(Boolean) as string[];
+    } catch (detailsError: any) {
+      console.warn('Could not fetch document details (this is normal for some Auco configurations):', detailsError.message);
+      // Continuar sin los detalles - usar solo el documentCode
+    }
+    
     const firstSignerId = signerIds[0];
     const sessionCode = firstSignerId ? `${documentCode}${firstSignerId}` : documentCode;
 

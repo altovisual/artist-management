@@ -33,7 +33,7 @@ const formSchema = z.object({
   template_id: z.string({
     required_error: "Please select a template.",
   }),
-  status: z.string().optional(),
+  status: z.enum(["draft", "sent", "signed", "expired", "archived"]).optional(),
   internal_reference: z.string().optional(),
   signing_location: z.string().optional(),
   additional_notes: z.string().optional(),
@@ -67,7 +67,7 @@ export default function EditContractPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      status: "",
+      status: undefined,
       internal_reference: "",
       signing_location: "",
       additional_notes: "",
@@ -134,7 +134,7 @@ export default function EditContractPage() {
             publisher: data.publisher || "",
             co_publishers: data.co_publishers || "",
             publisher_admin: data.publisher_admin || "",
-            status: data.status || "",
+            status: data.status || undefined,
           });
           const contractParticipants = data.participants.map((p: any) => ({
             id: p.id,
@@ -239,9 +239,20 @@ export default function EditContractPage() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Status</FormLabel>
-                <FormControl>
-                  <Input {...field} value={field.value ?? ""} />
-                </FormControl>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a status" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="sent">Sent</SelectItem>
+                    <SelectItem value="signed">Signed</SelectItem>
+                    <SelectItem value="expired">Expired</SelectItem>
+                    <SelectItem value="archived">Archived</SelectItem>
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}

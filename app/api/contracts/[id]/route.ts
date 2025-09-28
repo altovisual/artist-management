@@ -8,45 +8,53 @@ const pool = new Pool({
 const fullContractQuery = `
 SELECT
   c.*,
-  json_build_object(
-    'id', w.id,
-    'name', w.name,
-    'type', w.type,
-    'status', w.status,
-    'release_date', w.release_date,
-    'description', w.description,
-    'isrc', w.isrc,
-    'upc', w.upc,
-    'genre', w.genre,
-    'duration', w.duration,
-    'alternative_title', w.alternative_title,
-    'iswc', w.iswc
-  ) as work,
-  json_build_object(
-    'id', t.id,
-    'type', t.type,
-    'language', t.language,
-    'template_html', t.template_html,
-    'version', t.version,
-    'jurisdiction', t.jurisdiction
-  ) as template,
-  json_agg(
+  COALESCE(
     json_build_object(
-      'id', p.id,
-      'name', p.name,
-      'email', p.email,
-      'type', p.type,
-      'id_number', p.id_number,
-      'address', p.address,
-      'country', p.country,
-      'phone', p.phone,
-      'bank_info', p.bank_info,
-      'artistic_name', p.artistic_name,
-      'management_entity', p.management_entity,
-      'ipi', p.ipi,
-      'role', cp.role,
-      'percentage', cp.percentage
-    )
+      'id', w.id,
+      'name', w.name,
+      'type', w.type,
+      'status', w.status,
+      'release_date', w.release_date,
+      'description', w.description,
+      'isrc', w.isrc,
+      'upc', w.upc,
+      'genre', w.genre,
+      'duration', w.duration,
+      'alternative_title', w.alternative_title,
+      'iswc', w.iswc
+    ),
+    '{}'::json
+  ) as work,
+  COALESCE(
+    json_build_object(
+      'id', t.id,
+      'type', t.type,
+      'language', t.language,
+      'version', t.version,
+      'jurisdiction', t.jurisdiction
+    ),
+    '{}'::json
+  ) as template,
+  COALESCE(
+    json_agg(
+      json_build_object(
+        'id', p.id,
+        'name', p.name,
+        'email', p.email,
+        'type', p.type,
+        'id_number', p.id_number,
+        'address', p.address,
+        'country', p.country,
+        'phone', p.phone,
+        'bank_info', p.bank_info,
+        'artistic_name', p.artistic_name,
+        'management_entity', p.management_entity,
+        'ipi', p.ipi,
+        'role', cp.role,
+        'percentage', cp.percentage
+      )
+    ) FILTER (WHERE p.id IS NOT NULL),
+    '[]'::json
   ) as participants
 FROM public.contracts c
 LEFT JOIN public.projects w ON c.project_id = w.id
