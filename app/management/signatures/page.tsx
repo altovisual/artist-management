@@ -1,6 +1,6 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Table,
   TableBody,
@@ -143,7 +143,7 @@ export default function SignaturesPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
 
-  const fetchSignatures = async () => {
+  const fetchSignatures = useCallback(async () => {
     setIsLoading(true);
     try {
       const res = await fetch('/api/signatures');
@@ -165,9 +165,9 @@ export default function SignaturesPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const syncFromAuco = async (silent: boolean = false) => {
+  const syncFromAuco = useCallback(async (silent: boolean = false) => {
     if (!silent) setIsLoading(true);
     try {
       const res = await fetch('/api/auco/sync-documents', { 
@@ -190,7 +190,7 @@ export default function SignaturesPage() {
     } catch (error) {
       console.error('Auto-sync error:', error);
     }
-  }
+  }, [fetchSignatures]);
 
   useEffect(() => {
     const initializeData = async () => {

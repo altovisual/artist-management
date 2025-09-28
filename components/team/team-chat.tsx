@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -66,15 +66,15 @@ export function TeamChat({
   const [isTyping, setIsTyping] = useState<string[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Mensajes de ejemplo
-  const mockMessages: ChatMessage[] = [
+  // Mock data para demostración
+  const mockMessages = useMemo(() => [
     {
       id: '1',
       content: 'Hey team! How\'s the progress on the landing page?',
       senderId: '1',
       senderName: 'John Smith',
       timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-      type: 'text',
+      type: 'text' as const,
       isRead: true
     },
     {
@@ -83,7 +83,7 @@ export function TeamChat({
       senderId: '2',
       senderName: 'Sarah Johnson',
       timestamp: new Date(Date.now() - 1.5 * 60 * 60 * 1000), // 1.5 hours ago
-      type: 'text',
+      type: 'text' as const,
       isRead: true
     },
     {
@@ -92,7 +92,7 @@ export function TeamChat({
       senderId: '1',
       senderName: 'John Smith',
       timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
-      type: 'text',
+      type: 'text' as const,
       isRead: true
     },
     {
@@ -101,7 +101,7 @@ export function TeamChat({
       senderId: 'system',
       senderName: 'System',
       timestamp: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
-      type: 'system',
+      type: 'system' as const,
       isRead: true
     },
     {
@@ -110,7 +110,7 @@ export function TeamChat({
       senderId: '4',
       senderName: 'Emily Davis',
       timestamp: new Date(Date.now() - 25 * 60 * 1000), // 25 minutes ago
-      type: 'text',
+      type: 'text' as const,
       isRead: true
     },
     {
@@ -119,7 +119,7 @@ export function TeamChat({
       senderId: '2',
       senderName: 'Sarah Johnson',
       timestamp: new Date(Date.now() - 20 * 60 * 1000), // 20 minutes ago
-      type: 'text',
+      type: 'text' as const,
       isRead: true
     },
     {
@@ -128,10 +128,10 @@ export function TeamChat({
       senderId: '4',
       senderName: 'Emily Davis',
       timestamp: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
-      type: 'text',
+      type: 'text' as const,
       isRead: false
     }
-  ]
+  ], [])
 
   useEffect(() => {
     setMessages(mockMessages)
@@ -155,7 +155,7 @@ export function TeamChat({
       senderName: currentUser.name,
       senderAvatar: currentUser.avatar,
       timestamp: new Date(),
-      type: 'text',
+      type: 'text' as const,
       isRead: false
     }
 
@@ -185,7 +185,7 @@ export function TeamChat({
           senderName: randomMember.name,
           senderAvatar: randomMember.avatar,
           timestamp: new Date(),
-          type: 'text',
+          type: 'text' as const,
           isRead: false
         }
 

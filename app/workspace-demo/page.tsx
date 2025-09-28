@@ -223,14 +223,14 @@ export default function WorkspaceDemoPage() {
                     <ol className="list-decimal list-inside space-y-1">
                       <li>El widget aparece automáticamente en el dashboard</li>
                       <li>Click en las stats para cambiar de vista</li>
-                      <li>Usa "Back" para regresar al overview</li>
+                      <li>Usa &quot;Back&quot; para regresar al overview</li>
                       <li>Todas las interacciones son funcionales</li>
                     </ol>
                   </div>
                   <div className="hidden md:block">
                     <h4 className="font-medium mb-2">En Mobile (&lt; 768px):</h4>
                     <ol className="list-decimal list-inside space-y-1">
-                      <li>Click en tab "Team" para gestionar equipo</li>
+                      <li>Click en tab &quot;Team&quot; para gestionar equipo</li>
                       <li>Invita miembros con &quot;Invite Member&quot;</li>
                       <li>Cambia roles con el dropdown de cada miembro</li>
                       <li>Chat individual con botón de mensaje</li>

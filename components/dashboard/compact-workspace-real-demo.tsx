@@ -174,7 +174,7 @@ export function CompactWorkspaceRealDemo() {
         </p>
         <ul className="text-left space-y-1">
           <li>• <strong>Notificaciones:</strong> Sistema real de notificaciones</li>
-          <li>• <strong>Proyectos:</strong> Tabla 'artists' como proyectos</li>
+          <li>• <strong>Proyectos:</strong> Tabla &apos;artists&apos; como proyectos</li>
           <li>• <strong>Usuario actual:</strong> {currentUser?.name || 'Loading...'}</li>
           <li>• <strong>Team online:</strong> {teamMembers.filter(m => m.isOnline).length} miembros</li>
           <li>• <strong>Tiempo real:</strong> Suscripciones activas</li>

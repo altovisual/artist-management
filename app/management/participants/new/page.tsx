@@ -386,7 +386,7 @@ export default function NewParticipantPage() {
             <div className="mb-2">
               <h3 className="text-sm font-medium">Identity Verification (Optional)</h3>
               <p className="text-sm text-muted-foreground">Don&apos;t worry, you can always change these settings later in the participant&apos;s profile.</p>
-              <p className="text-sm text-muted-foreground">You can verify the participant's identity with Auco, but it's not required to create the participant.</p>
+              <p className="text-sm text-muted-foreground">You can verify the participant&apos;s identity with Auco, but it&apos;s not required to create the participant.</p>
             </div>
             <div className="flex items-start space-x-4">
               <FormField

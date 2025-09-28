@@ -410,7 +410,7 @@ export function NotificationCenter({
                           </div>
                           <p className="text-xs text-muted-foreground">
                             {notification.description}
-                            {notification.isRead && <span className="text-muted-foreground">You're all caught up! 🎉</span>}
+                            {notification.isRead && <span className="text-muted-foreground">You&apos;re all caught up! 🎉</span>}
                           </p>
                           
                           {/* Metadata */}
