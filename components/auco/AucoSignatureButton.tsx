@@ -39,12 +39,24 @@ export function AucoSignatureButton({ contractId, participants, workName }: Auco
         try {
           const err = await response.json();
           detailMsg = err?.details || err?.error || JSON.stringify(err);
-          // Consola para depurar rápidamente el motivo del 500/401
-          console.error('Start-signature error payload:', err);
+          console.error('❌ Start-signature error:', {
+            status: response.status,
+            statusText: response.statusText,
+            error: err,
+            contractId,
+            participants: participants.length
+          });
         } catch (_) {
-          try { detailMsg = await response.text(); } catch {}
+          try { 
+            detailMsg = await response.text(); 
+            console.error('❌ Start-signature text error:', detailMsg);
+          } catch {}
         }
-        throw new Error(`El backend falló al crear la sesión de firma. Detalle: ${detailMsg}`);
+        // Si es 404, probablemente el documento no existe en Auco
+        if (response.status === 404) {
+          throw new Error(`El documento no se encontró en Auco. Esto puede pasar si el documento fue eliminado o si hay un problema de sincronización. Intenta crear un nuevo contrato.`);
+        }
+        throw new Error(`El backend falló al crear la sesión de firma. Status: ${response.status} - ${detailMsg}`);
       }
 
       const { session_code } = await response.json();

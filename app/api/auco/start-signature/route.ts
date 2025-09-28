@@ -165,21 +165,19 @@ async function saveSignatureRequests(dbClient: any, contractId: string, particip
   }
 }
 
-// ---------- handler ----------
 export async function POST(req: Request) {
   let dbClient;
+  
   try {
     console.log('=== START POST /api/auco/start-signature ===');
     
-    // Test basic functionality first
     const body = await req.json();
-    console.log('Request body received:', body);
-    
     const { contractId } = body;
-    console.log('POST /api/auco/start-signature - contractId:', contractId);
+    console.log(' Request body received:', body);
+    console.log('Contract ID received:', contractId);
     
     if (!contractId) {
-      console.log('ERROR: contractId missing');
+      console.log('ERROR: Missing contractId');
       return NextResponse.json({ error: 'contractId es requerido' }, { status: 400 });
     }
 
