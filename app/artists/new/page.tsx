@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Plus, Trash2 } from "lucide-react"
+import { ArrowLeft, Plus, Trash2, User, Users, Music, Settings, CreditCard, Phone, MapPin, Calendar, FileText } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
@@ -19,6 +19,13 @@ import { Separator } from "@/components/ui/separator";
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { AnimatedTitle } from "@/components/animated-title"
 import { DatePickerField } from "@/components/ui/datepicker"
+
+// Modern form components
+import { FormLayout } from "@/components/forms/form-layout"
+import { FormSection } from "@/components/forms/form-section"
+import { FormField } from "@/components/forms/form-field"
+import { FormHeader } from "@/components/forms/form-header"
+import { ImageUpload } from "@/components/forms/image-upload"
 
 interface SocialAccount {
   platform: string
@@ -243,391 +250,391 @@ export default function NewArtistPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-4 md:p-6">
-        <div className="flex items-center gap-4 mb-8">
-          <Link href="/dashboard">
-            <Button variant="outline" size="sm" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </Button>
-          </Link>
-          <div>
-            <AnimatedTitle text="Add New Artist" level={1} className="text-2xl font-bold" />
-            <p className="text-muted-foreground">Create a new artist profile</p>
-          </div>
-        </div>
+      <FormHeader 
+        title="Add New Artist"
+        description="Create a comprehensive artist profile with all essential information"
+        backHref="/dashboard"
+      />
 
-        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Basic Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Artist Name *</Label>
-                  <Input
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Enter artist name"
-                    required
+      <div className="p-4 sm:p-6">
+        <form onSubmit={handleSubmit}>
+          <FormLayout>
+            {/* Basic Information */}
+            <FormSection 
+              title="Basic Information" 
+              description="Essential artist details and profile setup"
+              icon={User}
+            >
+              <div className="space-y-6">
+                {/* Profile Image */}
+                <FormField label="Profile Image" hint="Upload a professional artist photo">
+                  <ImageUpload 
+                    value={profileImage}
+                    onChange={setProfileImage}
                   />
+                </FormField>
+
+                {/* Name Fields */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                  <FormField label="Artist Name" required>
+                    <Input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Enter stage/artist name"
+                      required
+                    />
+                  </FormField>
+                  <FormField label="Genre" required>
+                    <Select value={genre} onValueChange={setGenre} required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select music genre" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Pop">Pop</SelectItem>
+                        <SelectItem value="Rock">Rock</SelectItem>
+                        <SelectItem value="Hip Hop">Hip Hop</SelectItem>
+                        <SelectItem value="R&B">R&B</SelectItem>
+                        <SelectItem value="Electronic">Electronic</SelectItem>
+                        <SelectItem value="Country">Country</SelectItem>
+                        <SelectItem value="Jazz">Jazz</SelectItem>
+                        <SelectItem value="Classical">Classical</SelectItem>
+                        <SelectItem value="Reggaeton">Reggaeton</SelectItem>
+                        <SelectItem value="Folk">Folk</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormField>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input
-                    id="firstName"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    placeholder="Artist's first name"
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                  <FormField label="First Name">
+                    <Input
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      placeholder="Legal first name"
+                    />
+                  </FormField>
+                  <FormField label="Last Name">
+                    <Input
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      placeholder="Legal last name"
+                    />
+                  </FormField>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                  <FormField label="Date of Birth">
+                    <DatePickerField date={dateOfBirth} onDateChange={setDateOfBirth} />
+                  </FormField>
+                  <FormField label="Location">
+                    <Input
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="City, Country"
+                    />
+                  </FormField>
+                </div>
+
+                <FormField label="Biography" hint="Tell us about the artist's background, style, and achievements">
+                  <Textarea
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="Write a compelling artist biography..."
+                    rows={4}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
+                </FormField>
+              </div>
+            </FormSection>
+
+            {/* Contact Information */}
+            <FormSection 
+              title="Contact Information" 
+              description="Contact details and identification"
+              icon={Phone}
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <FormField label="Phone Number">
                   <Input
-                    id="lastName"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    placeholder="Artist's last name"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+1 (555) 123-4567"
+                    type="tel"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dateOfBirth">Fecha de Nacimiento</Label>
-                  <DatePickerField date={dateOfBirth} onDateChange={setDateOfBirth} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="genre">Genre *</Label>
-                  <Select value={genre} onValueChange={setGenre} required>
-                    <SelectTrigger id="genre">
-                      <SelectValue placeholder="Select genre" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Pop">Pop</SelectItem>
-                      <SelectItem value="Rock">Rock</SelectItem>
-                      <SelectItem value="Hip Hop">Hip Hop</SelectItem>
-                      <SelectItem value="R&B">R&B</SelectItem>
-                      <SelectItem value="Electronic">Electronic</SelectItem>
-                      <SelectItem value="Country">Country</SelectItem>
-                      <SelectItem value="Jazz">Jazz</SelectItem>
-                      <SelectItem value="Classical">Classical</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
+                </FormField>
+                <FormField label="ID Number" hint="Government identification number">
                   <Input
-                    id="location"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="City, Country"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="profile-image">Profile Image</Label>
-                  <Input
-                    id="profile-image"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setProfileImage(e.target.files ? e.target.files[0] : null)}
-                  />
-                </div>
-                {/* New participant-related fields */}
-                <div className="space-y-2">
-                  <Label htmlFor="idNumber">ID Number</Label>
-                  <Input
-                    id="idNumber"
                     value={idNumber}
                     onChange={(e) => setIdNumber(e.target.value)}
                     placeholder="Identification number"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="address">Address</Label>
+                </FormField>
+              </div>
+
+              <FormField label="Address">
+                <Input
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Full address including city and postal code"
+                />
+              </FormField>
+            </FormSection>
+
+            {/* Professional Information */}
+            <FormSection 
+              title="Professional Information" 
+              description="Management and industry details"
+              icon={Settings}
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <FormField label="Management Entity" hint="PRO, publisher, or management company">
                   <Input
-                    id="address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Artist's address"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="Artist's phone number"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="bankInfo">Bank Info (JSON)</Label>
-                  <Textarea
-                    id="bankInfo"
-                    value={bankInfo}
-                    onChange={(e) => setBankInfo(e.target.value)}
-                    placeholder="Enter bank information as JSON"
-                    rows={3}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="managementEntity">Management Entity</Label>
-                  <Input
-                    id="managementEntity"
                     value={managementEntity}
                     onChange={(e) => setManagementEntity(e.target.value)}
-                    placeholder="e.g., PRO, publisher"
+                    placeholder="e.g., ASCAP, BMI, management company"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="ipi">IPI Number</Label>
+                </FormField>
+                <FormField label="IPI Number" hint="International Performer Identifier">
                   <Input
-                    id="ipi"
                     value={ipi}
                     onChange={(e) => setIpi(e.target.value)}
                     placeholder="IPI number (if applicable)"
                   />
-                </div>
+                </FormField>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="bio">Biography</Label>
+
+              <FormField label="Bank Information" hint="Enter bank details as JSON format">
                 <Textarea
-                  id="bio"
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder="Tell us about the artist..."
-                  rows={4}
+                  value={bankInfo}
+                  onChange={(e) => setBankInfo(e.target.value)}
+                  placeholder='{"bank": "Bank Name", "account": "123456789", "routing": "987654321"}'
+                  rows={3}
                 />
-              </div>
-            </CardContent>
-          </Card>
+              </FormField>
+            </FormSection>
 
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Social Media Accounts</CardTitle>
+            {/* Social Media Accounts */}
+            <FormSection 
+              title="Social Media Accounts" 
+              description="Connect artist's social media presence"
+              icon={Users}
+              headerAction={
                 <Button
                   type="button"
                   variant="outline"
+                  size="sm"
                   onClick={addSocialAccount}
-                  className="flex items-center gap-2 bg-transparent"
+                  className="flex items-center gap-2"
                 >
                   <Plus className="h-4 w-4" />
                   Add Account
                 </Button>
+              }
+            >
+              <div className="space-y-4">
+                {socialAccounts.map((account, index) => (
+                  <div key={index} className="p-4 sm:p-6 border rounded-xl bg-muted/20 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-sm sm:text-base">Social Account {index + 1}</h4>
+                      {socialAccounts.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeSocialAccount(index)}
+                          className="flex items-center gap-1 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField label="Platform">
+                        <Select
+                          value={account.platform}
+                          onValueChange={(value) => updateSocialAccount(index, "platform", value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select platform" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Instagram">📷 Instagram</SelectItem>
+                            <SelectItem value="Twitter">🐦 Twitter</SelectItem>
+                            <SelectItem value="YouTube">📺 YouTube</SelectItem>
+                            <SelectItem value="TikTok">🎵 TikTok</SelectItem>
+                            <SelectItem value="Facebook">👥 Facebook</SelectItem>
+                            <SelectItem value="Spotify">🎧 Spotify</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormField>
+                      
+                      <FormField label="Username">
+                        <Input
+                          value={account.username}
+                          onChange={(e) => updateSocialAccount(index, "username", e.target.value)}
+                          placeholder="@username"
+                        />
+                      </FormField>
+                      
+                      <FormField label="Followers" hint="Display only - not saved to database">
+                        <Input
+                          value={account.followers}
+                          onChange={(e) => updateSocialAccount(index, "followers", e.target.value)}
+                          placeholder="125K"
+                        />
+                      </FormField>
+                      
+                      <FormField label="Profile URL">
+                        <Input
+                          value={account.url}
+                          onChange={(e) => updateSocialAccount(index, "url", e.target.value)}
+                          placeholder="https://..."
+                          type="url"
+                        />
+                      </FormField>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {socialAccounts.map((account, index) => (
-                <div key={index} className="p-4 border rounded-lg space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium">Social Account {index + 1}</h4>
-                    {socialAccounts.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeSocialAccount(index)}
-                        className="flex items-center gap-1 bg-transparent"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                        Remove
-                      </Button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor={`social-platform-${index}`}>Platform</Label>
-                      <Select
-                        value={account.platform}
-                        onValueChange={(value) => updateSocialAccount(index, "platform", value)}
-                      >
-                        <SelectTrigger id={`social-platform-${index}`}>
-                          <SelectValue placeholder="Select platform" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Instagram">Instagram</SelectItem>
-                          <SelectItem value="Twitter">Twitter</SelectItem>
-                          <SelectItem value="YouTube">YouTube</SelectItem>
-                          <SelectItem value="TikTok">TikTok</SelectItem>
-                          <SelectItem value="Facebook">Facebook</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Username</Label>
-                      <Input
-                        value={account.username}
-                        onChange={(e) => updateSocialAccount(index, "username", e.target.value)}
-                        placeholder="@username"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Followers (UI only)</Label>
-                      <Input
-                        value={account.followers}
-                        onChange={(e) => updateSocialAccount(index, "followers", e.target.value)}
-                        placeholder="125K"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Profile URL</Label>
-                      <Input
-                        value={account.url}
-                        onChange={(e) => updateSocialAccount(index, "url", e.target.value)}
-                        placeholder="https://..."
-                      />
-                    </div>
-                  </div>
-                  <Separator className="my-4" />
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Password Management</Label>
-                    <div className="p-3 bg-muted rounded-md mt-2">
-                      <p className="text-xs text-muted-foreground">
-                        Password management will be available after the artist has been created. Please save this artist
-                        first, then edit their profile to add credentials.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+            </FormSection>
 
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Distribution Accounts</CardTitle>
+            {/* Distribution Accounts */}
+            <FormSection 
+              title="Distribution Accounts" 
+              description="Music distribution and streaming platforms"
+              icon={Music}
+              headerAction={
                 <Button
                   type="button"
                   variant="outline"
+                  size="sm"
                   onClick={addDistributionAccount}
-                  className="flex items-center gap-2 bg-transparent"
+                  className="flex items-center gap-2"
                 >
                   <Plus className="h-4 w-4" />
                   Add Account
                 </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {distributionAccounts.map((account, index) => (
-                <div key={index} className="p-4 border rounded-lg space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium">Distribution Account {index + 1}</h4>
-                    {distributionAccounts.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeDistributionAccount(index)}
-                        className="flex items-center gap-1 bg-transparent"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                        Remove
-                      </Button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor={`distribution-distributor-${index}`}>Distributor</Label>
-                      <Input
-                        id={`distribution-distributor-${index}`}
-                        value={account.distributor || ''}
-                        onChange={(e) => updateDistributionAccount(index, "distributor", e.target.value)}
-                        placeholder="e.g., DistroKid"
-                      />
+              }
+            >
+              <div className="space-y-4">
+                {distributionAccounts.map((account, index) => (
+                  <div key={index} className="p-4 sm:p-6 border rounded-xl bg-muted/20 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-sm sm:text-base">Distribution Account {index + 1}</h4>
+                      {distributionAccounts.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeDistributionAccount(index)}
+                          className="flex items-center gap-1 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          Remove
+                        </Button>
+                      )}
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`distribution-service-${index}`}>Service</Label>
-                      <Select
-                        value={account.service || ''}
-                        onValueChange={(value) => updateDistributionAccount(index, "service", value)}
-                      >
-                        <SelectTrigger id={`distribution-service-${index}`}>
-                          <SelectValue placeholder="Select service" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Spotify">Spotify</SelectItem>
-                          <SelectItem value="Apple Music">Apple Music</SelectItem>
-                          <SelectItem value="YouTube Music">YouTube Music</SelectItem>
-                          <SelectItem value="Amazon Music">Amazon Music</SelectItem>
-                          <SelectItem value="Bandcamp">Bandcamp</SelectItem>
-                          <SelectItem value="SoundCloud">SoundCloud</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField label="Distributor">
+                        <Input
+                          value={account.distributor || ''}
+                          onChange={(e) => updateDistributionAccount(index, "distributor", e.target.value)}
+                          placeholder="e.g., DistroKid, CD Baby"
+                        />
+                      </FormField>
+                      
+                      <FormField label="Service">
+                        <Select
+                          value={account.service || ''}
+                          onValueChange={(value) => updateDistributionAccount(index, "service", value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select service" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Spotify">🎧 Spotify</SelectItem>
+                            <SelectItem value="Apple Music">🍎 Apple Music</SelectItem>
+                            <SelectItem value="YouTube Music">📺 YouTube Music</SelectItem>
+                            <SelectItem value="Amazon Music">📦 Amazon Music</SelectItem>
+                            <SelectItem value="Bandcamp">🎵 Bandcamp</SelectItem>
+                            <SelectItem value="SoundCloud">☁️ SoundCloud</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormField>
+                      
+                      <FormField label="Username">
+                        <Input
+                          value={account.username || ''}
+                          onChange={(e) => updateDistributionAccount(index, "username", e.target.value)}
+                          placeholder="artist_username"
+                        />
+                      </FormField>
+                      
+                      <FormField label="Email">
+                        <Input
+                          type="email"
+                          value={account.email || ''}
+                          onChange={(e) => updateDistributionAccount(index, "email", e.target.value)}
+                          placeholder="contact@distro.com"
+                        />
+                      </FormField>
+                      
+                      <FormField label="Profile URL">
+                        <Input
+                          value={account.url || ''}
+                          onChange={(e) => updateDistributionAccount(index, "url", e.target.value)}
+                          placeholder="https://..."
+                          type="url"
+                        />
+                      </FormField>
+                      
+                      <FormField label="Monthly Listeners">
+                        <Input
+                          value={account.monthly_listeners || ''}
+                          onChange={(e) => updateDistributionAccount(index, "monthly_listeners", e.target.value)}
+                          placeholder="250,000"
+                        />
+                      </FormField>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`distribution-username-${index}`}>Username</Label>
-                      <Input
-                        id={`distribution-username-${index}`}
-                        value={account.username || ''}
-                        onChange={(e) => updateDistributionAccount(index, "username", e.target.value)}
-                        placeholder="artist_username"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`distribution-email-${index}`}>Email</Label>
-                      <Input
-                        id={`distribution-email-${index}`}
-                        type="email"
-                        value={account.email || ''}
-                        onChange={(e) => updateDistributionAccount(index, "email", e.target.value)}
-                        placeholder="contact@distro.com"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`distribution-url-${index}`}>URL</Label>
-                      <Input
-                        id={`distribution-url-${index}`}
-                        value={account.url || ''}
-                        onChange={(e) => updateDistributionAccount(index, "url", e.target.value)}
-                        placeholder="https://..."
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`distribution-account-id-${index}`}>Account ID</Label>
-                      <Input
-                        id={`distribution-account-id-${index}`}
-                        value={account.account_id || ''}
-                        onChange={(e) => updateDistributionAccount(index, "account_id", e.target.value)}
-                        placeholder="Account ID"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`distribution-monthly-listeners-${index}`}>Monthly Listeners</Label>
-                      <Input
-                        id={`distribution-monthly-listeners-${index}`}
-                        value={account.monthly_listeners || ''}
-                        onChange={(e) => updateDistributionAccount(index, "monthly_listeners", e.target.value)}
-                        placeholder="250K"
-                      />
-                    </div>
-                    <div className="space-y-2 col-span-full">
-                      <Label htmlFor={`distribution-notes-${index}`}>Notes</Label>
+                    
+                    <FormField label="Notes" hint="Additional information about this distribution account">
                       <Textarea
-                        id={`distribution-notes-${index}`}
                         value={account.notes || ''}
                         onChange={(e) => updateDistributionAccount(index, "notes", e.target.value)}
-                        placeholder="Add any relevant notes..."
-                        rows={3}
+                        placeholder="Add any relevant notes about this account..."
+                        rows={2}
                       />
-                    </div>
+                    </FormField>
                   </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+                ))}
+              </div>
+            </FormSection>
 
-          <div className="flex items-center justify-end gap-4">
-            <Link href="/dashboard">
-              <Button type="button" variant="outline" className="bg-transparent">
-                Cancel
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-3 sm:gap-4 pt-6">
+              <Link href="/dashboard" className="w-full sm:w-auto">
+                <Button type="button" variant="outline" className="w-full sm:w-auto">
+                  Cancel
+                </Button>
+              </Link>
+              <Button 
+                type="submit" 
+                disabled={isLoading}
+                className="w-full sm:w-auto bg-primary hover:bg-primary/90"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Creating Artist...
+                  </>
+                ) : (
+                  "Create Artist"
+                )}
               </Button>
-            </Link>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Creating Artist..." : "Create Artist"}
-            </Button>
-          </div>
+            </div>
+          </FormLayout>
         </form>
       </div>
     </DashboardLayout>

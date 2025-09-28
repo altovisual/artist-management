@@ -25,6 +25,8 @@ import { ActivityTimeline } from '@/components/dashboard/activity-timeline';
 
 export function Dashboard() {
   const [artists, setArtists] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [contracts, setContracts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState('grid');
   const [userRole, setUserRole] = useState('');
@@ -33,7 +35,7 @@ export function Dashboard() {
   const supabase = createClient();
 
   useEffect(() => {
-    const fetchArtists = async () => {
+    const fetchDashboardData = async () => {
       setIsLoading(true);
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -45,16 +47,16 @@ export function Dashboard() {
           setUserRole('admin');
         }
 
-        let query = supabase.from('artists').select('*, social_accounts(id), distribution_accounts(id), projects(*), assets(id)');
-
+        // Fetch artists with related data
+        let artistQuery = supabase.from('artists').select('*, social_accounts(id), distribution_accounts(id), projects(*), assets(id)');
         if (user && !isAdmin) {
-          query = query.eq('user_id', user.id);
+          artistQuery = artistQuery.eq('user_id', user.id);
         }
 
-        const { data: fetchedArtists, error } = await query.order('created_at', { ascending: false });
+        const { data: fetchedArtists, error: artistError } = await artistQuery.order('created_at', { ascending: false });
 
-        if (error) {
-          console.error('Error fetching artists:', error);
+        if (artistError) {
+          console.error('Error fetching artists:', artistError);
           setArtists([]);
         } else {
           const processedArtists = (fetchedArtists || []).map(artist => {
@@ -67,6 +69,30 @@ export function Dashboard() {
           });
           setArtists(processedArtists);
         }
+
+        // Fetch additional dashboard data in parallel
+        const promises = [];
+
+        // Fetch transactions for revenue calculation
+        let transactionQuery = supabase.from('transactions').select('amount, type, transaction_date, created_at');
+        if (user && !isAdmin) {
+          transactionQuery = transactionQuery.eq('user_id', user.id);
+        }
+        promises.push(transactionQuery);
+
+        // Fetch contracts for activity timeline
+        let contractQuery = supabase.from('contracts').select('*, signatures(*)');
+        if (user && !isAdmin) {
+          contractQuery = contractQuery.eq('user_id', user.id);
+        }
+        promises.push(contractQuery.order('created_at', { ascending: false }).limit(10));
+
+        const [transactionResult, contractResult] = await Promise.all(promises);
+
+        // Store additional data for metrics calculation
+        setTransactions(transactionResult.data || []);
+        setContracts(contractResult.data || []);
+
       } catch (error) {
         console.error('An unexpected error occurred:', error);
         setArtists([]);
@@ -75,7 +101,7 @@ export function Dashboard() {
       }
     };
 
-    fetchArtists();
+    fetchDashboardData();
   }, [supabase]);
 
   if (isLoading) {
@@ -154,7 +180,7 @@ export function Dashboard() {
     );
   };
 
-  // Calculate metrics for the dashboard
+  // Calculate metrics for the dashboard with real data
   const totalArtists = artists.length;
   const activeProjects = artists.reduce((acc, artist) => acc + (artist.projects?.length || 0), 0);
   const upcomingReleases = artists.reduce((acc, artist) => {
@@ -164,45 +190,82 @@ export function Dashboard() {
     return acc + upcoming;
   }, 0);
 
+  // Calculate monthly revenue from transactions
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const monthlyTransactions = transactions.filter(transaction => {
+    const transactionDate = new Date(transaction.transaction_date);
+    return transactionDate.getMonth() === currentMonth && 
+           transactionDate.getFullYear() === currentYear;
+  });
+
+  const monthlyRevenue = monthlyTransactions.reduce((acc, transaction) => {
+    return acc + (transaction.type === 'income' ? parseFloat(transaction.amount) : -parseFloat(transaction.amount));
+  }, 0);
+
+  // Calculate growth rate (compare with previous month)
+  const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+  const previousYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+  const previousMonthTransactions = transactions.filter(transaction => {
+    const transactionDate = new Date(transaction.transaction_date);
+    return transactionDate.getMonth() === previousMonth && 
+           transactionDate.getFullYear() === previousYear;
+  });
+
+  const previousMonthRevenue = previousMonthTransactions.reduce((acc, transaction) => {
+    return acc + (transaction.type === 'income' ? parseFloat(transaction.amount) : -parseFloat(transaction.amount));
+  }, 0);
+
+  const growthRate = previousMonthRevenue > 0 
+    ? ((monthlyRevenue - previousMonthRevenue) / previousMonthRevenue) * 100 
+    : monthlyRevenue > 0 ? 100 : 0;
+
   const metricsData = {
     totalArtists,
     activeProjects,
-    monthlyRevenue: 25000, // Mock data - replace with real data
-    growthRate: 12.5, // Mock data - replace with real data
+    monthlyRevenue,
+    growthRate,
     upcomingReleases,
-    totalContracts: 45 // Mock data - replace with real data
+    totalContracts: contracts.length
   };
 
-  // Mock activity data - replace with real data from your database
+  // Generate real activity data from database
   const recentActivities = [
-    {
-      id: '1',
+    // Recent artists
+    ...artists.slice(0, 3).map(artist => ({
+      id: `artist-${artist.id}`,
       type: 'artist_created' as const,
       title: 'New artist profile created',
-      description: 'Borngud profile has been successfully created',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+      description: `${artist.name} profile has been successfully created`,
+      timestamp: new Date(artist.created_at),
       user: { name: user?.user_metadata?.full_name || 'User', avatar: user?.user_metadata?.avatar_url },
-      metadata: { artistName: 'Borngud' }
-    },
-    {
-      id: '2',
-      type: 'project_added' as const,
-      title: 'New project added',
-      description: 'Hip Hop album project started',
-      timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
-      user: { name: user?.user_metadata?.full_name || 'User', avatar: user?.user_metadata?.avatar_url },
-      metadata: { projectName: 'New Album', artistName: 'Samuelito' }
-    },
-    {
-      id: '3',
+      metadata: { artistName: artist.name }
+    })),
+    
+    // Recent projects
+    ...artists.flatMap(artist => 
+      (artist.projects || []).slice(0, 2).map((project: any) => ({
+        id: `project-${project.id}`,
+        type: 'project_added' as const,
+        title: 'New project added',
+        description: `${project.name} project started`,
+        timestamp: new Date(project.created_at),
+        user: { name: user?.user_metadata?.full_name || 'User', avatar: user?.user_metadata?.avatar_url },
+        metadata: { projectName: project.name, artistName: artist.name }
+      }))
+    ).slice(0, 2),
+    
+    // Recent contracts
+    ...contracts.slice(0, 2).map(contract => ({
+      id: `contract-${contract.id}`,
       type: 'contract_signed' as const,
-      title: 'Contract signed',
-      description: 'Distribution agreement completed',
-      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+      title: 'Contract created',
+      description: `${contract.contract_type || 'Contract'} agreement created`,
+      timestamp: new Date(contract.created_at),
       user: { name: user?.user_metadata?.full_name || 'User', avatar: user?.user_metadata?.avatar_url },
-      metadata: { contractType: 'Distribution', artistName: 'Marval' }
-    }
-  ];
+      metadata: { contractType: contract.contract_type || 'Contract' }
+    }))
+  ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5);
 
   return (
     <div className="space-y-4 sm:space-y-6 md:space-y-8 p-3 sm:p-4 md:p-6">
