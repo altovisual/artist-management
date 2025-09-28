@@ -28,6 +28,7 @@ import { createClient } from "@/lib/supabase/client";
 import { redirect } from "next/navigation";
 
 const participantRoles = z.enum(["ARTISTA", "PRODUCTOR", "COMPOSITOR", "MANAGER", "LAWYER"]);
+const participantRoleOptions = ["ARTISTA", "PRODUCTOR", "COMPOSITOR", "MANAGER", "LAWYER"] as const;
 
 const formSchema = z.object({
   work_id: z.string({
@@ -397,7 +398,7 @@ export default function NewContractPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {participantRoles.options.map((role) => (
+                          {participantRoleOptions.map((role) => (
                             <SelectItem key={role} value={role}>
                               {role}
                             </SelectItem>

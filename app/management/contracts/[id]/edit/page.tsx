@@ -87,6 +87,13 @@ export default function EditContractPage() {
   const watchedParticipants = form.watch('participants');
   const watchedWorkId = form.watch('work_id');
   const selectedWork = works.find(w => w.id === watchedWorkId);
+  
+  // Filter and transform participants for AucoSignatureButton
+  const validParticipants = watchedParticipants?.filter(p => p.id && p.role).map(p => ({
+    id: p.id!,
+    role: p.role!,
+    percentage: p.percentage
+  })) || [];
 
   useEffect(() => {
     async function fetchData() {
@@ -168,10 +175,10 @@ export default function EditContractPage() {
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Edit Contract</h1>
-        {id && watchedParticipants && selectedWork && (
+        {id && validParticipants.length > 0 && selectedWork && (
           <AucoSignatureButton 
             contractId={id as string} 
-            participants={watchedParticipants} 
+            participants={validParticipants} 
             workName={selectedWork.name}
           />
         )}
