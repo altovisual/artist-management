@@ -1,0 +1,2 @@
+ALTER TABLE public.artists
+ADD COLUMN IF NOT EXISTS id_number TEXT;

@@ -69,7 +69,7 @@ interface DistributionAccount {
 
 export default function EditArtistPage() {
   const router = useRouter()
-  const params = useParams<{ id: string }>()
+  const params = useParams()
   const { toast } = useToast()
   const supabase = createClient()
 
