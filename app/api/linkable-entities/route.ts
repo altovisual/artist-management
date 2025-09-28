@@ -28,26 +28,22 @@ export async function GET(request: Request) {
     // Define queries
     let artistsQuery = supabase.from('artists').select('id, name, first_name, last_name, country, user_id, participants(*)');
     let participantsQuery = supabase.from('participants').select('*'); // Select all participant fields
-    let usersQuery = supabase.from('users_view').select('id, email, raw_user_meta_data');
 
     // If a search name is provided, add the search filters
     if (name) {
       const searchPattern = `%${name}%`;
       artistsQuery = artistsQuery.or(`name.ilike.${searchPattern},first_name.ilike.${searchPattern},last_name.ilike.${searchPattern}`);
       participantsQuery = participantsQuery.or(`name.ilike.${searchPattern},artistic_name.ilike.${searchPattern}`);
-      usersQuery = usersQuery.ilike('email', searchPattern);
     }
 
     // Perform searches in parallel
-    const [artistsRes, participantsRes, usersRes] = await Promise.all([
+    const [artistsRes, participantsRes] = await Promise.all([
       artistsQuery,
-      participantsQuery,
-      usersQuery
+      participantsQuery
     ]);
 
     if (artistsRes.error) throw new Error(`Error fetching artists: ${artistsRes.error.message}`);
     if (participantsRes.error) throw new Error(`Error fetching participants: ${participantsRes.error.message}`);
-    if (usersRes.error) throw new Error(`Error fetching users: ${usersRes.error.message}`);
 
     // Consolidate and format results
     const consolidatedResults: LinkableEntity[] = [];
@@ -92,26 +88,7 @@ export async function GET(request: Request) {
       }
     });
 
-    usersRes.data?.forEach(user => {
-       // Avoid duplicating if user is already listed as an artist or participant
-       if (!consolidatedResults.some(r => r.id === user.id)) {
-        consolidatedResults.push({
-          id: user.id,
-          name: user.raw_user_meta_data?.name || user.email,
-          type: 'user',
-          email: user.email || null,
-          country: null,
-          user_id: user.id,
-          id_number: null,
-          address: null,
-          phone: null,
-          bank_info: null,
-          artistic_name: null,
-          management_entity: null,
-          ipi: null,
-        });
-      }
-    });
+    // Note: Users query removed temporarily due to users_view dependency
     
     // Remove duplicates based on ID, giving preference to more specific types like 'artist'
     const uniqueResults = Array.from(new Map(consolidatedResults.map(item => [item.id, item])).values());

@@ -28,8 +28,8 @@ const formSchema = z.object({
   name: z.string().min(2, {
     message: "Name must be at least 2 characters.",
   }),
-  type: z.string().min(2, {
-    message: "Type must be at least 2 characters.",
+  type: z.enum(["single", "album", "ep", "mixtape"], {
+    required_error: "Please select a work type.",
   }),
   artist_id: z.string({
     required_error: "Please select an artist.",
@@ -45,7 +45,7 @@ export default function NewWorkPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      type: "song",
+      type: "single",
       alternative_title: "",
       iswc: "",
     },
@@ -64,19 +64,24 @@ export default function NewWorkPage() {
   }, []);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const res = await fetch("/api/works", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(values),
-    });
+    try {
+      const res = await fetch("/api/works", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(values),
+      });
 
-    if (res.ok) {
-      router.push("/management/works");
-    } else {
-      // Handle error
-      console.error("Failed to create work");
+      if (res.ok) {
+        router.push("/management/works");
+      } else {
+        const errorText = await res.text();
+        console.error("Failed to create work:", res.status, res.statusText, errorText);
+        // You could also show a toast or alert here
+      }
+    } catch (error) {
+      console.error("Error creating work:", error);
     }
   }
 
@@ -107,9 +112,19 @@ export default function NewWorkPage() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Type</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g., song, album" {...field} />
-                </FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select work type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="single">Single</SelectItem>
+                    <SelectItem value="album">Album</SelectItem>
+                    <SelectItem value="ep">EP</SelectItem>
+                    <SelectItem value="mixtape">Mixtape</SelectItem>
+                  </SelectContent>
+                </Select>
                 <FormDescription>
                   The type of the work.
                 </FormDescription>

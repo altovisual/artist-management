@@ -27,52 +27,61 @@ export function AucoSignatureButton({ contractId, participants, workName }: Auco
     setIsSigning(true);
 
     try {
-      // 1. Llama al backend para crear la sesión de firma de forma segura
+      // 1) Llamar al backend para iniciar la sesión de firma
       const response = await fetch('/api/auco/start-signature', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contractId, participants, workName }),
+        body: JSON.stringify({ contractId }),
       });
 
       if (!response.ok) {
-        throw new Error('El backend falló al crear la sesión de firma.');
+        let detailMsg = 'Error desconocido';
+        try {
+          const err = await response.json();
+          detailMsg = err?.details || err?.error || JSON.stringify(err);
+          // Consola para depurar rápidamente el motivo del 500/401
+          console.error('Start-signature error payload:', err);
+        } catch (_) {
+          try { detailMsg = await response.text(); } catch {}
+        }
+        throw new Error(`El backend falló al crear la sesión de firma. Detalle: ${detailMsg}`);
       }
 
       const { session_code } = await response.json();
-
       if (!session_code) {
-        throw new Error('El backend no devolvió un código de sesión.');
+        throw new Error('Respuesta inválida del backend: falta session_code.');
       }
 
-      // 2. Inicia el SDK de Auco con el código de sesión
-      setTimeout(() => {
-        const unmount = AucoSDK({
-          sdkType: 'sign', // <-- Usamos el tipo 'sign'
-          iframeId: 'auco-sdk-signature-container',
-          language: 'es',
-          env: 'DEV',
-          sdkData: {
-            document: session_code, // <-- Le pasamos el código de la sesión
-            uxOptions: {
-              primaryColor: "#3B82F6",
-              alternateColor: "#FFFFFF",
-            },
+      // 2) Inicia el SDK de Auco con el código de sesión
+      const sdkEnv = process.env.NEXT_PUBLIC_AUCO_ENV === 'PROD' ? 'PROD' : 'DEV';
+      const unmount = AucoSDK({
+        sdkType: 'sign', // <-- Usamos el tipo 'sign'
+        iframeId: 'auco-sdk-signature-container',
+        language: 'es',
+        env: sdkEnv,
+        sdkData: {
+          document: session_code, // <-- Le pasamos el código de la sesión
+          signFlow: 'document',
+          uxOptions: {
+            primaryColor: "#3B82F6",
+            alternateColor: "#FFFFFF",
           },
-          events: {
-            onSDKReady: () => console.log('Auco Signature SDK is ready.'),
-            onSDKClose: () => {
-              console.log('Auco Signature flow closed.');
-              setIsSigning(false);
-              if (unmount) unmount();
-              setUnmountAuco(null);
-            }
+        },
+        events: {
+          onSDKReady: () => console.log('Auco Signature SDK is ready.'),
+          onSDKClose: () => {
+            console.log('Auco Signature flow closed.');
+            setIsSigning(false);
+            try { unmount(); } catch {}
+            setUnmountAuco(null);
           }
-        });
-        setUnmountAuco(() => unmount);
-      }, 0);
+        }
+      });
+      setUnmountAuco(() => unmount);
 
     } catch (error) {
-      console.error("Error during Auco signature process:", error);
+      console.error("Error durante el proceso de firma de Auco:", error);
+      alert(String(error instanceof Error ? error.message : error));
       setIsSigning(false);
     }
   }
@@ -86,11 +95,17 @@ export function AucoSignatureButton({ contractId, participants, workName }: Auco
       {isSigning && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-40 flex justify-center items-center">
           <div className="bg-white p-4 rounded-lg shadow-lg w-full max-w-4xl h-5/6 relative">
-            <div id="auco-sdk-signature-container" className="w-full h-full"></div>
+            <iframe id="auco-sdk-signature-container" className="w-full h-full" />
             <Button 
               variant="ghost" 
               className="absolute top-2 right-2" 
-              onClick={() => unmountAuco && unmountAuco()}
+              onClick={() => {
+                if (unmountAuco) {
+                  try { unmountAuco(); } catch {}
+                  setUnmountAuco(null);
+                }
+                setIsSigning(false);
+              }}
             >
               Cerrar
             </Button>

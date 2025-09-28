@@ -50,6 +50,45 @@ WHERE c.id = $1
 GROUP BY c.id, w.id, t.id;
 `;
 
+const contractDataQueryNoTemplate = `
+SELECT
+  c.id as contract_id,
+  c.status as contract_status,
+  c.internal_reference,
+  c.signing_location,
+  c.additional_notes,
+  c.publisher,
+  c.publisher_percentage,
+  c.co_publishers,
+  c.publisher_admin,
+  c.created_at as contract_created_at,
+  w.name as work_name,
+  w.alternative_title as work_alternative_title,
+  w.iswc as work_iswc,
+  w.type as work_type,
+  w.status as work_status,
+  w.release_date as work_release_date,
+  w.isrc as work_isrc,
+  w.upc as work_upc,
+  NULL::text as template_html,
+  json_agg(
+    json_build_object(
+      'id', p.id,
+      'name', p.name,
+      'email', p.email,
+      'phone', p.phone,
+      'role', cp.role,
+      'percentage', cp.percentage
+    )
+  ) as participants
+FROM public.contracts c
+LEFT JOIN public.projects w ON c.project_id = w.id
+LEFT JOIN public.contract_participants cp ON c.id = cp.contract_id
+LEFT JOIN public.participants p ON cp.participant_id = p.id
+WHERE c.id = $1
+GROUP BY c.id, w.id;
+`;
+
 // ---------- utils ----------
 function renderTemplate(html: string, data: any): string {
   let renderedHtml = html;
@@ -129,30 +168,79 @@ async function saveSignatureRequests(dbClient: any, contractId: string, particip
 export async function POST(req: Request) {
   let dbClient;
   try {
-    const { contractId } = await req.json();
+    console.log('=== START POST /api/auco/start-signature ===');
+    
+    // Test basic functionality first
+    const body = await req.json();
+    console.log('Request body received:', body);
+    
+    const { contractId } = body;
+    console.log('POST /api/auco/start-signature - contractId:', contractId);
+    
     if (!contractId) {
+      console.log('ERROR: contractId missing');
       return NextResponse.json({ error: 'contractId es requerido' }, { status: 400 });
     }
 
+    // Check environment variables
+    console.log('Checking environment variables...');
     const ownerEmail = process.env.AUCO_OWNER_EMAIL?.trim().toLowerCase();
+    const postgresUrl = process.env.POSTGRES_URL_POOLER;
+    
+    console.log('Environment check:', {
+      ownerEmail: ownerEmail ? 'Present' : 'Missing',
+      postgresUrl: postgresUrl ? 'Present' : 'Missing'
+    });
+    
     if (!ownerEmail) {
+      console.log('ERROR: AUCO_OWNER_EMAIL missing');
       return NextResponse.json(
         { error: 'Config faltante', details: 'AUCO_OWNER_EMAIL no está configurado en el entorno' },
         { status: 500 }
       );
     }
 
+    if (!postgresUrl) {
+      console.log('ERROR: POSTGRES_URL_POOLER missing');
+      return NextResponse.json(
+        { error: 'Config faltante', details: 'POSTGRES_URL_POOLER no está configurado en el entorno' },
+        { status: 500 }
+      );
+    }
+
     // 1) Datos
+    console.log('Connecting to database...');
     dbClient = await pool.connect();
-    const { rows } = await dbClient.query(contractDataQuery, [contractId]);
+    console.log('Database connected successfully');
+    
+    console.log('Executing query with contractId:', contractId);
+    let rows;
+    try {
+      rows = (await dbClient.query(contractDataQuery, [contractId])).rows;
+    } catch (e: any) {
+      if ((e?.message || '').includes('template_html')) {
+        console.warn('template_html column missing, using fallback query');
+        rows = (await dbClient.query(contractDataQueryNoTemplate, [contractId])).rows;
+      } else {
+        throw e;
+      }
+    }
+    console.log('Query result rows:', rows.length);
+    
     if (rows.length === 0) {
+      console.log('ERROR: Contract not found');
       return NextResponse.json({ error: 'Contrato no encontrado' }, { status: 404 });
     }
+    
     const contractData = rows[0];
+    console.log('Contract data:', { 
+      id: contractData.contract_id, 
+      work_name: contractData.work_name,
+      template_html: contractData.template_html ? 'Present' : 'Missing',
+      participants: contractData.participants?.length || 0
+    });
 
-    if (!contractData.template_html) {
-      return NextResponse.json({ error: 'La plantilla del contrato no contiene código HTML.' }, { status: 400 });
-    }
+    // Si no hay template_html, usaremos una plantilla HTML mínima por defecto
 
     // 2) Render
     const templateRenderData = {
@@ -184,7 +272,42 @@ export async function POST(req: Request) {
       current_year: new Date().getFullYear(),
     };
 
-    let renderedHtml = renderTemplate(contractData.template_html, templateRenderData);
+    const defaultTemplateHtml = `
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <style>
+            body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.5; }
+            h1 { font-size: 18px; }
+            .section { margin-bottom: 12px; }
+            .small { color: #666; }
+          </style>
+        </head>
+        <body>
+          <h1>Contrato: {{work.name}}</h1>
+          <div class="section">
+            <strong>Estado:</strong> {{contract.status}}<br/>
+            <strong>Referencia Interna:</strong> {{contract.internal_reference}}<br/>
+            <strong>Lugar de firma:</strong> {{contract.signing_location}}<br/>
+            <strong>Notas:</strong> {{contract.additional_notes}}
+          </div>
+          <div class="section">
+            <strong>Obra</strong><br/>
+            Título alternativo: {{work.alternative_title}}<br/>
+            ISWC: {{work.iswc}}<br/>
+            Tipo: {{work.type}}<br/>
+            Estado: {{work.status}}<br/>
+            Fecha de lanzamiento: {{work.release_date}}<br/>
+            ISRC: {{work.isrc}} — UPC: {{work.upc}}
+          </div>
+          <div class="section small">
+            Generado automáticamente — {{current_date}}
+          </div>
+        </body>
+      </html>
+    `;
+    const baseTemplate = contractData.template_html || defaultTemplateHtml;
+    let renderedHtml = renderTemplate(baseTemplate, templateRenderData);
 
     // Agregar labels {{signature:N}} para cada participante (para usar label:true)
     const signatureTags = contractData.participants
@@ -193,9 +316,13 @@ export async function POST(req: Request) {
     renderedHtml += signatureTags;
 
     // 3) PDF
+    console.log('Generating PDF from HTML...');
     const maybePdf = await generatePdfFromHtml(renderedHtml);
+    console.log('PDF generated, normalizing to buffer...');
     const pdfBuffer = await normalizeToBuffer(maybePdf);
+    console.log('Converting to base64...');
     const base64Pdf = toPdfBase64Strict(pdfBuffer);
+    console.log('PDF conversion completed, size:', base64Pdf.length);
 
     // 4) signProfile
     const signProfile = contractData.participants.map((p: any) => ({
@@ -205,56 +332,62 @@ export async function POST(req: Request) {
       label: true,
     }));
 
-    // 5) Paso 1: subir (upload) SIN "sign"
+    // 5) Flujo simplificado: UPLOAD con PDF (opción C)
     const uploadBody = {
-      email: ownerEmail, // owner del tenant en Auco PROD
       name: `Contrato: ${contractData.work_name || 'Sin título'}`,
-      subject: `Firma requerida: Contrato para ${contractData.work_name || 'Obra'}`,
-      message: `Hola, por favor revisa y firma este documento para la obra ${contractData.work_name || ''}.`,
-      notification: true,
-      remember: 6,
-      signProfile,
       file: base64Pdf,
+      email: ownerEmail,
+      notification: true,
+      signProfile: signProfile.map((p, index) => ({
+        label: true, // auto-colocar firma si está habilitado
+        name: p.name,
+        email: p.email,
+        phone: normalizePhone(p.phone)
+      }))
     };
 
+    console.log('Sending to Auco /document/upload:', {
+      ...uploadBody,
+      file: '[PDF_BASE64_TRUNCATED]'
+    });
+
+    console.log('Making request to Auco API...');
     const uploadResp = await aucoFetch('/document/upload', 'POST', uploadBody, { diagnose: true });
+    console.log('Auco API response:', uploadResp);
 
-    // 6) Si el upload NO devuelve code (sino {document}), hacemos Paso 2: iniciar firma
-    if (!uploadResp?.code) {
-      if (!uploadResp?.document) {
-        return NextResponse.json(
-          { error: 'Respuesta inesperada de la API de Auco en /document/upload', details: uploadResp },
-          { status: 502 }
-        );
-      }
-
-      const startBody = {
-        email: ownerEmail,
-        document: uploadResp.document, // ID retornado por upload
-        sign: true,                    // inicia la sesión de firma
-        name: `Contrato: ${contractData.work_name || 'Sin título'}`,
-        subject: `Firma requerida: Contrato para ${contractData.work_name || 'Obra'}`,
-        message: `Hola, por favor revisa y firma este documento para la obra ${contractData.work_name || ''}.`,
-                           
-        data: []                       // opcional
-      };
-
-      const saveResp = await aucoFetch('/document/save', 'POST', startBody);
-      if (!saveResp?.code) {
-        return NextResponse.json(
-          { error: 'Respuesta inesperada de la API de Auco en /document/save', details: saveResp },
-          { status: 502 }
-        );
-      }
-      
-      await saveSignatureRequests(dbClient, contractId, contractData.participants, saveResp.code);
-
-      return NextResponse.json({ session_code: saveResp.code }, { status: 200 });
+    const documentCode = uploadResp?.code || uploadResp?.document;
+    if (!documentCode) {
+      return NextResponse.json(
+        { error: 'Respuesta inesperada de la API de Auco en /document/upload', details: uploadResp },
+        { status: 502 }
+      );
     }
 
-    // Si upload ya trajo code (algunas cuentas lo devuelven), úsalo
-    await saveSignatureRequests(dbClient, contractId, contractData.participants, uploadResp.code);
-    return NextResponse.json({ session_code: uploadResp.code }, { status: 200 });
+    // Guardar las solicitudes de firma en la base de datos
+    await saveSignatureRequests(dbClient, contractId, contractData.participants, documentCode);
+
+    // Consultar detalles del documento para obtener los IDs de firmantes (2 caracteres)
+    console.log('Fetching document details to resolve signer IDs...');
+    const details: any = await aucoFetch(`/document/get?code=${documentCode}`, 'GET');
+    console.log('Document details:', {
+      hasData: !!details?.data,
+      signers: details?.data?.signProfile?.length || details?.signProfile?.length || 0
+    });
+
+    const signers = (details?.data?.signProfile || details?.signProfile || []) as Array<{ id?: string; name?: string; email?: string; status?: string }>;
+    const signerIds = signers.map(s => s?.id).filter(Boolean) as string[];
+    const firstSignerId = signerIds[0];
+    const sessionCode = firstSignerId ? `${documentCode}${firstSignerId}` : documentCode;
+
+    return NextResponse.json(
+      {
+        session_code: sessionCode,
+        document_code: documentCode,
+        signer_ids: signerIds,
+        signers,
+      },
+      { status: 200 }
+    );
 
   } catch (err: any) {
     const msg = err?.message ?? 'Error desconocido';

@@ -103,9 +103,11 @@ export default function NewParticipantPage() {
       try {
         const res = await fetch('/api/linkable-entities');
         if (res.ok) {
-          setLinkableEntities(await res.json());
+          const data = await res.json();
+          setLinkableEntities(data);
         } else {
-          console.error('Failed to fetch linkable entities');
+          const errorText = await res.text();
+          console.error('Failed to fetch linkable entities:', res.status, res.statusText, errorText);
         }
       } catch (error) {
         console.error('Error fetching linkable entities:', error);
@@ -132,7 +134,8 @@ export default function NewParticipantPage() {
         );
         form.setValue('management_entity', entity.management_entity || '', { shouldValidate: true });
         form.setValue('ipi', entity.ipi || '', { shouldValidate: true });
-        if (entity.user_id) form.setValue('user_id', entity.user_id, { shouldValidate: true });
+        // Don't override user_id as it's used for the selection itself
+        // if (entity.user_id) form.setValue('user_id', entity.user_id, { shouldValidate: true });
         if (entity.type === 'artist') form.setValue('type', 'ARTISTA', { shouldValidate: true });
       }
     } else {
@@ -245,7 +248,7 @@ export default function NewParticipantPage() {
               <FormItem>
                 <FormLabel>Link to User or Artist</FormLabel>
                 <Select
-                  value={field.value || ''}
+                  value={selectedEntityId || field.value || ''}
                   onValueChange={(val) => {
                     setSelectedEntityId(val);
                     field.onChange(val);
