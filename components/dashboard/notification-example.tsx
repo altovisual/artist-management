@@ -63,13 +63,8 @@ export function NotificationExample() {
           // Opcional: Analytics o logging
           console.log('Navigating to:', notification.actionUrl)
           
-          // Opcional: Tracking de eventos
-          if (typeof window !== 'undefined' && window.gtag) {
-            window.gtag('event', 'notification_click', {
-              notification_type: notification.type,
-              notification_id: notification.id
-            })
-          }
+          // Opcional: Tracking personalizado
+          // Aquí puedes agregar tu sistema de analytics preferido
         }}
         className="w-full"
       />

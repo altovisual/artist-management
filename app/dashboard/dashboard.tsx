@@ -21,8 +21,8 @@ import dayjs from 'dayjs'
 // New modern dashboard components
 import { HeroSection } from '@/components/dashboard/hero-section';
 import { MetricsGrid } from '@/components/dashboard/metrics-grid';
-import { NotificationCenter } from '@/components/dashboard/notification-center';
-import { useNotifications } from '@/hooks/use-notifications';
+import { CompactWorkspaceWidget } from '@/components/dashboard/compact-workspace-widget';
+import { useCompactWorkspace } from '@/hooks/use-compact-workspace';
 
 export function Dashboard() {
   const [artists, setArtists] = useState<any[]>([]);
@@ -35,16 +35,24 @@ export function Dashboard() {
   const isMobile = useIsMobile();
   const supabase = createClient();
   
-  // Notifications hook
+  // Compact workspace hook con datos reales
   const {
     notifications,
-    isLoading: notificationsLoading,
-    unreadCount,
-    markAsRead,
-    markAsUnread,
-    deleteNotification,
-    bulkAction
-  } = useNotifications();
+    projects,
+    teamMembers,
+    currentUser,
+    teamStats,
+    isLoading: workspaceLoading,
+    error: workspaceError,
+    markNotificationAsRead,
+    toggleProjectFavorite,
+    createProject,
+    updateMemberOnlineStatus,
+    updateMemberRole,
+    inviteMember,
+    removeMember,
+    refreshData
+  } = useCompactWorkspace();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -343,19 +351,45 @@ export function Dashboard() {
           )}
         </div>
 
-        {/* Notification Center - Mobile: Full width below artists, Desktop: 1 column */}
+        {/* Compact Workspace Widget - Mobile: Full width, Desktop: 1 column */}
         <div className="lg:col-span-1 order-last lg:order-none">
-          <NotificationCenter 
-            notifications={notifications}
-            onMarkAsRead={markAsRead}
-            onMarkAsUnread={markAsUnread}
-            onDelete={deleteNotification}
-            onBulkAction={bulkAction}
-            onNotificationClick={(notification) => {
-              // Callback opcional para analytics o logging
-              console.log('Notification clicked:', notification.type, notification.title);
-            }}
-          />
+          {currentUser && (
+            <CompactWorkspaceWidget 
+              notifications={notifications}
+              projects={projects}
+              teamMembers={teamMembers}
+              currentUser={currentUser}
+              teamStats={teamStats}
+              onNotificationClick={(notification) => {
+                // Marcar como leída automáticamente
+                markNotificationAsRead(notification.id);
+                console.log('Notification clicked:', notification.type, notification.title);
+              }}
+              onProjectClick={(project) => {
+                console.log('Project selected:', project.name);
+                // Aquí podrías navegar al proyecto o abrir un modal
+              }}
+              onUpdateMemberRole={updateMemberRole}
+              onUpdateOnlineStatus={updateMemberOnlineStatus}
+              onInviteMember={async (email, role) => {
+                try {
+                  await inviteMember(email, role);
+                  console.log('Member invited:', email, role);
+                } catch (err) {
+                  console.error('Error inviting member:', err);
+                }
+              }}
+              onRemoveMember={removeMember}
+            />
+          )}
+          
+          {workspaceError && (
+            <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-sm text-red-600 dark:text-red-400">
+                Error loading workspace: {workspaceError}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

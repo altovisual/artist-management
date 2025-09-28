@@ -26,7 +26,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { LayoutDashboard, Calendar, Music, Shield, User, LogOut, DollarSign, Menu, BarChart } from "lucide-react"
+import { LayoutDashboard, Calendar, Music, Shield, User, LogOut, DollarSign, Menu, BarChart, Users } from "lucide-react"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { useTheme } from "next-themes"
 
@@ -92,7 +92,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       }
     }
   }, [pathname, isMounted, isAdmin]);
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push("/auth/login");
@@ -100,6 +99,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   const navLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/team", label: "Team", icon: Users },
     { href: "/dashboard/analytics", label: "Analytics", icon: BarChart },
     { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
     { href: "/dashboard/finance", label: "Finance", icon: DollarSign },
