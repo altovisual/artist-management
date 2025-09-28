@@ -45,14 +45,49 @@ export function CompactWorkspaceDemo() {
           <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full">Navegación intuitiva</span>
         </div>
       </div>
-
+      
       <div className="w-full max-w-sm">
         <CompactWorkspaceWidget
           notifications={compactMockData.notifications}
           projects={compactMockData.projects}
-          teamMembers={compactMockData.teamMembers}
-          onNotificationClick={handleNotificationClick}
-          onProjectClick={handleProjectClick}
+          teamMembers={[
+            {
+              id: '1',
+              name: 'John Smith',
+              email: 'john@example.com',
+              avatar: undefined,
+              isOnline: true,
+              role: 'admin',
+              createdAt: new Date()
+            },
+            {
+              id: '2',
+              name: 'Sarah Johnson',
+              email: 'sarah@example.com',
+              avatar: undefined,
+              isOnline: true,
+              role: 'manager',
+              createdAt: new Date()
+            },
+            {
+              id: '3',
+              name: 'Emily Davis',
+              email: 'emily@example.com',
+              avatar: undefined,
+              isOnline: true,
+              role: 'member',
+              createdAt: new Date()
+            },
+            {
+              id: '4',
+              name: 'Mike Wilson',
+              email: 'mike@example.com',
+              avatar: undefined,
+              isOnline: false,
+              role: 'member',
+              createdAt: new Date()
+            }
+          ]}
         />
       </div>
 
@@ -66,8 +101,10 @@ export function CompactWorkspaceDemo() {
           <li>• Navegación automática al hacer tap</li>
           <li>• Estados online en tiempo real</li>
           <li>• Prioridades visuales con colores</li>
-          <li>• Botón "Back" para regresar</li>
+          <li>• Botón &quot;Back&quot; para regresar</li>
           <li>• Scroll suave en listas largas</li>
+          <li>• Hover effects y micro-interacción</li>
+          <li>• Vista de equipo con miembros online/offline</li>
           <li>• Hover effects y micro-interacciones</li>
         </ul>
       </div>

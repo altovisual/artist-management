@@ -213,7 +213,7 @@ export function NotificationCenter({
       <Card className={cn("p-8 text-center", className)}>
         <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
         <h3 className="text-lg font-semibold mb-2">No Notifications</h3>
-        <p className="text-muted-foreground">You're all caught up! New notifications will appear here.</p>
+        <p className="text-muted-foreground">You&apos;re all caught up! New notifications will appear here.</p>
       </Card>
     )
   }
@@ -408,8 +408,9 @@ export function NotificationCenter({
                               <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                             )}
                           </div>
-                          <p className="text-xs text-muted-foreground mb-2">
+                          <p className="text-xs text-muted-foreground">
                             {notification.description}
+                            {notification.isRead && <span className="text-muted-foreground">You're all caught up! 🎉</span>}
                           </p>
                           
                           {/* Metadata */}

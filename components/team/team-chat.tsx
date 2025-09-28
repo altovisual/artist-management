@@ -135,7 +135,7 @@ export function TeamChat({
 
   useEffect(() => {
     setMessages(mockMessages)
-  }, [])
+  }, [mockMessages])
 
   useEffect(() => {
     scrollToBottom()

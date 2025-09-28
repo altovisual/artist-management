@@ -227,11 +227,11 @@ export default function WorkspaceDemoPage() {
                       <li>Todas las interacciones son funcionales</li>
                     </ol>
                   </div>
-                  <div>
-                    <h4 className="font-medium mb-2">Team Management:</h4>
+                  <div className="hidden md:block">
+                    <h4 className="font-medium mb-2">En Mobile (&lt; 768px):</h4>
                     <ol className="list-decimal list-inside space-y-1">
                       <li>Click en tab "Team" para gestionar equipo</li>
-                      <li>Invita miembros con "Invite Member"</li>
+                      <li>Invita miembros con &quot;Invite Member&quot;</li>
                       <li>Cambia roles con el dropdown de cada miembro</li>
                       <li>Chat individual con botón de mensaje</li>
                     </ol>

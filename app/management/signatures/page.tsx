@@ -189,13 +189,10 @@ export default function SignaturesPage() {
       }
     } catch (error) {
       console.error('Auto-sync error:', error);
-    } finally {
-      if (!silent) setIsLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
-    // Sincronización inicial
     const initializeData = async () => {
       await syncFromAuco(true); // Sincronización silenciosa
       await fetchSignatures();
@@ -210,7 +207,7 @@ export default function SignaturesPage() {
     
     // Cleanup del interval
     return () => clearInterval(syncInterval);
-  }, []);
+  }, [syncFromAuco, fetchSignatures]);
 
   const filteredSignatures = signatures.filter(signature => {
     if (activeTab === 'all') return true;
