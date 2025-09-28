@@ -18,11 +18,17 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { format } from 'date-fns'
 import dayjs from 'dayjs'
 
+// New modern dashboard components
+import { HeroSection } from '@/components/dashboard/hero-section';
+import { MetricsGrid } from '@/components/dashboard/metrics-grid';
+import { ActivityTimeline } from '@/components/dashboard/activity-timeline';
+
 export function Dashboard() {
   const [artists, setArtists] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState('grid');
   const [userRole, setUserRole] = useState('');
+  const [user, setUser] = useState<any>(null);
   const isMobile = useIsMobile();
   const supabase = createClient();
 
@@ -31,6 +37,7 @@ export function Dashboard() {
       setIsLoading(true);
       try {
         const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
         
         let isAdmin = false;
         if (user && user.app_metadata?.role === 'admin') {
@@ -147,47 +154,125 @@ export function Dashboard() {
     );
   };
 
+  // Calculate metrics for the dashboard
+  const totalArtists = artists.length;
+  const activeProjects = artists.reduce((acc, artist) => acc + (artist.projects?.length || 0), 0);
+  const upcomingReleases = artists.reduce((acc, artist) => {
+    const upcoming = artist.projects?.filter((project: any) => 
+      new Date(project.release_date) > new Date()
+    ).length || 0;
+    return acc + upcoming;
+  }, 0);
+
+  const metricsData = {
+    totalArtists,
+    activeProjects,
+    monthlyRevenue: 25000, // Mock data - replace with real data
+    growthRate: 12.5, // Mock data - replace with real data
+    upcomingReleases,
+    totalContracts: 45 // Mock data - replace with real data
+  };
+
+  // Mock activity data - replace with real data from your database
+  const recentActivities = [
+    {
+      id: '1',
+      type: 'artist_created' as const,
+      title: 'New artist profile created',
+      description: 'Borngud profile has been successfully created',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+      user: { name: user?.user_metadata?.full_name || 'User', avatar: user?.user_metadata?.avatar_url },
+      metadata: { artistName: 'Borngud' }
+    },
+    {
+      id: '2',
+      type: 'project_added' as const,
+      title: 'New project added',
+      description: 'Hip Hop album project started',
+      timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
+      user: { name: user?.user_metadata?.full_name || 'User', avatar: user?.user_metadata?.avatar_url },
+      metadata: { projectName: 'New Album', artistName: 'Samuelito' }
+    },
+    {
+      id: '3',
+      type: 'contract_signed' as const,
+      title: 'Contract signed',
+      description: 'Distribution agreement completed',
+      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+      user: { name: user?.user_metadata?.full_name || 'User', avatar: user?.user_metadata?.avatar_url },
+      metadata: { contractType: 'Distribution', artistName: 'Marval' }
+    }
+  ];
+
   return (
-    <div className="space-y-6">
-      <header className="border-b bg-card">
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
-            <AnimatedTitle text="Artists" level={1} className="text-2xl font-bold tracking-tight" />
-            <p className="text-muted-foreground">
-              {userRole === 'admin' 
-                ? 'Viewing all artists as an administrator.' 
-                : 'Manage your artists and their profiles.'}
-            </p>
+    <div className="space-y-4 sm:space-y-6 md:space-y-8 p-3 sm:p-4 md:p-6">
+      {/* Hero Section */}
+      <HeroSection 
+        userName={user?.user_metadata?.full_name}
+        userRole={userRole}
+        totalArtists={totalArtists}
+        activeProjects={activeProjects}
+      />
+
+      {/* Metrics Grid */}
+      <MetricsGrid data={metricsData} />
+
+      {/* Main Content Grid - Mobile: Stack vertically, Desktop: Side by side */}
+      <div className="grid gap-4 sm:gap-6 md:gap-8 lg:grid-cols-3">
+        {/* Artists Section - Mobile: Full width, Desktop: 2 columns */}
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Your Artists</h2>
+              <p className="text-sm sm:text-base text-muted-foreground">
+                {userRole === 'admin' 
+                  ? 'Managing all artists across the platform' 
+                  : 'Manage your artist profiles and projects'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {!isMobile && <ArtistViewSwitcher view={view} setView={setView} />}
+            </div>
           </div>
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            {!isMobile && <ArtistViewSwitcher view={view} setView={setView} />}
-            <Button asChild className="w-full md:w-auto">
-              <Link href="/artists/new">
-                <PlusCircle className="mr-2 h-4 w-4" /> New Artist
-              </Link>
-            </Button>
-          </div>
+
+          {/* Admin DB Size Card */}
+          {userRole === 'admin' && <DbSizeCard />}
+
+          {/* Artists Display */}
+          {artists.length === 0 ? (
+            <Card className="p-6 sm:p-8 md:p-12 text-center">
+              <div className="space-y-3 sm:space-y-4">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
+                  <PlusCircle className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-semibold">No artists found</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground mt-2">Get started by creating your first artist profile.</p>
+                </div>
+                <Button asChild size="sm" className="sm:size-lg">
+                  <Link href="/artists/new">
+                    <PlusCircle className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                    Create First Artist
+                  </Link>
+                </Button>
+              </div>
+            </Card>
+          ) : isMobile ? (
+            <div className="space-y-3 sm:space-y-4">
+              {artists.map(artist => (
+                <ArtistMobileCard key={artist.id} artist={artist} />
+              ))}
+            </div>
+          ) : (
+            renderDesktopView()
+          )}
+        </div>
+
+        {/* Activity Timeline - Mobile: Full width below artists, Desktop: 1 column */}
+        <div className="lg:col-span-1 order-last lg:order-none">
+          <ActivityTimeline activities={recentActivities} />
         </div>
       </div>
-    </header>
-
-      {userRole === 'admin' && <DbSizeCard />}
-
-      {artists.length === 0 ? (
-        <div className="text-center py-12">
-          <h2 className="text-xl font-semibold">No artists found</h2>
-          <p className="text-muted-foreground mt-2">Get started by creating a new artist profile.</p>
-        </div>
-      ) : isMobile ? (
-        <div className="space-y-4">
-          {artists.map(artist => (
-            <ArtistMobileCard key={artist.id} artist={artist} />
-          ))}
-        </div>
-      ) : (
-        renderDesktopView()
-      )}
     </div>
   );
 }

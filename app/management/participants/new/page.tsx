@@ -221,17 +221,84 @@ export default function NewParticipantPage() {
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const res = await fetch('/api/participants', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(values),
-    });
+    console.log('📤 Submitting participant data:', values);
+    
+    // Clean up empty strings to avoid database issues
+    const cleanedValues = Object.fromEntries(
+      Object.entries(values).map(([key, value]) => [
+        key, 
+        value === '' ? null : value
+      ])
+    );
+    
+    // If user_id is selected but causing FK constraint issues, 
+    // allow creating without user_id as fallback
+    const payload = { ...cleanedValues };
+    
+    console.log('🧹 Cleaned participant data:', cleanedValues);
+    
+    try {
+      let res = await fetch('/api/participants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
-    if (res.ok) {
-      router.push('/management/participants');
-    } else {
-      const errorDetails = await res.json().catch(() => ({}));
-      console.error('Failed to create participant:', errorDetails);
+      console.log('📥 Response status:', res.status, res.statusText);
+
+      // If foreign key constraint error and user_id is present, try without user_id
+      if (!res.ok && payload.user_id) {
+        let errorDetails;
+        try {
+          const responseText = await res.text();
+          errorDetails = JSON.parse(responseText);
+          console.log('📋 First attempt error details:', errorDetails);
+        } catch (e) {
+          console.log('📋 Could not parse error response');
+          errorDetails = {};
+        }
+        
+        if (errorDetails.code === '23503' || errorDetails.originalMessage?.includes('user_id_fkey')) {
+          console.log('🔄 Retrying without user_id due to FK constraint...');
+          
+          const payloadWithoutUserId = { ...payload, user_id: null };
+          console.log('🧹 Retry payload:', payloadWithoutUserId);
+          
+          res = await fetch('/api/participants', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payloadWithoutUserId),
+          });
+          
+          console.log('📥 Retry response status:', res.status, res.statusText);
+        }
+      }
+
+      if (res.ok) {
+        const data = await res.json();
+        console.log('✅ Participant created successfully:', data);
+        router.push('/management/participants');
+      } else {
+        let finalErrorDetails;
+        try {
+          const responseText = await res.text();
+          finalErrorDetails = JSON.parse(responseText);
+        } catch (e) {
+          finalErrorDetails = { message: 'Error desconocido' };
+        }
+        
+        console.error('❌ Final error creating participant:', {
+          status: res.status,
+          statusText: res.statusText,
+          errorDetails: finalErrorDetails
+        });
+        
+        const errorMessage = finalErrorDetails.message || finalErrorDetails.error || 'Error desconocido';
+        alert(`❌ Error al crear participante:\n\n${errorMessage}`);
+      }
+    } catch (error) {
+      console.error('❌ Network error:', error);
+      alert(`Network error: ${error}`);
     }
   }
 
@@ -315,7 +382,11 @@ export default function NewParticipantPage() {
             )}
           />
 
-          <div className="p-4 border rounded-md">
+          <div className="p-4 border rounded-md bg-muted/20">
+            <div className="mb-2">
+              <h3 className="text-sm font-medium">Identity Verification (Optional)</h3>
+              <p className="text-xs text-muted-foreground">You can verify the participant's identity with Auco, but it's not required to create the participant.</p>
+            </div>
             <div className="flex items-start space-x-4">
               <FormField
                 control={form.control}
@@ -386,8 +457,9 @@ export default function NewParticipantPage() {
                 type="button"
                 onClick={handleVerification}
                 disabled={isVerifying || verificationStatus === 'verified' || isVerificationDisabled}
+                variant="outline"
               >
-                {isVerifying ? 'Verifying...' : 'Verify Identity with Auco'}
+                {isVerifying ? 'Verifying...' : 'Verify Identity (Optional)'}
               </Button>
               {verificationStatus && (
                 <Badge
@@ -490,9 +562,33 @@ export default function NewParticipantPage() {
             )}
           />
 
-          <Button type="submit" disabled={verificationStatus !== 'verified'}>
-            Submit
-          </Button>
+          <div className="flex gap-4">
+            <Button type="submit">
+              Create Participant
+            </Button>
+            <Button 
+              type="button"
+              variant="outline"
+              onClick={() => {
+                const values = form.getValues();
+                const cleanedValues = Object.fromEntries(
+                  Object.entries(values).map(([key, value]) => [
+                    key, 
+                    value === '' ? null : value
+                  ])
+                );
+                // Force create without user_id
+                onSubmit({ ...cleanedValues, user_id: null });
+              }}
+            >
+              Create Without Link
+            </Button>
+            {verificationStatus !== 'verified' && (
+              <p className="text-sm text-muted-foreground flex items-center">
+                ℹ️ Verification is optional. Participants can be created without identity verification.
+              </p>
+            )}
+          </div>
         </form>
       </Form>
     </div>
