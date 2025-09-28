@@ -21,7 +21,8 @@ import dayjs from 'dayjs'
 // New modern dashboard components
 import { HeroSection } from '@/components/dashboard/hero-section';
 import { MetricsGrid } from '@/components/dashboard/metrics-grid';
-import { ActivityTimeline } from '@/components/dashboard/activity-timeline';
+import { NotificationCenter } from '@/components/dashboard/notification-center';
+import { useNotifications } from '@/hooks/use-notifications';
 
 export function Dashboard() {
   const [artists, setArtists] = useState<any[]>([]);
@@ -33,6 +34,17 @@ export function Dashboard() {
   const [user, setUser] = useState<any>(null);
   const isMobile = useIsMobile();
   const supabase = createClient();
+  
+  // Notifications hook
+  const {
+    notifications,
+    isLoading: notificationsLoading,
+    unreadCount,
+    markAsRead,
+    markAsUnread,
+    deleteNotification,
+    bulkAction
+  } = useNotifications();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -331,9 +343,19 @@ export function Dashboard() {
           )}
         </div>
 
-        {/* Activity Timeline - Mobile: Full width below artists, Desktop: 1 column */}
+        {/* Notification Center - Mobile: Full width below artists, Desktop: 1 column */}
         <div className="lg:col-span-1 order-last lg:order-none">
-          <ActivityTimeline activities={recentActivities} />
+          <NotificationCenter 
+            notifications={notifications}
+            onMarkAsRead={markAsRead}
+            onMarkAsUnread={markAsUnread}
+            onDelete={deleteNotification}
+            onBulkAction={bulkAction}
+            onNotificationClick={(notification) => {
+              // Callback opcional para analytics o logging
+              console.log('Notification clicked:', notification.type, notification.title);
+            }}
+          />
         </div>
       </div>
     </div>
