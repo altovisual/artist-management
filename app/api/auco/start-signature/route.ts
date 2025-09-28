@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { generatePdfFromHtml } from '@/lib/pdf';
 import { aucoFetch } from '@/app/api/_lib/auco';
+import { getContractTemplate } from '@/lib/contract-templates';
 
 const pool = new Pool({
   connectionString: process.env.POSTGRES_URL_POOLER,
@@ -272,41 +273,9 @@ export async function POST(req: Request) {
       current_year: new Date().getFullYear(),
     };
 
-    const defaultTemplateHtml = `
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <style>
-            body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.5; }
-            h1 { font-size: 18px; }
-            .section { margin-bottom: 12px; }
-            .small { color: #666; }
-          </style>
-        </head>
-        <body>
-          <h1>Contrato: {{work.name}}</h1>
-          <div class="section">
-            <strong>Estado:</strong> {{contract.status}}<br/>
-            <strong>Referencia Interna:</strong> {{contract.internal_reference}}<br/>
-            <strong>Lugar de firma:</strong> {{contract.signing_location}}<br/>
-            <strong>Notas:</strong> {{contract.additional_notes}}
-          </div>
-          <div class="section">
-            <strong>Obra</strong><br/>
-            Título alternativo: {{work.alternative_title}}<br/>
-            ISWC: {{work.iswc}}<br/>
-            Tipo: {{work.type}}<br/>
-            Estado: {{work.status}}<br/>
-            Fecha de lanzamiento: {{work.release_date}}<br/>
-            ISRC: {{work.isrc}} — UPC: {{work.upc}}
-          </div>
-          <div class="section small">
-            Generado automáticamente — {{current_date}}
-          </div>
-        </body>
-      </html>
-    `;
-    const baseTemplate = contractData.template_html || defaultTemplateHtml;
+    // Usar plantilla personalizada o la moderna por defecto
+    const templateType = process.env.CONTRACT_TEMPLATE_TYPE as 'modern' | 'simple' || 'modern';
+    const baseTemplate = contractData.template_html || getContractTemplate(templateType);
     let renderedHtml = renderTemplate(baseTemplate, templateRenderData);
 
     // Agregar labels {{signature:N}} para cada participante (para usar label:true)
@@ -324,13 +293,53 @@ export async function POST(req: Request) {
     const base64Pdf = toPdfBase64Strict(pdfBuffer);
     console.log('PDF conversion completed, size:', base64Pdf.length);
 
-    // 4) signProfile
+    // 4) signProfile con validación de duplicados
     const signProfile = contractData.participants.map((p: any) => ({
       name: p.name,
       email: p.email,
       phone: normalizePhone(p.phone),
       label: true,
     }));
+
+    // Validar emails duplicados
+    const emailCounts = new Map<string, number>();
+    const duplicateEmails: string[] = [];
+    
+    signProfile.forEach(signer => {
+      if (signer.email) {
+        const email = signer.email.toLowerCase().trim();
+        const count = (emailCounts.get(email) || 0) + 1;
+        emailCounts.set(email, count);
+        if (count === 2) {
+          duplicateEmails.push(email);
+        }
+      }
+    });
+
+    if (duplicateEmails.length > 0) {
+      console.log('ERROR: Duplicate emails found:', duplicateEmails);
+      return NextResponse.json(
+        { 
+          error: 'Emails duplicados detectados en firmantes', 
+          details: `Los siguientes emails están repetidos: ${duplicateEmails.join(', ')}. Cada firmante debe tener un email único.`,
+          duplicateEmails 
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validar emails vacíos
+    const emptyEmails = signProfile.filter(s => !s.email || s.email.trim() === '');
+    if (emptyEmails.length > 0) {
+      console.log('ERROR: Empty emails found:', emptyEmails.length);
+      return NextResponse.json(
+        { 
+          error: 'Firmantes sin email', 
+          details: `Se encontraron ${emptyEmails.length} firmante(s) sin email. Todos los firmantes deben tener un email válido.`
+        },
+        { status: 400 }
+      );
+    }
 
     // 5) Flujo simplificado: UPLOAD con PDF (opción C)
     const uploadBody = {

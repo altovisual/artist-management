@@ -10,14 +10,29 @@ export async function GET() {
       .from('signatures')
       .select(`
         *,
-        contract:contracts(internal_reference)
-      `);
+        contract:contracts(
+          internal_reference,
+          status,
+          projects(name)
+        )
+      `)
+      .order('created_at', { ascending: false });
 
     if (error) {
       throw new Error(`Error fetching signatures: ${error.message}`);
     }
 
-    return NextResponse.json(data);
+    // Transformar los datos para el dashboard
+    const transformedData = data?.map(signature => ({
+      ...signature,
+      contract: signature.contract ? {
+        internal_reference: signature.contract.internal_reference,
+        status: signature.contract.status,
+        work_name: signature.contract.projects?.name || 'Sin título'
+      } : null
+    })) || [];
+
+    return NextResponse.json(transformedData);
 
   } catch (error: any) {
     console.error('[API /signatures Error]', error);
