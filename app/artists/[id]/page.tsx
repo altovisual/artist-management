@@ -37,7 +37,14 @@ import {
   Users,
   FolderKanban,
   LayoutGrid,
-  BarChart
+  BarChart,
+  Copy,
+  ExternalLink,
+  Star,
+  Heart,
+  Headphones,
+  User,
+  MapPin,
 } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
@@ -57,6 +64,12 @@ import ArtistDetailPageSkeleton from "./artist-detail-skeleton"
 import { AnimatedTitle } from "@/components/animated-title"
 import { ArtistAnalyticsDashboard } from '@/components/artist-analytics-dashboard'
 import { decrypt } from "@/lib/crypto"
+import { 
+  PageHeader, 
+  StatsGrid, 
+  ContentSection, 
+  PageLayout 
+} from "@/components/ui/design-system"
 
 // --- Helper Functions ---
 const getExt = (url?: string) => {
@@ -551,68 +564,95 @@ export default function ArtistDetailPage() {
     </div>
   );
 
-  const renderDesktopView = () => (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-0 mb-6">
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full md:w-auto">
-          
-          <div className="flex items-center gap-3">
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={artist.profile_image || "/placeholder.svg"} alt={artist.name} />
-              <AvatarFallback>{artist.name.split(" ").map((n: string) => n[0]).join("")}</AvatarFallback>
-            </Avatar>
-            <div>
-              <AnimatedTitle text={artist.name} level={1} className="text-2xl font-bold" />
-              <p className="text-muted-foreground">{artist.genre} Artist</p>
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href={`/artists/${artist.id}/assets`}>
-            <Button variant="outline" className="flex items-center gap-2 bg-transparent"><ImageIcon className="h-4 w-4" />Manage Assets</Button>
-          </Link>
-          <Link href={`/artists/${artist.id}/creative-vault`}>
-            <Button variant="outline" className="flex items-center gap-2 bg-transparent"><FolderKanban className="h-4 w-4" />Creative Vault</Button>
-          </Link>
-          <Link href={`/artists/${artist.id}/edit`}>
-            <Button className="flex items-center gap-2"><Edit className="h-4 w-4" />Edit Artist</Button>
-          </Link>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm" className="flex items-center gap-2"><Trash2 className="h-4 w-4" />Delete Artist</Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                <AlertDialogDescription>This action cannot be undone. This will permanently delete the artist and all their associated data.</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteArtist}>Delete</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      </div>
+  const renderDesktopView = () => {
+    // Prepare stats data
+    const statsData = [
+      {
+        title: "Releases",
+        value: projects.length,
+        icon: Music,
+        description: "Total projects"
+      },
+      {
+        title: "Social Accounts", 
+        value: socialAccounts.length,
+        icon: Users,
+        description: "Connected platforms"
+      },
+      {
+        title: "Assets",
+        value: assets.length,
+        icon: ImageIcon,
+        description: "Media files"
+      },
+      {
+        title: "Total Streams",
+        value: artist.total_streams?.toLocaleString() || "0",
+        icon: Headphones,
+        description: "All platforms"
+      }
+    ]
 
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="flex flex-wrap justify-center w-full">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="social">Social Media</TabsTrigger>
-          <TabsTrigger value="distribution">Distribution</TabsTrigger>
-          <TabsTrigger value="releases">Releases</TabsTrigger>
-          <TabsTrigger value="assets">Asset Kit</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-        </TabsList>
-        <TabsContent value="overview">{renderTabContent('overview')}</TabsContent>
-        <TabsContent value="social">{renderTabContent('social')}</TabsContent>
-        <TabsContent value="distribution">{renderTabContent('distribution')}</TabsContent>
-        <TabsContent value="releases">{renderTabContent('releases')}</TabsContent>
-        <TabsContent value="assets">{renderTabContent('assets')}</TabsContent>
-        <TabsContent value="analytics">{renderTabContent('analytics')}</TabsContent>
-      </Tabs>
-    </div>
-  );
+    return (
+      <PageLayout spacing="normal">
+        {/* Page Header */}
+        <PageHeader
+          title={artist.name}
+          subtitle={`${artist.country || "Location not specified"}`}
+          description={artist.bio}
+          badge={{
+            text: `${artist.genre} Artist`,
+            variant: 'secondary'
+          }}
+          avatar={{
+            src: artist.profile_image || "/placeholder.svg",
+            fallback: artist.name.split(" ").map((n: string) => n[0]).join("")
+          }}
+          actions={[
+            {
+              label: "Edit Profile",
+              href: `/artists/${artist.id}/edit`,
+              variant: 'default',
+              icon: Edit
+            },
+            {
+              label: "Assets",
+              href: `/artists/${artist.id}/assets`,
+              variant: 'outline',
+              icon: ImageIcon
+            }
+          ]}
+        />
+
+        {/* Stats Grid */}
+        <StatsGrid stats={statsData} columns={4} />
+
+        {/* Content Tabs */}
+        <ContentSection
+          title="Artist Details"
+          description="Manage all aspects of the artist profile"
+        >
+          <Tabs defaultValue="overview" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-6">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="social">Social</TabsTrigger>
+              <TabsTrigger value="distribution">Distribution</TabsTrigger>
+              <TabsTrigger value="releases">Releases</TabsTrigger>
+              <TabsTrigger value="assets">Assets</TabsTrigger>
+              <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="overview">{renderTabContent('overview')}</TabsContent>
+            <TabsContent value="social">{renderTabContent('social')}</TabsContent>
+            <TabsContent value="distribution">{renderTabContent('distribution')}</TabsContent>
+            <TabsContent value="releases">{renderTabContent('releases')}</TabsContent>
+            <TabsContent value="assets">{renderTabContent('assets')}</TabsContent>
+            <TabsContent value="analytics">{renderTabContent('analytics')}</TabsContent>
+          </Tabs>
+        </ContentSection>
+      </PageLayout>
+    )
+  };
 
   return (
     <DashboardLayout>
