@@ -378,21 +378,7 @@ export function CompactWorkspaceWidget({
               </div>
               
               <div className="max-h-48 overflow-y-auto">
-                <RealTeamSection
-                  teamMembers={teamMembers}
-                  currentUser={currentUser}
-                  teamStats={teamStats || {
-                    totalMembers: teamMembers.length,
-                    onlineMembers: onlineCount,
-                    adminCount: teamMembers.filter(m => m.role === 'admin').length,
-                    managerCount: teamMembers.filter(m => m.role === 'manager').length,
-                    memberCount: teamMembers.filter(m => m.role === 'member').length
-                  }}
-                  onUpdateMemberRole={onUpdateMemberRole}
-                  onUpdateOnlineStatus={onUpdateOnlineStatus}
-                  onInviteMember={onInviteMember}
-                  onRemoveMember={onRemoveMember}
-                />
+                <RealTeamSection className="h-full" />
               </div>
             </div>
           )}
