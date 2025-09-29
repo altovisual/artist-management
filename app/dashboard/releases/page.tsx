@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 import { useSearchParams } from 'next/navigation'
@@ -28,7 +28,7 @@ type ReleaseEvent = {
   resource: ProjectRow
 }
 
-export default function ReleasesPage() {
+function ReleasesPageContent() {
   const supabase = createClient()
   const { toast } = useToast()
   const searchParams = useSearchParams();
@@ -95,5 +95,13 @@ export default function ReleasesPage() {
         isLoading={isLoading}
       />
     </DashboardLayout>
+  )
+}
+
+export default function ReleasesPage() {
+  return (
+    <Suspense fallback={<DashboardLayout><div className="flex items-center justify-center h-screen">Loading...</div></DashboardLayout>}>
+      <ReleasesPageContent />
+    </Suspense>
   )
 }
