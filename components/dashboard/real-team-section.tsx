@@ -846,7 +846,7 @@ export function RealTeamSection({ className }: RealTeamSectionProps) {
                         <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                           <Users className="h-6 w-6 text-gray-400" />
                         </div>
-                        <p className="text-sm text-gray-500">No members found matching "{searchQuery}"</p>
+                        <p className="text-sm text-gray-500">No members found matching &quot;{searchQuery}&quot;</p>
                         <Button
                           variant="ghost"
                           size="sm"

@@ -77,7 +77,7 @@ export default function StreamingAnalytics({ artistId }: StreamingAnalyticsProps
     return () => {
       audio?.pause()
     }
-  }, [artistId])
+  }, [artistId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load initial data after musoAiData is available
   useEffect(() => {
@@ -86,7 +86,7 @@ export default function StreamingAnalytics({ artistId }: StreamingAnalyticsProps
       fetchCollaborators(1)
       fetchAlbums(1)
     }
-  }, [musoAiData])
+  }, [musoAiData]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchStreamingData = async () => {
     setIsLoading(true)
@@ -1157,7 +1157,7 @@ export default function StreamingAnalytics({ artistId }: StreamingAnalyticsProps
             <h3 className="font-medium text-blue-900 dark:text-blue-100">Demo Data Active</h3>
           </div>
           <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-            You're viewing demonstration data for Marval's streaming analytics. 
+            You&apos;re viewing demonstration data for Marval&apos;s streaming analytics. 
             Connect your Spotify for Artists and Muso.AI accounts to see real data.
           </p>
         </div>

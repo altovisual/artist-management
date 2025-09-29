@@ -40,7 +40,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     fetchAnalyticsData()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchAnalyticsData = async () => {
     setIsLoading(true)
