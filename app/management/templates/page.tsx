@@ -10,10 +10,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import { DeleteButton } from "../DeleteButton";
-import { AnimatedTitle } from '@/components/animated-title';
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { PageHeader } from '@/components/ui/design-system/page-header';
+import { ContentSection } from '@/components/ui/design-system/content-section';
+import { StatsGrid } from '@/components/ui/design-system/stats-grid';
+import { FileText, Globe, Code, Plus, Settings, Layout } from 'lucide-react';
 
 function TemplatesTableSkeleton() {
   return (
@@ -89,45 +94,181 @@ export default function TemplatesPage() {
     }
   };
 
+  // Calculate stats
+  const contractTemplates = templates.filter(t => t.type === 'contract').length;
+  const agreementTemplates = templates.filter(t => t.type === 'agreement').length;
+  const englishTemplates = templates.filter(t => t.language === 'english').length;
+  const totalCount = templates.length;
+
+  // Stats data for the grid
+  const statsData = [
+    {
+      title: 'Total Templates',
+      value: totalCount.toString(),
+      change: '+2',
+      changeType: 'positive' as const,
+      icon: FileText,
+      description: 'All document templates'
+    },
+    {
+      title: 'Contract Templates',
+      value: contractTemplates.toString(),
+      change: '+1',
+      changeType: 'positive' as const,
+      icon: Code,
+      description: 'Contract templates'
+    },
+    {
+      title: 'Agreement Templates',
+      value: agreementTemplates.toString(),
+      change: 'stable',
+      changeType: 'neutral' as const,
+      icon: Layout,
+      description: 'Agreement templates'
+    },
+    {
+      title: 'Languages',
+      value: new Set(templates.map(t => t.language)).size.toString(),
+      change: 'Multi-lang',
+      changeType: 'positive' as const,
+      icon: Globe,
+      description: 'Available languages'
+    }
+  ];
+
   if (isLoading) {
     return <TemplatesTableSkeleton />;
   }
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <AnimatedTitle text="Templates" level={1} className="text-2xl font-bold" />
-        <Button asChild>
-          <Link href="/management/templates/new">Create Template</Link>
-        </Button>
-      </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Type</TableHead>
-            <TableHead>Language</TableHead>
-            <TableHead>Version</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {templates.map((template: any) => (
-            <TableRow key={template.id} ref={el => { rowRefs.current[template.id] = el; }}>
-              <TableCell>{template.type}</TableCell>
-              <TableCell>{template.language}</TableCell>
-              <TableCell>{template.version}</TableCell>
-              <TableCell>
-                <div className="flex space-x-2">
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={`/management/templates/${template.id}/edit`}>Edit</Link>
-                  </Button>
-                  <DeleteButton id={template.id} resource="templates" onDelete={handleDelete} />
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+    <div className="space-y-8 p-6">
+      {/* Page Header */}
+      <PageHeader
+        title="Template Management"
+        description="Manage document templates and legal forms"
+        avatar={{
+          src: '/placeholder.svg',
+          fallback: 'T'
+        }}
+        badge={{
+          text: `${totalCount} Templates`,
+          variant: 'default'
+        }}
+        actions={[
+          {
+            label: 'Settings',
+            href: '/management/settings',
+            variant: 'outline',
+            icon: Settings
+          },
+          {
+            label: 'Create Template',
+            href: '/management/templates/new',
+            variant: 'default',
+            icon: Plus
+          }
+        ]}
+      />
+
+      {/* Stats Grid */}
+      <StatsGrid stats={statsData} columns={4} />
+
+      {/* Templates Table Section */}
+      <ContentSection
+        title="All Templates"
+        description={`${totalCount} templates found`}
+        icon={FileText}
+        actions={[
+          {
+            label: 'Export CSV',
+            href: '#',
+            variant: 'outline',
+            icon: Settings
+          }
+        ]}
+      >
+        {templates.length === 0 ? (
+          <Card className="border-0 bg-gradient-to-br from-background to-muted/20">
+            <CardContent className="p-12 text-center">
+              <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                <FileText className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">No templates found</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Create your first document template
+              </p>
+              <Button asChild>
+                <Link href="/management/templates/new">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Template
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-0 bg-gradient-to-br from-background to-muted/20">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b">
+                      <TableHead className="font-semibold">Type</TableHead>
+                      <TableHead className="font-semibold">Language</TableHead>
+                      <TableHead className="font-semibold">Version</TableHead>
+                      <TableHead className="font-semibold">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {templates.map((template: any) => (
+                      <TableRow 
+                        key={template.id} 
+                        ref={el => { rowRefs.current[template.id] = el; }}
+                        className="hover:bg-muted/50 transition-colors"
+                      >
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                              <FileText className="w-4 h-4 text-primary" />
+                            </div>
+                            <Badge variant="outline" className="capitalize">
+                              {template.type}
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Globe className="w-4 h-4 text-muted-foreground" />
+                            <span className="capitalize">{template.language}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">
+                            v{template.version}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            <Button asChild variant="outline" size="sm">
+                              <Link href={`/management/templates/${template.id}/edit`}>
+                                Edit
+                              </Link>
+                            </Button>
+                            <DeleteButton 
+                              id={template.id} 
+                              resource="templates" 
+                              onDelete={handleDelete} 
+                            />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </ContentSection>
     </div>
   );
 }

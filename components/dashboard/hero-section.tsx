@@ -84,7 +84,7 @@ export function HeroSection({ userName, userRole, totalArtists, activeProjects }
                 </Link>
               </Button>
               <Button variant="outline" size="sm" asChild className="w-full xs:w-auto">
-                <Link href="/analytics">
+                <Link href="/dashboard/analytics">
                   <span className="hidden sm:inline">View Analytics</span>
                   <span className="sm:hidden">Analytics</span>
                 </Link>

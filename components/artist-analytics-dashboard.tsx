@@ -2,8 +2,8 @@
 'use client'
 
 import React, { Suspense, useEffect, useState } from 'react'
-import { AnalyticsContent } from '@/components/analytics-content'
-import { MusoAiAnalytics } from '@/components/muso-ai-analytics'
+import { AnalyticsContentRedesigned } from '@/components/analytics-content-redesigned'
+import { MusoAiAnalyticsRedesigned } from '@/components/muso-ai-analytics-redesigned'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
 import { AnalyticsSkeleton } from '@/components/analytics-skeleton'
@@ -81,7 +81,7 @@ export function ArtistAnalyticsDashboard({ artist }: ArtistAnalyticsDashboardPro
         <TabsContent value="spotify">
           <Suspense fallback={<AnalyticsSkeleton />}>
             {artist.spotify_artist_id ? (
-              <AnalyticsContent artistId={artist.spotify_artist_id} />
+              <AnalyticsContentRedesigned artistId={artist.spotify_artist_id} />
             ) : (
               <div className="text-center py-16">
                 <p className="text-muted-foreground">No Spotify Artist ID found for this artist.</p>
@@ -92,7 +92,7 @@ export function ArtistAnalyticsDashboard({ artist }: ArtistAnalyticsDashboardPro
         <TabsContent value="musoai">
           <Suspense fallback={<AnalyticsSkeleton />}>
             {artist.id ? (
-              <MusoAiAnalytics artistId={artist.id} />
+              <MusoAiAnalyticsRedesigned artistId={artist.id} />
             ) : (
               <div className="text-center py-16">
                 <p className="text-muted-foreground">No Artist Profile found in database.</p>

@@ -10,11 +10,13 @@ import '@/styles/calendar.css' // Your custom calendar styles
 import { createClient } from '@/lib/supabase/client'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import { Button } from '@/components/ui/button'
-import { PlusCircle } from 'lucide-react'
+import { PlusCircle, Calendar as CalendarIcon, Clock, Users } from 'lucide-react'
 import { EventModal } from '@/components/event-modal'
 import { CalendarToolbar } from '@/components/calendar-toolbar' // Import the custom toolbar
 import { CalendarSkeleton } from './calendar-skeleton' // Import the skeleton
-import { AnimatedTitle } from '@/components/animated-title'
+import { PageHeader } from '@/components/ui/design-system/page-header'
+import { ContentSection } from '@/components/ui/design-system/content-section'
+import { StatsGrid } from '@/components/ui/design-system/stats-grid'
 
 const locales = {
   'en-US': enUS,
@@ -48,6 +50,27 @@ export default function CalendarPage() {
   // State for calendar view and date
   const [currentView, setCurrentView] = useState<View>(Views.MONTH);
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  // Calculate stats from events
+  const getEventStats = () => {
+    const today = new Date()
+    const thisMonth = events.filter(event => {
+      const eventDate = new Date(event.start)
+      return eventDate.getMonth() === today.getMonth() && eventDate.getFullYear() === today.getFullYear()
+    })
+    
+    const upcoming = events.filter(event => new Date(event.start) > today)
+    const categories = [...new Set(events.map(event => event.resource?.category).filter(Boolean))]
+    
+    return {
+      total: events.length,
+      thisMonth: thisMonth.length,
+      upcoming: upcoming.length,
+      categories: categories.length
+    }
+  }
+
+  const stats = getEventStats()
 
   const fetchEvents = useCallback(async () => {
     setLoading(true)
@@ -97,52 +120,106 @@ export default function CalendarPage() {
     handleModalClose()
   }
 
+  const statsData = [
+    {
+      title: 'Total Events',
+      value: stats.total.toString(),
+      change: '+12.5%',
+      trend: 'up' as const,
+      icon: CalendarIcon,
+      description: 'All scheduled events'
+    },
+    {
+      title: 'This Month',
+      value: stats.thisMonth.toString(),
+      change: '+3',
+      trend: 'up' as const,
+      icon: Clock,
+      description: 'Events this month'
+    },
+    {
+      title: 'Upcoming',
+      value: stats.upcoming.toString(),
+      change: '+5',
+      trend: 'up' as const,
+      icon: Users,
+      description: 'Future events'
+    },
+    {
+      title: 'Categories',
+      value: stats.categories.toString(),
+      change: 'stable',
+      trend: 'stable' as const,
+      icon: CalendarIcon,
+      description: 'Event categories'
+    }
+  ]
+
   return (
     <DashboardLayout>
-      <div className="h-full flex flex-col gap-6 p-4 sm:p-6">
-        <header className="border-b bg-card">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex-grow text-center sm:text-left">
-                    <AnimatedTitle text="Calendar" level={1} className="text-2xl font-bold tracking-tight" />
-                    <p className="text-muted-foreground">View and manage all artist-related events.</p>
-                </div>
-                <Button className="flex items-center gap-2 w-full sm:w-auto" onClick={() => {
-                  setSelectedEvent(null)
-                  setInitialSlot(new Date())
-                  setIsModalOpen(true)
-                }}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Event
-                </Button>
-            </div>
-          </div>
-        </header>
-        <div className="flex-grow h-[75vh]">
+      <div className="space-y-8">
+        {/* Page Header */}
+        <PageHeader
+          title="Calendar"
+          description="View and manage all artist-related events"
+          avatar={{
+            src: '/placeholder.svg',
+            fallback: 'C'
+          }}
+          badge={{
+            text: `${stats.total} Events`,
+            variant: 'secondary' as const
+          }}
+          actions={[
+            {
+              label: 'Add Event',
+              onClick: () => {
+                setSelectedEvent(null)
+                setInitialSlot(new Date())
+                setIsModalOpen(true)
+              },
+              variant: 'default',
+              icon: PlusCircle
+            }
+          ]}
+        />
+
+        {/* Stats Grid */}
+        <StatsGrid stats={statsData} columns={4} />
+
+        {/* Calendar Section */}
+        <ContentSection
+          title="Event Calendar"
+          description="Interactive calendar view of all events"
+          icon={CalendarIcon}
+        >
+          <div className="h-[75vh] bg-card rounded-lg border p-4">
             {loading ? (
-                <CalendarSkeleton /> // Use the skeleton component
+              <CalendarSkeleton />
             ) : (
-                <Calendar
-                    localizer={localizer}
-                    events={events}
-                    startAccessor="start"
-                    endAccessor="end"
-                    style={{ height: '100%' }}
-                    views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
-                    onSelectEvent={handleSelectEvent}
-                    onSelectSlot={handleSelectSlot}
-                    selectable
-                    view={currentView}
-                    onView={setCurrentView}
-                    date={currentDate}
-                    onNavigate={setCurrentDate}
-                    components={{
-                      toolbar: CalendarToolbar,
-                    }}
-                />
+              <Calendar
+                localizer={localizer}
+                events={events}
+                startAccessor="start"
+                endAccessor="end"
+                style={{ height: '100%' }}
+                views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
+                onSelectEvent={handleSelectEvent}
+                onSelectSlot={handleSelectSlot}
+                selectable
+                view={currentView}
+                onView={setCurrentView}
+                date={currentDate}
+                onNavigate={setCurrentDate}
+                components={{
+                  toolbar: CalendarToolbar,
+                }}
+              />
             )}
-        </div>
+          </div>
+        </ContentSection>
       </div>
+
       <EventModal 
         isOpen={isModalOpen}
         onClose={handleModalClose}

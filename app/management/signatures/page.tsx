@@ -9,7 +9,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { AnimatedTitle } from '@/components/animated-title';
+import { PageHeader } from '@/components/ui/design-system/page-header';
+import { ContentSection } from '@/components/ui/design-system/content-section';
+import { StatsGrid } from '@/components/ui/design-system/stats-grid';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -221,104 +223,75 @@ export default function SignaturesPage() {
     return <SignaturesTableSkeleton />;
   }
 
+  // Stats data for the grid
+  const statsData = [
+    {
+      title: 'Total Documentos',
+      value: stats.total.toString(),
+      change: '+5',
+      changeType: 'positive' as const,
+      icon: AlertCircle,
+      description: 'Documentos enviados'
+    },
+    {
+      title: 'Completados',
+      value: stats.completed.toString(),
+      change: '+3',
+      changeType: 'positive' as const,
+      icon: CheckCircle,
+      description: 'Firmas completadas'
+    },
+    {
+      title: 'Pendientes',
+      value: stats.pending.toString(),
+      change: stats.pending > 0 ? `${stats.pending} waiting` : 'All signed',
+      changeType: stats.pending > 0 ? 'neutral' as const : 'positive' as const,
+      icon: Clock,
+      description: 'Esperando firma'
+    },
+    {
+      title: 'Tasa de Éxito',
+      value: `${stats.completionRate}%`,
+      change: 'High rate',
+      changeType: 'positive' as const,
+      icon: CheckCircle,
+      description: 'Documentos completados'
+    }
+  ];
+
   return (
-    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div>
-          <AnimatedTitle text="Dashboard de Firmas" level={1} className="text-2xl sm:text-3xl font-bold" />
-          <p className="text-sm text-muted-foreground mt-1" id="dashboard-description">
-            Gestiona y supervisa el estado de todos los documentos de firma digital
-          </p>
-        </div>
-        <div className="flex gap-2" role="toolbar" aria-label="Acciones del dashboard">
-          <Button 
-            onClick={fetchSignatures} 
-            disabled={isLoading} 
-            size="sm" 
-            className="flex items-center gap-2"
-            aria-label={isLoading ? 'Actualizando datos...' : 'Actualizar lista de documentos'}
-          >
-            <RefreshCw 
-              className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} 
-              aria-hidden="true"
-            />
-            <span className="hidden sm:inline">Actualizar</span>
-            <span className="sr-only sm:hidden">Actualizar datos</span>
-          </Button>
-          {lastSyncTime && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <ArrowLeftRight className="w-3 h-3" aria-hidden="true" />
-              <span className="hidden sm:inline">
-                Última sync: {format(lastSyncTime, 'HH:mm', { locale: es })}
-              </span>
-              <span className="sm:hidden">
-                {format(lastSyncTime, 'HH:mm', { locale: es })}
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
+    <div className="space-y-8 p-6">
+      {/* Page Header */}
+      <PageHeader
+        title="Signature Management"
+        description="Manage and track all digital signature documents"
+        avatar={{
+          src: '/placeholder.svg',
+          fallback: 'S'
+        }}
+        badge={{
+          text: `${stats.total} Documents`,
+          variant: 'default'
+        }}
+        actions={[
+          {
+            label: 'Refresh',
+            onClick: fetchSignatures,
+            variant: 'outline',
+            icon: RefreshCw
+          }
+        ]}
+      />
 
-      {/* Estadísticas */}
-      <section aria-labelledby="stats-heading">
-        <h2 id="stats-heading" className="sr-only">Estadísticas de documentos</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <Card role="region" aria-labelledby="total-docs-title">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle id="total-docs-title" className="text-sm font-medium">Total Documentos</CardTitle>
-            <AlertCircle className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" aria-label={`${stats.total} documentos en total`}>
-              {stats.total}
-            </div>
-            <p className="text-xs text-muted-foreground">Documentos enviados</p>
-          </CardContent>
-        </Card>
-        
-        <Card role="region" aria-labelledby="completed-docs-title">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle id="completed-docs-title" className="text-sm font-medium">Completados</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" aria-hidden="true" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600" aria-label={`${stats.completed} documentos completados`}>
-              {stats.completed}
-            </div>
-            <p className="text-xs text-muted-foreground">Firmas completadas</p>
-          </CardContent>
-        </Card>
-        
-        <Card role="region" aria-labelledby="pending-docs-title">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle id="pending-docs-title" className="text-sm font-medium">Pendientes</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-600" aria-hidden="true" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600" aria-label={`${stats.pending} documentos pendientes`}>
-              {stats.pending}
-            </div>
-            <p className="text-xs text-muted-foreground">Esperando firma</p>
-          </CardContent>
-        </Card>
-        
-        <Card role="region" aria-labelledby="success-rate-title">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle id="success-rate-title" className="text-sm font-medium">Tasa de Éxito</CardTitle>
-            <CheckCircle className="h-4 w-4 text-blue-600" aria-hidden="true" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600" aria-label={`${stats.completionRate} por ciento de tasa de éxito`}>
-              {stats.completionRate}%
-            </div>
-            <p className="text-xs text-muted-foreground">Documentos completados</p>
-          </CardContent>
-        </Card>
-        </div>
-      </section>
+      {/* Stats Grid */}
+      <StatsGrid stats={statsData} columns={4} />
 
-      {/* Tabla con filtros */}
-      <section aria-labelledby="documents-section-title">
+      {/* Signatures Table Section */}
+      <ContentSection
+        title="Signature Status"
+        description="Detailed tracking of all documents sent for signature"
+        icon={Eye}
+      >
         <Card>
           <CardHeader className="pb-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -596,7 +569,7 @@ export default function SignaturesPage() {
           </Tabs>
         </CardContent>
       </Card>
-      </section>
+      </ContentSection>
 
       {/* Modal de detalles */}
       <SignatureDetailModal

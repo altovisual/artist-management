@@ -202,7 +202,7 @@ export default function DashboardRedesigned() {
             },
             {
               label: "View Analytics",
-              href: "/analytics",
+              href: "/dashboard/analytics",
               variant: 'outline',
               icon: TrendingUp
             }
