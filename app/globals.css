@@ -49,6 +49,933 @@ select {
   min-height: -webkit-fill-available;
 }
 
+/* iOS Safari Glassmorphism Fixes */
+@supports (-webkit-backdrop-filter: blur(10px)) or (backdrop-filter: blur(10px)) {
+  .backdrop-blur-sm {
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+  
+  .backdrop-blur-md {
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+  
+  .backdrop-blur-lg {
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+  }
+}
+
+/* Fallback for iOS Safari without backdrop-filter support */
+@supports not ((-webkit-backdrop-filter: blur(10px)) or (backdrop-filter: blur(10px))) {
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur-lg {
+    background-color: rgba(255, 255, 255, 0.8);
+  }
+  
+  .dark .backdrop-blur-sm,
+  .dark .backdrop-blur-md,
+  .dark .backdrop-blur-lg {
+    background-color: rgba(0, 0, 0, 0.8);
+  }
+}
+
+/* iOS Safari specific gradient fixes */
+.bg-gradient-to-r,
+.bg-gradient-to-b,
+.bg-gradient-to-br {
+  -webkit-background-clip: padding-box;
+  background-clip: padding-box;
+}
+
+/* Force hardware acceleration for smoother animations on iOS */
+.transform,
+.transition-all,
+.transition-colors,
+.transition-transform {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-perspective: 1000px;
+  perspective: 1000px;
+}
+
+/* iOS Safari shadow fixes */
+.shadow-sm,
+.shadow-md,
+.shadow-lg,
+.shadow-xl,
+.shadow-2xl {
+  -webkit-box-shadow: var(--tw-shadow);
+  box-shadow: var(--tw-shadow);
+}
+
+/* iOS Safari specific card styling */
+.bg-card {
+  background-color: rgba(255, 255, 255, 0.95);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+}
+
+.dark .bg-card {
+  background-color: rgba(15, 15, 15, 0.95);
+}
+
+/* iOS Safari border fixes */
+.border {
+  border-width: 1px;
+  border-style: solid;
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.dark .border {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* iOS Safari gradient improvements */
+.bg-gradient-to-br {
+  background-image: linear-gradient(to bottom right, var(--tw-gradient-stops));
+  -webkit-background-size: 100% 100%;
+  background-size: 100% 100%;
+}
+
+/* iOS Safari text rendering */
+.text-foreground {
+  color: rgba(0, 0, 0, 0.9);
+}
+
+.dark .text-foreground {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.text-muted-foreground {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.dark .text-muted-foreground {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* iOS Safari rounded corners */
+.rounded-2xl {
+  border-radius: 1rem;
+  -webkit-border-radius: 1rem;
+}
+
+.rounded-lg {
+  border-radius: 0.5rem;
+  -webkit-border-radius: 0.5rem;
+}
+
+/* iOS Safari opacity fixes */
+.bg-primary\/10 {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.dark .bg-primary\/10 {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* iOS Safari specific fixes */
+.ios-safari .bg-gradient-to-br {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.05) 0%, rgba(0, 0, 0, 0.02) 50%, transparent 100%);
+}
+
+.ios-safari.dark .bg-gradient-to-br {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 50%, transparent 100%);
+}
+
+.ios-safari .backdrop-blur-sm {
+  background-color: rgba(255, 255, 255, 0.85);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.ios-safari.dark .backdrop-blur-sm {
+  background-color: rgba(15, 15, 15, 0.9);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.ios-safari .bg-card {
+  background-color: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.ios-safari.dark .bg-card {
+  background-color: rgba(15, 15, 15, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Force hardware acceleration on iOS */
+.ios-safari .transform,
+.ios-safari .transition-all,
+.ios-safari .hover\:shadow-md {
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* iOS Safari specific hero section fixes */
+.ios-safari .bg-gradient-to-br.from-primary\/10 {
+  background: linear-gradient(135deg, 
+    rgba(0, 0, 0, 0.08) 0%, 
+    rgba(0, 0, 0, 0.04) 30%, 
+    rgba(0, 0, 0, 0.02) 60%, 
+    transparent 100%
+  );
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.ios-safari.dark .bg-gradient-to-br.from-primary\/10 {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.08) 0%, 
+    rgba(255, 255, 255, 0.04) 30%, 
+    rgba(255, 255, 255, 0.02) 60%, 
+    transparent 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* iOS Safari blur effects fallback */
+.ios-safari .blur-3xl {
+  filter: blur(60px);
+  -webkit-filter: blur(60px);
+  opacity: 0.6;
+}
+
+/* iOS Safari card improvements */
+.ios-safari .shadow-sm {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  -webkit-box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.ios-safari .shadow-md {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  -webkit-box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* iOS Safari text improvements */
+.ios-safari .text-primary {
+  color: rgba(0, 0, 0, 0.8);
+}
+
+.ios-safari.dark .text-primary {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* iOS Safari button improvements */
+.ios-safari .bg-primary {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.ios-safari.dark .bg-primary {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Fix for transparent modals and sidebars */
+.ios-safari [role="dialog"],
+.ios-safari .fixed.inset-0,
+.ios-safari .bg-background {
+  background-color: rgba(255, 255, 255, 0.98) !important;
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+
+.ios-safari.dark [role="dialog"],
+.ios-safari.dark .fixed.inset-0,
+.ios-safari.dark .bg-background {
+  background-color: rgba(15, 15, 15, 0.98) !important;
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+
+/* Sidebar specific fixes */
+.ios-safari .bg-sidebar {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.ios-safari.dark .bg-sidebar {
+  background-color: rgba(15, 15, 15, 0.95) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Modal backdrop fixes */
+.ios-safari .bg-black\/80,
+.ios-safari .bg-background\/80 {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+.ios-safari.dark .bg-black\/80,
+.ios-safari.dark .bg-background\/80 {
+  background-color: rgba(0, 0, 0, 0.9) !important;
+}
+
+/* Dark mode improvements for iOS Safari - Higher specificity */
+html.ios-safari.dark,
+html.ios-safari.dark body,
+.ios-safari.dark,
+.ios-safari.dark body {
+  background-color: #0a0a0a !important;
+  color: #ffffff !important;
+}
+
+html.ios-safari.dark .bg-background,
+.ios-safari.dark .bg-background {
+  background-color: #0a0a0a !important;
+}
+
+html.ios-safari.dark .text-foreground,
+.ios-safari.dark .text-foreground {
+  color: #ffffff !important;
+}
+
+html.ios-safari.dark .text-muted-foreground,
+.ios-safari.dark .text-muted-foreground {
+  color: #a1a1aa !important;
+}
+
+html.ios-safari.dark .border,
+.ios-safari.dark .border {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Force dark mode styles for all iOS devices */
+html.dark.ios-safari,
+html.dark.ios-safari body,
+html.dark.ios-device,
+html.dark.ios-device body {
+  background-color: #0a0a0a !important;
+  color: #ffffff !important;
+}
+
+/* Button outline fixes for iOS Safari */
+.ios-safari .bg-transparent {
+  background-color: transparent !important;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.ios-safari.dark .bg-transparent {
+  background-color: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Stats card background fixes */
+.ios-safari .bg-white {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.ios-safari.dark .bg-white {
+  background-color: rgba(15, 15, 15, 0.95) !important;
+}
+
+/* Aggressive dark mode fixes for iOS Safari */
+html.dark body,
+html.dark,
+.dark body,
+.dark {
+  background-color: #0a0a0a !important;
+  color: #ffffff !important;
+}
+
+/* iOS specific overrides */
+@media screen and (-webkit-min-device-pixel-ratio: 2) {
+  html.dark,
+  html.dark body {
+    background-color: #0a0a0a !important;
+    color: #ffffff !important;
+  }
+  
+  .dark .bg-card,
+  .dark .bg-background {
+    background-color: rgba(15, 15, 15, 0.95) !important;
+  }
+  
+  .dark .text-foreground {
+    color: #ffffff !important;
+  }
+  
+  .dark .text-muted-foreground {
+    color: #a1a1aa !important;
+  }
+  
+  .dark .bg-primary {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+}
+
+/* iOS Safari rounded corners enhancement */
+.ios-safari .rounded-2xl {
+  border-radius: 16px;
+  -webkit-border-radius: 16px;
+}
+
+.ios-safari .rounded-lg {
+  border-radius: 12px;
+  -webkit-border-radius: 12px;
+}
+
+/* iPhone Native Layout System */
+.ios-safari .space-y-4 > * + * {
+  margin-top: 16px !important;
+}
+
+.ios-safari .space-y-6 > * + * {
+  margin-top: 24px !important;
+}
+
+.ios-safari .space-y-8 > * + * {
+  margin-top: 32px !important;
+}
+
+/* iPhone Native Padding System */
+.ios-safari .p-4 {
+  padding: 16px !important;
+}
+
+.ios-safari .p-6 {
+  padding: 20px !important;
+}
+
+.ios-safari .px-4 {
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+}
+
+.ios-safari .py-4 {
+  padding-top: 16px !important;
+  padding-bottom: 16px !important;
+}
+
+/* iPhone Native Grid System */
+.ios-safari .grid-cols-2 {
+  grid-template-columns: 1fr 1fr !important;
+  gap: 12px !important;
+}
+
+.ios-safari .grid-cols-3 {
+  grid-template-columns: 1fr 1fr 1fr !important;
+  gap: 12px !important;
+}
+
+.ios-safari .grid-cols-4 {
+  grid-template-columns: 1fr 1fr !important;
+  gap: 12px !important;
+}
+
+/* iPhone Native Card System */
+.ios-safari .bg-card {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  margin-bottom: 12px !important;
+}
+
+.ios-safari.dark .bg-card {
+  background-color: rgba(28, 28, 30, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* iPhone Native Typography */
+.ios-safari .text-xl {
+  font-size: 20px !important;
+  line-height: 24px !important;
+  font-weight: 600 !important;
+}
+
+.ios-safari .text-lg {
+  font-size: 18px !important;
+  line-height: 22px !important;
+  font-weight: 500 !important;
+}
+
+.ios-safari .text-base {
+  font-size: 16px !important;
+  line-height: 20px !important;
+}
+
+.ios-safari .text-sm {
+  font-size: 14px !important;
+  line-height: 18px !important;
+}
+
+/* iPhone Native Button System */
+.ios-safari .min-h-\[44px\],
+.ios-safari button {
+  min-height: 44px !important;
+  border-radius: 10px !important;
+  font-weight: 500 !important;
+  font-size: 16px !important;
+}
+
+/* iPhone Native Container System */
+.ios-safari .container,
+.ios-safari .max-w-7xl,
+.ios-safari .max-w-6xl,
+.ios-safari .max-w-5xl {
+  max-width: 100% !important;
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+}
+
+/* iPhone Safe Area */
+.ios-safari body {
+  padding-top: env(safe-area-inset-top) !important;
+  padding-bottom: env(safe-area-inset-bottom) !important;
+  padding-left: env(safe-area-inset-left) !important;
+  padding-right: env(safe-area-inset-right) !important;
+}
+
+/* iPhone Native List Items */
+.ios-safari .space-y-3 > * + * {
+  margin-top: 12px !important;
+}
+
+.ios-safari .gap-3 {
+  gap: 12px !important;
+}
+
+.ios-safari .gap-2 {
+  gap: 8px !important;
+}
+
+/* iPhone Native Shadows */
+.ios-safari .shadow-sm {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.ios-safari .shadow-md {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.ios-safari.dark .shadow-sm {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+.ios-safari.dark .shadow-md {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* iPhone Native Borders */
+.ios-safari .border {
+  border-width: 0.5px !important;
+  border-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+.ios-safari.dark .border {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* iPhone Native Avatar System */
+.ios-safari .h-10.w-10 {
+  height: 40px !important;
+  width: 40px !important;
+}
+
+.ios-safari .h-12.w-12 {
+  height: 48px !important;
+  width: 48px !important;
+}
+
+/* iPhone Native Badge System */
+.ios-safari .badge,
+.ios-safari [class*="badge"] {
+  padding: 4px 8px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  border-radius: 6px !important;
+}
+
+/* iPhone Native Backdrop Blur */
+.ios-safari .backdrop-blur-sm {
+  -webkit-backdrop-filter: blur(8px) saturate(180%) !important;
+  backdrop-filter: blur(8px) saturate(180%) !important;
+}
+
+/* Management Area Native iPhone Improvements */
+.ios-safari [data-page="management"] .space-y-6 > * + * {
+  margin-top: 24px !important;
+}
+
+.ios-safari [data-page="management"] .p-6 {
+  padding: 20px !important;
+}
+
+.ios-safari [data-page="management"] .p-4 {
+  padding: 16px !important;
+}
+
+.ios-safari [data-page="management"] .rounded-xl {
+  border-radius: 12px !important;
+}
+
+/* Native iPhone Tab Navigation */
+.ios-safari .grid-cols-4 {
+  grid-template-columns: 1fr 1fr 1fr 1fr !important;
+  gap: 4px !important;
+}
+
+/* Native iPhone Cards in Management */
+.ios-safari [data-page="management"] .bg-background {
+  background-color: rgba(255, 255, 255, 0.98) !important;
+}
+
+.ios-safari.dark [data-page="management"] .bg-background {
+  background-color: rgba(28, 28, 30, 0.98) !important;
+}
+
+/* Native iPhone Sticky Navigation */
+.ios-safari .sticky {
+  position: -webkit-sticky !important;
+  position: sticky !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+}
+
+/* Native iPhone Dropdown/Select Styling - Enhanced for iOS */
+[data-radix-select-content] {
+  background-color: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.15) !important;
+  padding: 8px !important;
+}
+
+.dark [data-radix-select-content] {
+  background-color: rgba(28, 28, 30, 0.98) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 4px 10px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* iOS Safari Specific Overrides */
+.ios-safari [data-radix-select-content] {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 2px solid rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+.ios-safari.dark [data-radix-select-content] {
+  background-color: #1c1c1e !important;
+  background: #1c1c1e !important;
+  border: 2px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+.ios-safari [data-radix-select-item] {
+  border-radius: 8px !important;
+  padding: 12px 16px !important;
+  margin: 2px 0 !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+.ios-safari [data-radix-select-item]:hover,
+.ios-safari [data-radix-select-item][data-highlighted] {
+  background-color: rgba(0, 122, 255, 0.1) !important;
+  color: #007AFF !important;
+}
+
+.ios-safari.dark [data-radix-select-item]:hover,
+.ios-safari.dark [data-radix-select-item][data-highlighted] {
+  background-color: rgba(10, 132, 255, 0.2) !important;
+  color: #0A84FF !important;
+}
+
+/* Enhanced Select Triggers for all devices */
+[data-radix-select-trigger] {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  border-radius: 10px !important;
+  padding: 12px 16px !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  min-height: 44px !important;
+  transition: all 0.2s ease !important;
+}
+
+.dark [data-radix-select-trigger] {
+  background-color: rgba(28, 28, 30, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+}
+
+/* iOS Safari Specific Trigger Overrides */
+.ios-safari [data-radix-select-trigger] {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 2px solid rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.ios-safari.dark [data-radix-select-trigger] {
+  background-color: #1c1c1e !important;
+  background: #1c1c1e !important;
+  border: 2px solid rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+.ios-safari [data-radix-select-trigger]:focus {
+  border-color: #007AFF !important;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2) !important;
+  outline: none !important;
+}
+
+.ios-safari.dark [data-radix-select-trigger]:focus {
+  border-color: #0A84FF !important;
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.3) !important;
+}
+
+/* Enhanced Input Styling for all devices */
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="password"],
+textarea {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  border-radius: 10px !important;
+  padding: 12px 16px !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  min-height: 44px !important;
+  transition: all 0.2s ease !important;
+}
+
+.dark input[type="text"],
+.dark input[type="email"],
+.dark input[type="tel"],
+.dark input[type="password"],
+.dark textarea {
+  background-color: rgba(28, 28, 30, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+}
+
+/* iOS Safari Specific Input Overrides */
+.ios-safari input[type="text"],
+.ios-safari input[type="email"],
+.ios-safari input[type="tel"],
+.ios-safari input[type="password"],
+.ios-safari textarea {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 2px solid rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+}
+
+.ios-safari.dark input[type="text"],
+.ios-safari.dark input[type="email"],
+.ios-safari.dark input[type="tel"],
+.ios-safari.dark input[type="password"],
+.ios-safari.dark textarea {
+  background-color: #1c1c1e !important;
+  background: #1c1c1e !important;
+  border: 2px solid rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+.ios-safari input:focus,
+.ios-safari textarea:focus {
+  border-color: #007AFF !important;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2) !important;
+  outline: none !important;
+}
+
+.ios-safari.dark input:focus,
+.ios-safari.dark textarea:focus {
+  border-color: #0A84FF !important;
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.3) !important;
+}
+
+/* Native iPhone Dropdown Menu Styling */
+.ios-safari [data-radix-dropdown-menu-content] {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1) !important;
+  padding: 8px !important;
+}
+
+.ios-safari.dark [data-radix-dropdown-menu-content] {
+  background-color: rgba(28, 28, 30, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 4px 10px rgba(0, 0, 0, 0.3) !important;
+}
+
+.ios-safari [data-radix-dropdown-menu-item] {
+  border-radius: 8px !important;
+  padding: 12px 16px !important;
+  margin: 2px 0 !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+.ios-safari [data-radix-dropdown-menu-item]:hover,
+.ios-safari [data-radix-dropdown-menu-item][data-highlighted] {
+  background-color: rgba(0, 122, 255, 0.1) !important;
+  color: #007AFF !important;
+}
+
+.ios-safari.dark [data-radix-dropdown-menu-item]:hover,
+.ios-safari.dark [data-radix-dropdown-menu-item][data-highlighted] {
+  background-color: rgba(10, 132, 255, 0.2) !important;
+  color: #0A84FF !important;
+}
+
+/* Native iPhone Popover Styling */
+.ios-safari [data-radix-popover-content] {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1) !important;
+  padding: 16px !important;
+}
+
+.ios-safari.dark [data-radix-popover-content] {
+  background-color: rgba(28, 28, 30, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 4px 10px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Native iPhone Modal/Dialog Styling */
+.ios-safari [data-radix-dialog-content] {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2), 0 8px 16px rgba(0, 0, 0, 0.1) !important;
+}
+
+.ios-safari.dark [data-radix-dialog-content] {
+  background-color: rgba(28, 28, 30, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 8px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Native iPhone Sheet Animation */
+.ios-safari [data-radix-dialog-content][data-state="open"] {
+  animation: slideUpAndFade 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+@keyframes slideUpAndFade {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* Native iPhone Tabs Styling */
+.ios-safari [data-radix-tabs-list] {
+  background-color: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  border-radius: 10px !important;
+  padding: 4px !important;
+}
+
+.ios-safari.dark [data-radix-tabs-list] {
+  background-color: rgba(28, 28, 30, 0.7) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.ios-safari [data-radix-tabs-trigger] {
+  background-color: transparent !important;
+  border-radius: 6px !important;
+  padding: 8px 16px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  border: none !important;
+}
+
+.ios-safari [data-radix-tabs-trigger][data-state="active"] {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  color: #000000 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.ios-safari.dark [data-radix-tabs-trigger][data-state="active"] {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Native iPhone Command Palette Styling */
+.ios-safari [cmdk-root] {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1) !important;
+}
+
+.ios-safari.dark [cmdk-root] {
+  background-color: rgba(28, 28, 30, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 4px 10px rgba(0, 0, 0, 0.3) !important;
+}
+
+.ios-safari [cmdk-item] {
+  border-radius: 8px !important;
+  padding: 12px 16px !important;
+  margin: 2px 0 !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+}
+
+.ios-safari [cmdk-item][data-selected="true"] {
+  background-color: rgba(0, 122, 255, 0.1) !important;
+  color: #007AFF !important;
+}
+
+.ios-safari.dark [cmdk-item][data-selected="true"] {
+  background-color: rgba(10, 132, 255, 0.2) !important;
+  color: #0A84FF !important;
+}
+
 /* Ensure proper button sizing on iOS */
 button {
   -webkit-appearance: none;

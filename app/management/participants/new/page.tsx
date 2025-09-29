@@ -303,11 +303,34 @@ export default function NewParticipantPage() {
   }
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Create Participant</h1>
+    <div className="space-y-6">
+      {/* Native iPhone Header */}
+      <div className="bg-card border rounded-xl shadow-sm backdrop-blur-sm p-6 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-primary/2 to-transparent" />
+        
+        <div className="relative">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center">
+                <span className="text-primary font-semibold text-lg">+</span>
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-bold text-foreground mb-1">
+                Create New Participant
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Add a new participant to your management system
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      {/* Native iPhone Form Container */}
+      <div className="bg-card border rounded-xl shadow-sm backdrop-blur-sm p-6">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <FormField
             control={form.control}
             name="user_id"
@@ -382,18 +405,25 @@ export default function NewParticipantPage() {
             )}
           />
 
-          <div className="p-4 border rounded-md bg-muted/20">
-            <div className="mb-2">
-              <h3 className="text-sm font-medium">Identity Verification (Optional)</h3>
-              <p className="text-sm text-muted-foreground">Don&apos;t worry, you can always change these settings later in the participant&apos;s profile.</p>
-              <p className="text-sm text-muted-foreground">You can verify the participant&apos;s identity with Auco, but it&apos;s not required to create the participant.</p>
+          {/* Native iPhone Verification Section */}
+          <div className="bg-muted/30 border rounded-xl p-6">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-foreground mb-2">Identity Verification (Optional)</h3>
+              <p className="text-sm text-muted-foreground mb-1">
+                Verification is optional. Participants can be created without identity verification.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                You can always verify identity later in the participant&apos;s profile.
+              </p>
             </div>
-            <div className="flex items-start space-x-4">
+
+            {/* Responsive Grid for Verification Fields */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
               <FormField
                 control={form.control}
                 name="country"
                 render={({ field }) => (
-                  <FormItem className="w-1/4">
+                  <FormItem>
                     <FormLabel>Country Code</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g., ES, CO" {...field} />
@@ -406,12 +436,12 @@ export default function NewParticipantPage() {
                 control={form.control}
                 name="document_type"
                 render={({ field }) => (
-                  <FormItem className="w-1/4">
+                  <FormItem>
                     <FormLabel>Document Type</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a document type" />
+                          <SelectValue placeholder="Select document type" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -428,7 +458,7 @@ export default function NewParticipantPage() {
                 control={form.control}
                 name="id_number"
                 render={({ field }) => (
-                  <FormItem className="flex-grow">
+                  <FormItem>
                     <FormLabel>ID Number</FormLabel>
                     <FormControl>
                       <Input placeholder="Identification number" {...field} />
@@ -439,12 +469,13 @@ export default function NewParticipantPage() {
               />
             </div>
 
-            <div className="flex items-end space-x-4 mt-4">
+            {/* Phone and Verification Button */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
               <FormField
                 control={form.control}
                 name="phone"
                 render={({ field }) => (
-                  <FormItem className="w-1/3">
+                  <FormItem>
                     <FormLabel>Phone (with country code)</FormLabel>
                     <FormControl>
                       <Input placeholder="+573003003030" {...field} />
@@ -453,33 +484,39 @@ export default function NewParticipantPage() {
                   </FormItem>
                 )}
               />
-              <div className="flex-grow" />
-              <Button
-                type="button"
-                onClick={handleVerification}
-                disabled={isVerifying || verificationStatus === 'verified' || isVerificationDisabled}
-                variant="outline"
-              >
-                {isVerifying ? 'Verifying...' : 'Verify Identity (Optional)'}
-              </Button>
-              {verificationStatus && (
-                <Badge
-                  variant={
-                    verificationStatus === 'verified'
-                      ? 'default'
-                      : verificationStatus === 'pending'
-                      ? 'secondary'
-                      : verificationStatus === 'error'
-                      ? 'destructive'
-                      : 'outline'
-                  }
+              <div className="flex flex-col sm:flex-row gap-2 items-end">
+                <Button
+                  type="button"
+                  onClick={handleVerification}
+                  disabled={isVerifying || verificationStatus === 'verified' || isVerificationDisabled}
+                  variant="outline"
+                  className="w-full sm:w-auto"
                 >
-                  {verificationStatus}
-                </Badge>
-              )}
+                  {isVerifying ? 'Verifying...' : 'Verify Identity (Optional)'}
+                </Button>
+                {verificationStatus && (
+                  <Badge
+                    variant={
+                      verificationStatus === 'verified'
+                        ? 'default'
+                        : verificationStatus === 'pending'
+                        ? 'secondary'
+                        : verificationStatus === 'error'
+                        ? 'destructive'
+                        : 'outline'
+                    }
+                  >
+                    {verificationStatus}
+                  </Badge>
+                )}
+              </div>
             </div>
 
-            {isVerifying && <div id="auco-sdk-container" className="w-full h-[500px] mt-4 rounded-md border" />}
+            {isVerifying && (
+              <div className="mt-4">
+                <div id="auco-sdk-container" className="w-full h-[500px] rounded-xl border bg-background" />
+              </div>
+            )}
           </div>
 
           <FormField
@@ -507,91 +544,105 @@ export default function NewParticipantPage() {
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="address"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Address</FormLabel>
-                <FormControl>
-                  <Input placeholder="Participant's address" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* Additional Information Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Address</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Participant's address" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="bank_info"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Bank Info</FormLabel>
-                <FormControl>
-                  <Input placeholder="Bank account details" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="bank_info"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bank Info</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Bank account details" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="management_entity"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Management Entity</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g., PRO, publisher" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="management_entity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Management Entity</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., PRO, publisher" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="ipi"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>IPI</FormLabel>
-                <FormControl>
-                  <Input placeholder="IPI number" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="ipi"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>IPI</FormLabel>
+                  <FormControl>
+                    <Input placeholder="IPI number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-          <div className="flex gap-4">
-            <Button type="submit">
-              Create Participant
-            </Button>
-            <Button 
-              type="button"
-              variant="outline"
-              onClick={() => {
-                const values = form.getValues();
-                const cleanedValues = Object.fromEntries(
-                  Object.entries(values).map(([key, value]) => [
-                    key, 
-                    value === '' ? null : value
-                  ])
-                );
-                // Force create without user_id
-                onSubmit({ ...cleanedValues, user_id: null });
-              }}
-            >
-              Create Without Link
-            </Button>
-            {verificationStatus !== 'verified' && (
-              <p className="text-sm text-muted-foreground flex items-center">
-                ℹ️ Verification is optional. Participants can be created without identity verification.
-              </p>
-            )}
+          {/* Native iPhone Action Buttons */}
+          <div className="bg-muted/30 border rounded-xl p-6">
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button type="submit" className="flex-1">
+                  Create Participant
+                </Button>
+                <Button 
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    const values = form.getValues();
+                    const cleanedValues = Object.fromEntries(
+                      Object.entries(values).map(([key, value]) => [
+                        key, 
+                        value === '' ? null : value
+                      ])
+                    );
+                    // Force create without user_id
+                    onSubmit({ ...cleanedValues, user_id: null });
+                  }}
+                >
+                  Create Without Link
+                </Button>
+              </div>
+              
+              {verificationStatus !== 'verified' && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                  <p className="text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                    <span className="text-blue-500">ℹ️</span>
+                    Verification is optional. Participants can be created without identity verification.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </form>
       </Form>
+      </div>
     </div>
   );
 }

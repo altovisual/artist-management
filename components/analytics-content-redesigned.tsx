@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { CheckCircle, XCircle, Loader2, Users, Music, Disc, Star, PlayCircle, Pause, ExternalLink, TrendingUp, Calendar, Clock, Hash, ChevronUp, ChevronDown } from 'lucide-react'
+import { CheckCircle, XCircle, Loader2, Users, Music, Disc, Star, PlayCircle, Pause, ExternalLink, TrendingUp, Calendar, Clock, Hash, ChevronUp, ChevronDown, X, Shuffle, SkipBack, SkipForward, Repeat } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { createClient } from '@/lib/supabase/client'
 import Image from 'next/image'
@@ -28,7 +28,13 @@ interface ArtistProfile {
 interface TopTrack {
   id: string;
   name: string;
-  album: { name: string; images: { url: string }[] };
+  album: { 
+    name: string; 
+    images: { url: string }[];
+    release_date?: string;
+    album_type?: string;
+    total_tracks?: number;
+  };
   external_urls: { spotify: string };
   popularity: number;
   artists: { name: string }[];
@@ -71,6 +77,8 @@ export const AnalyticsContentRedesigned = ({ artistId }: AnalyticsContentProps) 
   const [showAllReleases, setShowAllReleases] = useState(false)
   const [selectedSpotifyTrack, setSelectedSpotifyTrack] = useState<TopTrack | null>(null)
   const [isSpotifyModalOpen, setIsSpotifyModalOpen] = useState(false)
+  const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null)
+  const [isAlbumModalOpen, setIsAlbumModalOpen] = useState(false)
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -318,6 +326,11 @@ export const AnalyticsContentRedesigned = ({ artistId }: AnalyticsContentProps) 
   const handleSpotifyTrackClick = (track: TopTrack) => {
     setSelectedSpotifyTrack(track)
     setIsSpotifyModalOpen(true)
+  }
+
+  const handleAlbumClick = (album: Album) => {
+    setSelectedAlbum(album)
+    setIsAlbumModalOpen(true)
   }
 
   const renderStatusAlert = () => {
@@ -769,7 +782,11 @@ export const AnalyticsContentRedesigned = ({ artistId }: AnalyticsContentProps) 
           <div className="space-y-4">
             {/* Albums List */}
             {(showAllAlbums ? albums : albums.slice(0, 4)).map((album) => (
-              <Card key={album.id} className="group hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-r from-background to-muted/10">
+              <Card 
+                key={album.id} 
+                className="group hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-r from-background to-muted/10 cursor-pointer"
+                onClick={() => handleAlbumClick(album)}
+              >
                 <CardContent className="p-6">
                   <div className="flex items-center gap-6">
                     {/* Album Cover */}
@@ -981,135 +998,328 @@ export const AnalyticsContentRedesigned = ({ artistId }: AnalyticsContentProps) 
         </div>
       </ContentSection>
 
-      {/* Spotify Track Modal */}
+      {/* Spotify Track Modal - Estilo Spotify Now Playing */}
       <Dialog open={isSpotifyModalOpen} onOpenChange={setIsSpotifyModalOpen}>
-        <DialogContent className="max-w-2xl w-[95vw] max-h-[95vh] overflow-y-auto p-0 bg-gradient-to-br from-green-900 to-black text-white">
-          <DialogHeader className="p-6 pb-4 border-b border-green-700/50">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                <Music className="w-5 h-5" />
+        <DialogContent className="max-w-md w-[95vw] h-[90vh] p-0 bg-black border-none overflow-hidden [&>button]:hidden">
+          <DialogTitle className="sr-only">
+            Now Playing: {selectedSpotifyTrack?.name || 'Track'}
+          </DialogTitle>
+          {selectedSpotifyTrack && (
+            <div className="relative w-full h-full">
+              {/* Background Image with Overlay */}
+              <div className="absolute inset-0">
+                <Image
+                  src={selectedSpotifyTrack.album?.images?.[0]?.url || '/placeholder.svg'}
+                  alt={selectedSpotifyTrack.album?.name || 'Album cover'}
+                  fill
+                  className="object-cover"
+                />
+                {/* Gradient Overlays */}
+                <div className="absolute inset-0 bg-gradient-to-b from-teal-900/60 via-teal-800/70 to-black/95" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
               </div>
-              <div>
-                <DialogTitle className="text-xl font-bold text-white">Now Playing</DialogTitle>
-                <DialogDescription className="text-green-200">
-                  Spotify Track Details
-                </DialogDescription>
+
+              {/* Content Overlay */}
+              <div className="relative h-full flex flex-col justify-between p-6 text-white">
+                {/* Top Section */}
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs text-gray-300 uppercase tracking-widest mb-1">Playing from Artist</p>
+                    <p className="text-sm text-white font-medium">
+                      {selectedSpotifyTrack.artists?.[0]?.name || 'Artist'}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-white hover:bg-white/10"
+                    onClick={() => setIsSpotifyModalOpen(false)}
+                  >
+                    <X className="w-6 h-6" />
+                  </Button>
+                </div>
+
+                {/* Bottom Section - Player Controls */}
+                <div className="space-y-6">
+                  {/* Track Info */}
+                  <div className="space-y-3">
+                    <h2 className="text-3xl font-bold text-white drop-shadow-lg">
+                      {selectedSpotifyTrack.name}
+                    </h2>
+                    <p className="text-base text-gray-200">
+                      {selectedSpotifyTrack.artists?.map(artist => artist.name).join(', ')}
+                    </p>
+                    
+                    {/* Additional Info */}
+                    <div className="flex flex-wrap gap-3 text-xs text-gray-300">
+                      {selectedSpotifyTrack.album?.name && (
+                        <div className="flex items-center gap-1">
+                          <Disc className="w-3 h-3" />
+                          <span>{selectedSpotifyTrack.album.name}</span>
+                        </div>
+                      )}
+                      {selectedSpotifyTrack.album?.release_date && (
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          <span>{new Date(selectedSpotifyTrack.album.release_date).getFullYear()}</span>
+                        </div>
+                      )}
+                      {selectedSpotifyTrack.popularity !== undefined && (
+                        <div className="flex items-center gap-1">
+                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                          <span>{selectedSpotifyTrack.popularity}/100</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  {selectedSpotifyTrack.duration_ms && (
+                    <div className="space-y-2">
+                      <Progress 
+                        value={50} 
+                        className="h-1 bg-white/30" 
+                      />
+                      <div className="flex justify-between text-xs text-gray-300">
+                        <span>0:00</span>
+                        <span>{formatDuration(selectedSpotifyTrack.duration_ms)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Player Controls */}
+                  <div className="flex items-center justify-between">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-white hover:bg-white/10"
+                    >
+                      <Shuffle className="w-5 h-5" />
+                    </Button>
+
+                    <div className="flex items-center gap-4">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-white hover:bg-white/10"
+                      >
+                        <SkipBack className="w-7 h-7" />
+                      </Button>
+
+                      <Button
+                        size="icon"
+                        className="w-16 h-16 rounded-full bg-white hover:bg-gray-200 text-black shadow-xl"
+                        onClick={() => handlePlayPreview(selectedSpotifyTrack)}
+                        disabled={!selectedSpotifyTrack.preview_url}
+                      >
+                        {currentlyPlaying === selectedSpotifyTrack.id ? (
+                          <Pause className="w-8 h-8" />
+                        ) : (
+                          <PlayCircle className="w-8 h-8" />
+                        )}
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-white hover:bg-white/10"
+                      >
+                        <SkipForward className="w-7 h-7" />
+                      </Button>
+                    </div>
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-white hover:bg-white/10"
+                    >
+                      <Repeat className="w-5 h-5" />
+                    </Button>
+                  </div>
+
+                  {/* Additional Track Details */}
+                  <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/10">
+                    {selectedSpotifyTrack.album?.album_type && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-gray-400 uppercase tracking-wide">Album Type</p>
+                        <p className="text-sm text-white font-medium capitalize">{selectedSpotifyTrack.album.album_type}</p>
+                      </div>
+                    )}
+                    {selectedSpotifyTrack.album?.total_tracks && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-gray-400 uppercase tracking-wide">Total Tracks</p>
+                        <p className="text-sm text-white font-medium">{selectedSpotifyTrack.album.total_tracks} tracks</p>
+                      </div>
+                    )}
+                    {selectedSpotifyTrack.duration_ms && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-gray-400 uppercase tracking-wide">Duration</p>
+                        <p className="text-sm text-white font-medium">{formatDuration(selectedSpotifyTrack.duration_ms)}</p>
+                      </div>
+                    )}
+                    {selectedSpotifyTrack.popularity !== undefined && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-gray-400 uppercase tracking-wide">Popularity</p>
+                        <div className="flex items-center gap-2">
+                          <Progress value={selectedSpotifyTrack.popularity} className="h-1.5 bg-white/20 flex-1" />
+                          <span className="text-sm text-white font-medium">{selectedSpotifyTrack.popularity}%</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Bottom Actions */}
+                  <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white hover:bg-white/10"
+                      asChild
+                    >
+                      <a
+                        href={selectedSpotifyTrack.external_urls?.spotify || '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Open in Spotify
+                      </a>
+                    </Button>
+                    
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-[#1DB954] rounded-full flex items-center justify-center">
+                        <Music className="w-4 h-4 text-black" />
+                      </div>
+                      <span className="text-xs font-semibold">Spotify</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </DialogHeader>
-          
-          {selectedSpotifyTrack && (
-            <div className="p-6">
-              {/* Hero Section */}
-              <div className="flex flex-col items-center text-center space-y-6 mb-8">
-                {/* Large Album Cover */}
-                <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-2xl overflow-hidden shadow-2xl">
-                  <Image
-                    src={selectedSpotifyTrack.album?.images?.[0]?.url || '/placeholder.svg'}
-                    alt={selectedSpotifyTrack.album?.name || 'Album cover'}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                
-                {/* Track Info */}
-                <div className="space-y-2 max-w-md">
-                  <h2 className="text-3xl sm:text-4xl font-bold text-white leading-tight">
-                    {selectedSpotifyTrack.name}
-                  </h2>
-                  <p className="text-xl text-green-200">
-                    {selectedSpotifyTrack.artists?.map(artist => artist.name).join(', ')}
-                  </p>
-                  <p className="text-lg text-green-300">
-                    {selectedSpotifyTrack.album?.name}
-                  </p>
-                </div>
-                
-                {/* Large Play Button */}
-                <Button
-                  size="lg"
-                  className="bg-green-500 hover:bg-green-400 text-black px-12 py-4 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 text-lg font-bold"
-                  onClick={() => handlePlayPreview(selectedSpotifyTrack)}
-                  disabled={!selectedSpotifyTrack.preview_url}
-                >
-                  {currentlyPlaying === selectedSpotifyTrack.id ? (
-                    <>
-                      <Pause className="w-6 h-6 mr-3" />
-                      Pause Preview
-                    </>
-                  ) : (
-                    <>
-                      <PlayCircle className="w-6 h-6 mr-3" />
-                      {selectedSpotifyTrack.preview_url ? 'Play Preview' : 'No Preview Available'}
-                    </>
-                  )}
-                </Button>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Album Modal - Estilo Spotify */}
+      <Dialog open={isAlbumModalOpen} onOpenChange={setIsAlbumModalOpen}>
+        <DialogContent className="max-w-md w-[95vw] h-[90vh] p-0 bg-black border-none overflow-hidden [&>button]:hidden">
+          <DialogTitle className="sr-only">
+            Album: {selectedAlbum?.name || 'Album'}
+          </DialogTitle>
+          {selectedAlbum && (
+            <div className="relative w-full h-full">
+              {/* Background Image with Overlay */}
+              <div className="absolute inset-0">
+                <Image
+                  src={selectedAlbum.images?.[0]?.url || '/placeholder.svg'}
+                  alt={selectedAlbum.name}
+                  fill
+                  className="object-cover"
+                />
+                {/* Gradient Overlays */}
+                <div className="absolute inset-0 bg-gradient-to-b from-purple-900/60 via-purple-800/70 to-black/95" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
               </div>
 
-              {/* Stats Cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
-                <Card className="p-4 text-center bg-green-800/30 border-green-600/50">
-                  <div className="text-2xl font-bold text-green-400 mb-1">
-                    {selectedSpotifyTrack.popularity}
+              {/* Content Overlay */}
+              <div className="relative h-full flex flex-col justify-between p-6 text-white">
+                {/* Top Section */}
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs text-gray-300 uppercase tracking-widest mb-1">Album</p>
+                    <p className="text-sm text-white font-medium capitalize">
+                      {selectedAlbum.album_type}
+                    </p>
                   </div>
-                  <div className="text-xs text-green-200 font-medium">Popularity</div>
-                </Card>
-                
-                {selectedSpotifyTrack.duration_ms && (
-                  <Card className="p-4 text-center bg-green-800/30 border-green-600/50">
-                    <div className="text-2xl font-bold text-green-400 mb-1">
-                      {formatDuration(selectedSpotifyTrack.duration_ms)}
-                    </div>
-                    <div className="text-xs text-green-200 font-medium">Duration</div>
-                  </Card>
-                )}
-                
-                <Card className="p-4 text-center bg-green-800/30 border-green-600/50">
-                  <div className="text-2xl font-bold text-green-400 mb-1">
-                    {new Date().getFullYear()}
-                  </div>
-                  <div className="text-xs text-green-200 font-medium">Year</div>
-                </Card>
-              </div>
-
-              {/* Progress Bar */}
-              {selectedSpotifyTrack.popularity && (
-                <div className="mb-8">
-                  <div className="flex justify-between mb-2">
-                    <span className="text-green-200 font-medium">Popularity Score</span>
-                    <span className="text-green-400 font-bold">{selectedSpotifyTrack.popularity}/100</span>
-                  </div>
-                  <Progress 
-                    value={selectedSpotifyTrack.popularity} 
-                    className="h-3 bg-green-900/50" 
-                  />
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button 
-                  asChild 
-                  className="flex-1 h-12 bg-green-600 hover:bg-green-500 text-white font-semibold"
-                >
-                  <a
-                    href={selectedSpotifyTrack.external_urls?.spotify || '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-white hover:bg-white/10"
+                    onClick={() => setIsAlbumModalOpen(false)}
                   >
-                    <ExternalLink className="w-5 h-5 mr-2" />
-                    Open in Spotify
-                  </a>
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  className="flex-1 h-12 border-green-500 text-green-400 hover:bg-green-500 hover:text-black"
-                  onClick={() => setIsSpotifyModalOpen(false)}
-                >
-                  <Music className="w-5 h-5 mr-2" />
-                  Close
-                </Button>
+                    <X className="w-6 h-6" />
+                  </Button>
+                </div>
+
+                {/* Bottom Section */}
+                <div className="space-y-6">
+                  {/* Album Info */}
+                  <div className="space-y-3">
+                    <h2 className="text-3xl font-bold text-white drop-shadow-lg">
+                      {selectedAlbum.name}
+                    </h2>
+                    
+                    {/* Additional Info */}
+                    <div className="flex flex-wrap gap-3 text-xs text-gray-300">
+                      {selectedAlbum.release_date && (
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          <span>{formatReleaseDate(selectedAlbum.release_date)}</span>
+                        </div>
+                      )}
+                      {selectedAlbum.total_tracks && (
+                        <div className="flex items-center gap-1">
+                          <Music className="w-3 h-3" />
+                          <span>{selectedAlbum.total_tracks} tracks</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-1">
+                        <Disc className="w-3 h-3" />
+                        <span className="capitalize">{selectedAlbum.album_type}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Album Details Grid */}
+                  <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/10">
+                    <div className="space-y-1">
+                      <p className="text-xs text-gray-400 uppercase tracking-wide">Release Date</p>
+                      <p className="text-sm text-white font-medium">{formatReleaseDate(selectedAlbum.release_date)}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-gray-400 uppercase tracking-wide">Years Ago</p>
+                      <p className="text-sm text-white font-medium">{getYearsAgo(selectedAlbum.release_date)}</p>
+                    </div>
+                    {selectedAlbum.total_tracks && (
+                      <>
+                        <div className="space-y-1">
+                          <p className="text-xs text-gray-400 uppercase tracking-wide">Total Tracks</p>
+                          <p className="text-sm text-white font-medium">{selectedAlbum.total_tracks} songs</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-gray-400 uppercase tracking-wide">Type</p>
+                          <p className="text-sm text-white font-medium capitalize">{selectedAlbum.album_type}</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Bottom Actions */}
+                  <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white hover:bg-white/10"
+                      asChild
+                    >
+                      <a
+                        href={selectedAlbum.external_urls?.spotify || '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Open in Spotify
+                      </a>
+                    </Button>
+                    
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-[#1DB954] rounded-full flex items-center justify-center">
+                        <Disc className="w-4 h-4 text-black" />
+                      </div>
+                      <span className="text-xs font-semibold">Spotify</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

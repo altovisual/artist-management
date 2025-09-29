@@ -25,8 +25,8 @@ export function StatsCard({
 }: StatsCardProps) {
   return (
     <Card className={cn(
-      "relative overflow-hidden bg-card border shadow-sm",
-      "hover:shadow-md transition-all duration-300",
+      "relative overflow-hidden bg-card border shadow-sm backdrop-blur-sm",
+      "hover:shadow-md transition-all duration-300 transform",
       className
     )}>
       <div className="p-6">

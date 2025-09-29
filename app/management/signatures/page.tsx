@@ -260,95 +260,131 @@ export default function SignaturesPage() {
   ];
 
   return (
-    <div className="space-y-8 p-6">
-      {/* Page Header */}
-      <PageHeader
-        title="Signature Management"
-        description="Manage and track all digital signature documents"
-        avatar={{
-          src: '/placeholder.svg',
-          fallback: 'S'
-        }}
-        badge={{
-          text: `${stats.total} Documents`,
-          variant: 'default'
-        }}
-        actions={[
-          {
-            label: 'Refresh',
-            onClick: fetchSignatures,
-            variant: 'outline',
-            icon: RefreshCw
-          }
-        ]}
-      />
-
-      {/* Stats Grid */}
-      <StatsGrid stats={statsData} columns={4} />
-
-      {/* Signatures Table Section */}
-      <ContentSection
-        title="Signature Status"
-        description="Detailed tracking of all documents sent for signature"
-        icon={Eye}
-      >
-        <Card>
-          <CardHeader className="pb-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <CardTitle id="documents-section-title" className="text-lg sm:text-xl">Estado de Firmas</CardTitle>
-                <CardDescription className="text-sm">
-                  Seguimiento detallado de todos los documentos enviados para firma
-                </CardDescription>
+    <div className="space-y-6">
+      {/* Native iPhone Header */}
+      <div className="bg-card border rounded-xl shadow-sm backdrop-blur-sm p-6 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-primary/2 to-transparent" />
+        
+        <div className="relative space-y-4">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center">
+                <span className="text-primary font-semibold text-lg">S</span>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <TabsList 
-                  className="grid w-full grid-cols-2 sm:grid-cols-4 sm:w-auto"
-                  role="tablist"
-                  aria-label="Filtrar documentos por estado"
-                >
-                  <TabsTrigger 
-                    value="all" 
-                    className="text-xs sm:text-sm"
-                    aria-label={`Mostrar todos los documentos (${stats.total})`}
-                  >
-                    <span className="hidden sm:inline">Todos</span>
-                    <span className="sm:hidden">All</span>
-                    <span className="ml-1">({stats.total})</span>
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="pending" 
-                    className="text-xs sm:text-sm"
-                    aria-label={`Mostrar documentos pendientes (${stats.pending})`}
-                  >
-                    <span className="hidden sm:inline">Pendientes</span>
-                    <span className="sm:hidden">Pend</span>
-                    <span className="ml-1">({stats.pending})</span>
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="completed" 
-                    className="text-xs sm:text-sm"
-                    aria-label={`Mostrar documentos completados (${stats.completed})`}
-                  >
-                    <span className="hidden sm:inline">Completados</span>
-                    <span className="sm:hidden">Comp</span>
-                    <span className="ml-1">({stats.completed})</span>
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="rejected" 
-                    className="text-xs sm:text-sm"
-                    aria-label={`Mostrar documentos rechazados (${stats.rejected})`}
-                  >
-                    <span className="hidden sm:inline">Rechazados</span>
-                    <span className="sm:hidden">Rech</span>
-                    <span className="ml-1">({stats.rejected})</span>
-                  </TabsTrigger>
-                </TabsList>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h1 className="text-xl font-bold text-foreground">
+                  Signature Status
+                </h1>
+                <Badge variant="secondary" className="text-xs">
+                  {stats.total} Documents
+                </Badge>
               </div>
+              <p className="text-sm text-muted-foreground">
+                Detailed tracking of all documents sent for signature
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button 
+              onClick={fetchSignatures}
+              variant="outline" 
+              className="flex-1 sm:flex-none"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Native iPhone Stats Grid */}
+      <div className="grid grid-cols-2 gap-3">
+        {statsData.map((stat, index) => (
+          <div key={index} className="bg-card border rounded-xl shadow-sm backdrop-blur-sm p-4 text-center">
+            <div className="flex items-center justify-center mb-2">
+              <div className={`p-2 rounded-lg ${
+                stat.changeType === 'positive' ? 'bg-green-100 dark:bg-green-900/30' :
+                stat.changeType === 'neutral' ? 'bg-orange-100 dark:bg-orange-900/30' :
+                'bg-red-100 dark:bg-red-900/30'
+              }`}>
+                <stat.icon className={`h-5 w-5 ${
+                  stat.changeType === 'positive' ? 'text-green-600 dark:text-green-400' :
+                  stat.changeType === 'neutral' ? 'text-orange-600 dark:text-orange-400' :
+                  'text-red-600 dark:text-red-400'
+                }`} />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-foreground mb-1">{stat.value}</div>
+            <div className="text-sm text-muted-foreground mb-1">{stat.title}</div>
+            <Badge 
+              variant={stat.changeType === 'positive' ? 'secondary' : 'outline'} 
+              className="text-xs"
+            >
+              {stat.change}
+            </Badge>
+          </div>
+        ))}
+      </div>
+
+      {/* Native iPhone Content Section */}
+      <div className="bg-card border rounded-xl shadow-sm backdrop-blur-sm p-6">
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground mb-1">Estado de Firmas</h2>
+            <p className="text-sm text-muted-foreground">
+              Seguimiento detallado de todos los documentos enviados para firma
+            </p>
+          </div>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            {/* Native iPhone Tab Navigation */}
+            <div className="bg-muted/30 p-1 rounded-lg">
+              <div className="grid grid-cols-4 gap-1">
+                <button
+                  onClick={() => setActiveTab('all')}
+                  className={`px-3 py-2 rounded-md text-xs font-medium transition-all ${
+                    activeTab === 'all'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  All ({stats.total})
+                </button>
+                <button
+                  onClick={() => setActiveTab('pending')}
+                  className={`px-3 py-2 rounded-md text-xs font-medium transition-all ${
+                    activeTab === 'pending'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Pend ({stats.pending})
+                </button>
+                <button
+                  onClick={() => setActiveTab('completed')}
+                  className={`px-3 py-2 rounded-md text-xs font-medium transition-all ${
+                    activeTab === 'completed'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Comp ({stats.completed})
+                </button>
+                <button
+                  onClick={() => setActiveTab('rejected')}
+                  className={`px-3 py-2 rounded-md text-xs font-medium transition-all ${
+                    activeTab === 'rejected'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Rech ({stats.rejected})
+                </button>
+              </div>
+            </div>
             
             <TabsContent value={activeTab}>
               {isLoading ? (
@@ -479,87 +515,75 @@ export default function SignaturesPage() {
                     </Table>
                   </div>
 
-                  {/* Vista Mobile - Cards */}
-                  <div className="lg:hidden space-y-3" role="list" aria-label="Lista de documentos">
+                  {/* Native iPhone Mobile Cards */}
+                  <div className="lg:hidden space-y-3">
                     {filteredSignatures.length === 0 ? (
-                      <div 
-                        className="text-center py-8 text-muted-foreground"
-                        role="status"
-                        aria-live="polite"
-                      >
-                        {isLoading ? 'Cargando documentos...' : 
-                          `No hay documentos ${activeTab === 'all' ? '' : `en estado "${activeTab}"`}`
-                        }
+                      <div className="bg-muted/30 rounded-xl p-8 text-center">
+                        <div className="text-muted-foreground">
+                          {isLoading ? 'Cargando documentos...' : 
+                            `No hay documentos ${activeTab === 'all' ? '' : `en estado "${activeTab}"`}`
+                          }
+                        </div>
                       </div>
                     ) : (
                       filteredSignatures.map((signature) => (
-                        <Card 
-                          key={signature.id} 
-                          className="cursor-pointer hover:bg-muted/50 focus:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-colors"
+                        <div
+                          key={signature.id}
+                          className="bg-background border rounded-xl p-4 cursor-pointer hover:bg-muted/30 transition-colors"
                           onClick={() => {
                             setSelectedSignature(signature);
                             setShowDetailModal(true);
                           }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              setSelectedSignature(signature);
-                              setShowDetailModal(true);
-                            }
-                          }}
-                          tabIndex={0}
-                          role="listitem button"
-                          aria-label={`Ver detalles del documento ${signature.document_name || signature.contract?.work_name || 'Sin título'}, firmante: ${signature.signer_name || signature.signer_email}`}
                         >
-                          <CardContent className="p-4">
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-semibold truncate">
-                                  {signature.document_name || signature.contract?.work_name || 'Sin título'}
-                                </h3>
-                                <p className="text-xs text-muted-foreground font-mono">
-                                  {signature.signature_request_id}
-                                </p>
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-foreground truncate">
+                                {signature.document_name || signature.contract?.work_name || 'Sin título'}
+                              </h3>
+                              <p className="text-xs text-muted-foreground font-mono mt-1">
+                                {signature.signature_request_id}
+                              </p>
+                            </div>
+                            {getStatusBadge(signature.status)}
+                          </div>
+                          
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                                <span className="text-primary text-sm font-semibold">
+                                  {(signature.signer_name || signature.signer_email || 'U').charAt(0).toUpperCase()}
+                                </span>
                               </div>
-                              {getStatusBadge(signature.status)}
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-foreground truncate">
+                                  {signature.signer_name || signature.signer_email}
+                                </div>
+                                <div className="text-xs text-muted-foreground truncate">
+                                  {signature.signer_email}
+                                </div>
+                              </div>
                             </div>
                             
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2 text-sm">
-                                <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
-                                  {(signature.signer_name || signature.signer_email || 'U').charAt(0).toUpperCase()}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium truncate">
-                                    {signature.signer_name || signature.signer_email}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground truncate">
-                                    {signature.signer_email}
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                <div className="flex items-center gap-1">
-                                  <Badge variant="outline" className="text-xs">
-                                    {signature.signature_platform || 'Email'}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {signature.signature_platform || 'Email'}
+                                </Badge>
+                                {signature.reading_time && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {signature.reading_time}
                                   </Badge>
-                                  {signature.reading_time && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      {signature.reading_time}
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div>
-                                  {signature.signed_at 
-                                    ? format(new Date(signature.signed_at), 'dd/MM/yyyy', { locale: es })
-                                    : format(new Date(signature.created_at), 'dd/MM/yyyy', { locale: es })
-                                  }
-                                </div>
+                                )}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {signature.signed_at 
+                                  ? format(new Date(signature.signed_at), 'dd/MM/yyyy', { locale: es })
+                                  : format(new Date(signature.created_at), 'dd/MM/yyyy', { locale: es })
+                                }
                               </div>
                             </div>
-                          </CardContent>
-                        </Card>
+                          </div>
+                        </div>
                       ))
                     )}
                   </div>
@@ -567,9 +591,8 @@ export default function SignaturesPage() {
               )}
             </TabsContent>
           </Tabs>
-        </CardContent>
-      </Card>
-      </ContentSection>
+        </div>
+      </div>
 
       {/* Modal de detalles */}
       <SignatureDetailModal
@@ -580,7 +603,6 @@ export default function SignaturesPage() {
           setSelectedSignature(null);
         }}
       />
-
     </div>
   );
 }

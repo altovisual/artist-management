@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { 
   Users, Star, Music, Facebook, Instagram, Play, Pause, 
   ExternalLink, TrendingUp, Calendar, Clock, Hash, 
-  Award, Headphones, Mic, Settings, Zap, Disc 
+  Award, Headphones, Mic, Settings, Zap, Disc, X, Shuffle, SkipBack, SkipForward, Repeat 
 } from 'lucide-react'
 import { AnalyticsSkeleton } from './analytics-skeleton'
 import { PageHeader } from '@/components/ui/design-system/page-header'
@@ -561,200 +561,225 @@ export const MusoAiAnalyticsRedesigned = ({ artistId }: MusoAiAnalyticsProps) =>
         </ContentSection>
       )}
 
-      {/* Credit Detail Modal - Responsive */}
+      {/* Credit Detail Modal - Estilo Spotify Now Playing */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] overflow-y-auto p-0">
-          <DialogHeader className="p-4 sm:p-6 pb-4 border-b bg-gradient-to-r from-background to-muted/20">
-            <DialogTitle className="text-xl sm:text-2xl font-bold text-center">Track Details</DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground text-center">
-              Detailed information about this track from Muso.AI
-            </DialogDescription>
-          </DialogHeader>
-          
+        <DialogContent className="max-w-md w-[95vw] h-[90vh] p-0 bg-black border-none overflow-hidden [&>button]:hidden">
+          <DialogTitle className="sr-only">
+            Now Playing: {selectedCredit?.track?.title || 'Track'}
+          </DialogTitle>
           {selectedCredit && (
-            <div className="p-4 sm:p-6">
-              {/* Header Section - Centered Layout */}
-              <div className="flex flex-col items-center text-center space-y-4 mb-8">
-                {/* Album Cover - Larger and Centered */}
-                <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-xl overflow-hidden bg-muted shadow-2xl">
-                  <Image
-                    src={selectedCredit.album?.albumArt || '/placeholder.svg'}
-                    alt={selectedCredit.album?.title || 'Album cover'}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                
-                {/* Track Info - Centered */}
-                <div className="space-y-2 max-w-md">
-                  <h2 className="text-2xl sm:text-3xl font-bold break-words leading-tight">
-                    {selectedCredit.track?.title || 'Unknown Track'}
-                  </h2>
-                  <p className="text-lg sm:text-xl text-muted-foreground break-words">
-                    {selectedCredit.artists?.map((artist: any) => artist.name || artist).join(', ') || 'Unknown Artist'}
-                  </p>
-                  <p className="text-base text-muted-foreground break-words">
-                    {selectedCredit.album?.title || 'Unknown Album'}
-                  </p>
-                </div>
-                
-                {/* Play Button - Prominent */}
-                <Button
-                  size="lg"
-                  className="bg-blue-500 hover:bg-blue-400 px-8 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
-                  onClick={() => handlePlayPreview({
-                    ...selectedCredit,
-                    preview_url: selectedCredit.track?.spotifyPreviewUrl || selectedCredit.track?.preview_url || selectedCredit.preview_url,
-                    id: selectedCredit.track?.id || selectedCredit.id
-                  })}
-                  disabled={!selectedCredit.track?.spotifyPreviewUrl && !selectedCredit.track?.preview_url && !selectedCredit.preview_url}
-                >
-                  {currentlyPlaying === (selectedCredit.track?.id || selectedCredit.id) ? (
-                    <>
-                      <Pause className="w-5 h-5 mr-2" />
-                      Pause Spotify Preview
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-5 h-5 mr-2" />
-                      {selectedCredit.track?.spotifyPreviewUrl || selectedCredit.track?.preview_url || selectedCredit.preview_url ? 'Play Spotify Preview' : 'No Preview Available'}
-                    </>
-                  )}
-                </Button>
+            <div className="relative w-full h-full">
+              {/* Background Image with Overlay */}
+              <div className="absolute inset-0">
+                <Image
+                  src={selectedCredit.album?.albumArt || '/placeholder.svg'}
+                  alt={selectedCredit.album?.title || 'Album cover'}
+                  fill
+                  className="object-cover"
+                />
+                {/* Gradient Overlays */}
+                <div className="absolute inset-0 bg-gradient-to-b from-blue-900/60 via-blue-800/70 to-black/95" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
               </div>
 
-              {/* Stats Grid - Improved Layout */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <Card className="p-4 text-center bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border-blue-200 dark:border-blue-800">
-                  <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-1">{selectedCredit.track?.popularity || 0}</div>
-                  <div className="text-xs text-blue-700 dark:text-blue-300 font-medium">Spotify Popularity</div>
-                </Card>
-                <Card className="p-4 text-center bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border-green-200 dark:border-green-800">
-                  <div className="text-2xl sm:text-3xl font-bold text-green-600 mb-1">
-                    {selectedCredit.streams ? formatStreams(selectedCredit.streams) : 'N/A'}
+              {/* Content Overlay */}
+              <div className="relative h-full flex flex-col justify-between p-6 text-white">
+                {/* Top Section */}
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs text-gray-300 uppercase tracking-widest mb-1">Playing from Muso.AI</p>
+                    <p className="text-sm text-white font-medium">
+                      {selectedCredit.artists?.[0]?.name || selectedCredit.artists?.[0] || 'Artist'}
+                    </p>
                   </div>
-                  <div className="text-xs text-green-700 dark:text-green-300 font-medium">Streams</div>
-                </Card>
-                <Card className="p-4 text-center bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-purple-200 dark:border-purple-800">
-                  <div className="text-2xl sm:text-3xl font-bold text-purple-600 mb-1">
-                    {selectedCredit.track?.duration ? formatDuration(selectedCredit.track.duration) : 'N/A'}
-                  </div>
-                  <div className="text-xs text-purple-700 dark:text-purple-300 font-medium">Duration</div>
-                </Card>
-                <Card className="p-4 text-center bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 border-orange-200 dark:border-orange-800">
-                  <div className="text-2xl sm:text-3xl font-bold text-orange-600 mb-1">
-                    {selectedCredit.releaseDate ? new Date(selectedCredit.releaseDate).getFullYear() : new Date().getFullYear()}
-                  </div>
-                  <div className="text-xs text-orange-700 dark:text-orange-300 font-medium">Release Year</div>
-                </Card>
-              </div>
-
-              {/* Credits Section */}
-              {selectedCredit.credits && selectedCredit.credits.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                    <Award className="w-5 h-5" />
-                    Production Credits
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedCredit.credits.map((credit: any, index: number) => (
-                      <Badge key={index} variant="outline" className="px-3 py-1">
-                        {credit.child || credit}
-                      </Badge>
-                    ))}
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-white hover:bg-white/10"
+                    onClick={() => setIsModalOpen(false)}
+                  >
+                    <X className="w-6 h-6" />
+                  </Button>
                 </div>
-              )}
 
-              {/* Album Information - Card Layout */}
-              <Card className="p-6 mb-6 bg-gradient-to-br from-background to-muted/10">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Disc className="w-5 h-5 text-primary" />
-                  Album Information
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="flex flex-col space-y-1">
-                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Album Name</span>
-                      <span className="font-semibold break-words">{selectedCredit.album?.title || 'Unknown'}</span>
-                    </div>
-                    <div className="flex flex-col space-y-1">
-                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Release Date</span>
-                      <span className="font-semibold">{selectedCredit.releaseDate || 'Unknown'}</span>
-                    </div>
-                    <div className="flex flex-col space-y-1">
-                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Label</span>
-                      <span className="font-semibold break-words">{selectedCredit.label || 'Independent'}</span>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="flex flex-col space-y-1">
-                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Spotify ID</span>
-                      <span className="font-mono text-sm bg-muted px-2 py-1 rounded">{selectedCredit.track?.spotifyId?.slice(0, 15)}...</span>
-                    </div>
-                    <div className="flex flex-col space-y-1">
-                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Copyright</span>
-                      <span className="text-sm break-words">{selectedCredit.c_line || 'N/A'}</span>
-                    </div>
-                    <div className="flex flex-col space-y-1">
-                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Publisher</span>
-                      <span className="text-sm break-words">{selectedCredit.publisher || selectedCredit.p_line || 'N/A'}</span>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Performance Metrics - Enhanced */}
-              {(selectedCredit.track?.popularity || selectedCredit.streams) && (
-                <Card className="p-6 mb-6 bg-gradient-to-br from-background to-muted/10">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-primary" />
-                    Performance Metrics
-                  </h3>
-                  <div className="space-y-6">
-                    {selectedCredit.track?.popularity && (
-                      <div>
-                        <div className="flex justify-between mb-3">
-                          <span className="font-medium">Popularity Score</span>
-                          <span className="text-sm text-muted-foreground font-mono">{selectedCredit.track.popularity}/100</span>
+                {/* Bottom Section - Player Controls */}
+                <div className="space-y-6">
+                  {/* Track Info */}
+                  <div className="space-y-3">
+                    <h2 className="text-3xl font-bold text-white drop-shadow-lg">
+                      {selectedCredit.track?.title || 'Unknown Track'}
+                    </h2>
+                    <p className="text-base text-gray-200">
+                      {selectedCredit.artists?.map((artist: any) => artist.name || artist).join(', ') || 'Unknown Artist'}
+                    </p>
+                    
+                    {/* Additional Info */}
+                    <div className="flex flex-wrap gap-3 text-xs text-gray-300">
+                      {selectedCredit.album?.title && (
+                        <div className="flex items-center gap-1">
+                          <Disc className="w-3 h-3" />
+                          <span>{selectedCredit.album.title}</span>
                         </div>
-                        <Progress value={selectedCredit.track.popularity} className="h-3 bg-muted" />
+                      )}
+                      {selectedCredit.releaseDate && (
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          <span>{new Date(selectedCredit.releaseDate).getFullYear()}</span>
+                        </div>
+                      )}
+                      {selectedCredit.track?.popularity !== undefined && (
+                        <div className="flex items-center gap-1">
+                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                          <span>{selectedCredit.track.popularity}/100</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  {selectedCredit.track?.duration && (
+                    <div className="space-y-2">
+                      <Progress 
+                        value={50} 
+                        className="h-1 bg-white/30" 
+                      />
+                      <div className="flex justify-between text-xs text-gray-300">
+                        <span>0:00</span>
+                        <span>{formatDuration(selectedCredit.track.duration)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Player Controls */}
+                  <div className="flex items-center justify-between">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-white hover:bg-white/10"
+                    >
+                      <Shuffle className="w-5 h-5" />
+                    </Button>
+
+                    <div className="flex items-center gap-4">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-white hover:bg-white/10"
+                      >
+                        <SkipBack className="w-7 h-7" />
+                      </Button>
+
+                      <Button
+                        size="icon"
+                        className="w-16 h-16 rounded-full bg-white hover:bg-gray-200 text-black shadow-xl"
+                        onClick={() => handlePlayPreview({
+                          ...selectedCredit,
+                          preview_url: selectedCredit.track?.spotifyPreviewUrl || selectedCredit.track?.preview_url || selectedCredit.preview_url,
+                          id: selectedCredit.track?.id || selectedCredit.id
+                        })}
+                        disabled={!selectedCredit.track?.spotifyPreviewUrl && !selectedCredit.track?.preview_url && !selectedCredit.preview_url}
+                      >
+                        {currentlyPlaying === (selectedCredit.track?.id || selectedCredit.id) ? (
+                          <Pause className="w-8 h-8" />
+                        ) : (
+                          <Play className="w-8 h-8" />
+                        )}
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-white hover:bg-white/10"
+                      >
+                        <SkipForward className="w-7 h-7" />
+                      </Button>
+                    </div>
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-white hover:bg-white/10"
+                    >
+                      <Repeat className="w-5 h-5" />
+                    </Button>
+                  </div>
+
+                  {/* Additional Track Details */}
+                  <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/10">
+                    {selectedCredit.track?.popularity !== undefined && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-gray-400 uppercase tracking-wide">Popularity</p>
+                        <div className="flex items-center gap-2">
+                          <Progress value={selectedCredit.track.popularity} className="h-1.5 bg-white/20 flex-1" />
+                          <span className="text-sm text-white font-medium">{selectedCredit.track.popularity}%</span>
+                        </div>
                       </div>
                     )}
-                    
                     {selectedCredit.streams && (
-                      <Card className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 border-blue-200 dark:border-blue-800">
-                        <div className="flex items-center gap-4">
-                          <div className="p-3 bg-blue-500/10 rounded-full">
-                            <Headphones className="w-6 h-6 text-blue-500" />
-                          </div>
-                          <div>
-                            <div className="text-2xl font-bold text-blue-600">{formatStreams(selectedCredit.streams)}</div>
-                            <div className="text-sm text-blue-700 dark:text-blue-300 font-medium">Total Streams</div>
-                          </div>
-                        </div>
-                      </Card>
+                      <div className="space-y-1">
+                        <p className="text-xs text-gray-400 uppercase tracking-wide">Streams</p>
+                        <p className="text-sm text-white font-medium">{formatStreams(selectedCredit.streams)}</p>
+                      </div>
+                    )}
+                    {selectedCredit.track?.duration && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-gray-400 uppercase tracking-wide">Duration</p>
+                        <p className="text-sm text-white font-medium">{formatDuration(selectedCredit.track.duration)}</p>
+                      </div>
+                    )}
+                    {selectedCredit.releaseDate && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-gray-400 uppercase tracking-wide">Release Year</p>
+                        <p className="text-sm text-white font-medium">{new Date(selectedCredit.releaseDate).getFullYear()}</p>
+                      </div>
                     )}
                   </div>
-                </Card>
-              )}
 
-              {/* Action Buttons - Enhanced */}
-              <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t">
-                <Button asChild className="flex-1 h-12 bg-green-600 hover:bg-green-500 text-white shadow-lg hover:shadow-xl transition-all duration-300">
-                  <a
-                    href={selectedCredit.track?.spotifyId ? `https://open.spotify.com/track/${selectedCredit.track.spotifyId}` : '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <ExternalLink className="w-5 h-5 mr-2" />
-                    {selectedCredit.track?.spotifyId ? 'Open in Spotify' : 'No Spotify Link'}
-                  </a>
-                </Button>
-                <Button variant="outline" className="flex-1 h-12 border-2 hover:bg-muted/50 transition-all duration-300">
-                  <Users className="w-5 h-5 mr-2" />
-                  View Collaborators
-                </Button>
+                  {/* Credits Section */}
+                  {selectedCredit.credits && selectedCredit.credits.length > 0 && (
+                    <div className="pt-4 border-t border-white/10">
+                      <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Production Credits</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedCredit.credits.slice(0, 4).map((credit: any, index: number) => (
+                          <Badge key={index} variant="secondary" className="bg-white/10 text-white border-white/20">
+                            {credit.child || credit}
+                          </Badge>
+                        ))}
+                        {selectedCredit.credits.length > 4 && (
+                          <Badge variant="secondary" className="bg-white/10 text-white border-white/20">
+                            +{selectedCredit.credits.length - 4} more
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Bottom Actions */}
+                  <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white hover:bg-white/10"
+                      asChild
+                    >
+                      <a
+                        href={selectedCredit.track?.spotifyId ? `https://open.spotify.com/track/${selectedCredit.track.spotifyId}` : '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Open in Spotify
+                      </a>
+                    </Button>
+                    
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                        <Music className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="text-xs font-semibold">Muso.AI</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

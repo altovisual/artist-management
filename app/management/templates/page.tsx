@@ -141,55 +141,96 @@ export default function TemplatesPage() {
   }
 
   return (
-    <div className="space-y-8 p-6">
-      {/* Page Header */}
-      <PageHeader
-        title="Template Management"
-        description="Manage document templates and legal forms"
-        avatar={{
-          src: '/placeholder.svg',
-          fallback: 'T'
-        }}
-        badge={{
-          text: `${totalCount} Templates`,
-          variant: 'default'
-        }}
-        actions={[
-          {
-            label: 'Settings',
-            href: '/management/settings',
-            variant: 'outline',
-            icon: Settings
-          },
-          {
-            label: 'Create Template',
-            href: '/management/templates/new',
-            variant: 'default',
-            icon: Plus
-          }
-        ]}
-      />
+    <div className="space-y-6">
+      {/* Native iPhone Header */}
+      <div className="bg-card border rounded-xl shadow-sm backdrop-blur-sm p-6 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-primary/2 to-transparent" />
+        
+        <div className="relative space-y-4">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center">
+                <span className="text-primary font-semibold text-lg">T</span>
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h1 className="text-xl font-bold text-foreground">
+                  Template Management
+                </h1>
+                <Badge variant="secondary" className="text-xs">
+                  {totalCount} Templates
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Manage document templates and legal forms
+              </p>
+            </div>
+          </div>
 
-      {/* Stats Grid */}
-      <StatsGrid stats={statsData} columns={4} />
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button asChild variant="outline" className="flex-1 sm:flex-none">
+              <Link href="/management/settings">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </Link>
+            </Button>
+            <Button asChild className="flex-1 sm:flex-none">
+              <Link href="/management/templates/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Create Template
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </div>
 
-      {/* Templates Table Section */}
-      <ContentSection
-        title="All Templates"
-        description={`${totalCount} templates found`}
-        icon={FileText}
-        actions={[
-          {
-            label: 'Export CSV',
-            href: '#',
-            variant: 'outline',
-            icon: Settings
-          }
-        ]}
-      >
-        {templates.length === 0 ? (
-          <Card className="border-0 bg-gradient-to-br from-background to-muted/20">
-            <CardContent className="p-12 text-center">
+      {/* Native iPhone Stats Grid */}
+      <div className="grid grid-cols-2 gap-3">
+        {statsData.map((stat, index) => (
+          <div key={index} className="bg-card border rounded-xl shadow-sm backdrop-blur-sm p-4 text-center">
+            <div className="flex items-center justify-center mb-2">
+              <div className={`p-2 rounded-lg ${
+                stat.changeType === 'positive' ? 'bg-green-100 dark:bg-green-900/30' :
+                stat.changeType === 'neutral' ? 'bg-orange-100 dark:bg-orange-900/30' :
+                'bg-red-100 dark:bg-red-900/30'
+              }`}>
+                <stat.icon className={`h-5 w-5 ${
+                  stat.changeType === 'positive' ? 'text-green-600 dark:text-green-400' :
+                  stat.changeType === 'neutral' ? 'text-orange-600 dark:text-orange-400' :
+                  'text-red-600 dark:text-red-400'
+                }`} />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-foreground mb-1">{stat.value}</div>
+            <div className="text-sm text-muted-foreground mb-1">{stat.title}</div>
+            <Badge 
+              variant={stat.changeType === 'positive' ? 'secondary' : 'outline'} 
+              className="text-xs"
+            >
+              {stat.change}
+            </Badge>
+          </div>
+        ))}
+      </div>
+
+      {/* Native iPhone Content Section */}
+      <div className="bg-card border rounded-xl shadow-sm backdrop-blur-sm p-6">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground mb-1">All Templates</h2>
+              <p className="text-sm text-muted-foreground">
+                {totalCount} templates found
+              </p>
+            </div>
+            <Button variant="outline" size="sm">
+              <Settings className="mr-2 h-4 w-4" />
+              Export CSV
+            </Button>
+          </div>
+          {templates.length === 0 ? (
+            <div className="bg-muted/30 rounded-xl p-8 text-center">
               <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
                 <FileText className="w-8 h-8 text-muted-foreground" />
               </div>
@@ -203,12 +244,11 @@ export default function TemplatesPage() {
                   Create Template
                 </Link>
               </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border-0 bg-gradient-to-br from-background to-muted/20">
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {/* Desktop Table */}
+              <div className="hidden lg:block overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-b">
@@ -265,10 +305,55 @@ export default function TemplatesPage() {
                   </TableBody>
                 </Table>
               </div>
-            </CardContent>
-          </Card>
-        )}
-      </ContentSection>
+
+              {/* Mobile Cards */}
+              <div className="lg:hidden space-y-3">
+                {templates.map((template: any) => (
+                  <div
+                    key={template.id}
+                    className="bg-background border rounded-xl p-4"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                          <Badge variant="outline" className="capitalize mb-1">
+                            {template.type}
+                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Globe className="w-3 h-3 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground capitalize">
+                              {template.language}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <Badge variant="secondary">
+                        v{template.version}
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Button asChild variant="outline" size="sm" className="flex-1">
+                        <Link href={`/management/templates/${template.id}/edit`}>
+                          Edit
+                        </Link>
+                      </Button>
+                      <DeleteButton 
+                        id={template.id} 
+                        resource="templates" 
+                        onDelete={handleDelete} 
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
