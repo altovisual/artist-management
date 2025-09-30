@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import { AudioAnalyticsPanel } from '@/components/audio-analytics-panel'
 import { PageHeader } from '@/components/ui/design-system/page-header'
@@ -23,7 +23,7 @@ export default function AudioAnalyticsPage() {
   const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d')
   const [selectedUser, setSelectedUser] = useState<string>('all')
 
-  const getDateRange = () => {
+  const dateRangeStrings = useMemo(() => {
     const end = new Date()
     let start = new Date()
 
@@ -42,8 +42,11 @@ export default function AudioAnalyticsPage() {
         break
     }
 
-    return { start, end }
-  }
+    return { 
+      start: start.toISOString(), 
+      end: end.toISOString() 
+    }
+  }, [dateRange])
 
   const handleExport = () => {
     // TODO: Implement CSV export
@@ -132,7 +135,8 @@ export default function AudioAnalyticsPage() {
         {/* Main Analytics Panel */}
         <AudioAnalyticsPanel 
           userId={selectedUser === 'me' ? undefined : undefined}
-          dateRange={getDateRange()}
+          startDate={dateRangeStrings.start}
+          endDate={dateRangeStrings.end}
         />
 
         {/* Additional Insights */}

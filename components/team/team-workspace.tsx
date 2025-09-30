@@ -7,6 +7,13 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { 
   Search, 
   Clock, 
@@ -25,10 +32,19 @@ import {
   CheckCircle,
   Circle,
   AlertCircle,
-  Eye
+  Eye,
+  MoreVertical,
+  Edit,
+  StarOff,
+  ArchiveRestore,
+  Music
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { TeamChat } from './team-chat'
+import { CreateTaskDialog } from './create-task-dialog'
+import { TaskDetailsDialog } from './task-details-dialog'
+import { TaskCard } from './task-card'
+import { useRouter } from 'next/navigation'
 
 interface Project {
   id: string
@@ -40,6 +56,9 @@ interface Project {
   updatedAt: Date
   members: TeamMember[]
   tasks: Task[]
+  artistId?: string
+  genre?: string
+  profileImage?: string
 }
 
 interface Task {
@@ -70,7 +89,9 @@ interface TeamWorkspaceProps {
   onProjectSelect?: (project: Project) => void
   onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void
   onNewProject?: () => void
-  onNewTask?: (projectId: string) => void
+  onNewTask?: (projectId: string, taskData: any) => Promise<void>
+  onToggleFavorite?: (projectId: string) => void
+  onUpdateProjectStatus?: (projectId: string, status: Project['status']) => void
 }
 
 export function TeamWorkspace({
@@ -80,18 +101,25 @@ export function TeamWorkspace({
   onProjectSelect,
   onTaskUpdate,
   onNewProject,
-  onNewTask
+  onNewTask,
+  onToggleFavorite,
+  onUpdateProjectStatus
 }: TeamWorkspaceProps) {
+  const router = useRouter()
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState("team")
   const [isChatOpen, setIsChatOpen] = useState(false)
-  const [expandedSections, setExpandedSections] = useState({
+  const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false)
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [isTaskDetailsOpen, setIsTaskDetailsOpen] = useState(false)
+  const [expandedSections, setExpandedSections] = useState<any>({
     recent: true,
     projects: true,
     favorites: true,
     archived: false,
-    deleted: false
+    deleted: false,
+    mobileMenu: false
   })
 
   // Filtrar proyectos
@@ -124,6 +152,45 @@ export function TeamWorkspace({
   const handleProjectClick = (project: Project) => {
     setSelectedProject(project)
     onProjectSelect?.(project)
+  }
+
+  const handleCreateTask = async (projectId: string, taskData: any) => {
+    if (onNewTask) {
+      await onNewTask(projectId, taskData)
+    }
+  }
+
+  const handleToggleFavorite = (projectId: string) => {
+    onToggleFavorite?.(projectId)
+  }
+
+  const handleArchiveProject = (projectId: string) => {
+    onUpdateProjectStatus?.(projectId, 'archived')
+  }
+
+  const handleRestoreProject = (projectId: string) => {
+    onUpdateProjectStatus?.(projectId, 'active')
+  }
+
+  const handleViewArtist = (artistId?: string) => {
+    if (artistId) {
+      router.push(`/artists/${artistId}`)
+    }
+  }
+
+  const handleTaskClick = (task: Task) => {
+    setSelectedTask(task)
+    setIsTaskDetailsOpen(true)
+  }
+
+  const handleDeleteTask = async (taskId: string) => {
+    // This will be handled by the parent component
+    if (onTaskUpdate) {
+      // For now, we'll just close the dialog
+      // In a real implementation, you'd call a delete function
+      setIsTaskDetailsOpen(false)
+      setSelectedTask(null)
+    }
   }
 
   const getTaskStatusColor = (status: Task['status']) => {
@@ -191,20 +258,70 @@ export function TeamWorkspace({
       {isExpanded && (
         <div className="ml-6 mt-2 space-y-1">
           {projects.map(project => (
-            <button
+            <div
               key={project.id}
-              onClick={() => handleProjectClick(project)}
               className={cn(
-                "flex items-center gap-2 w-full text-left p-2 rounded-lg transition-colors hover:bg-muted/50",
+                "flex items-center gap-2 w-full p-2 rounded-lg transition-colors hover:bg-muted/50 group",
                 selectedProject?.id === project.id && "bg-primary/10 border-l-2 border-primary"
               )}
             >
-              <Hash className="h-3 w-3 text-muted-foreground" />
-              <span className="text-sm truncate flex-1">{project.name}</span>
-              {selectedProject?.id === project.id && (
-                <CheckCircle className="h-3 w-3 text-primary" />
-              )}
-            </button>
+              <button
+                onClick={() => handleProjectClick(project)}
+                className="flex items-center gap-2 flex-1 text-left min-w-0"
+              >
+                {project.profileImage ? (
+                  <img src={project.profileImage} alt="" className="h-4 w-4 rounded object-cover" />
+                ) : (
+                  <Hash className="h-3 w-3 text-muted-foreground" />
+                )}
+                <span className="text-sm truncate flex-1">{project.name}</span>
+                {selectedProject?.id === project.id && (
+                  <CheckCircle className="h-3 w-3 text-primary" />
+                )}
+              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <MoreVertical className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleProjectClick(project)}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Project
+                  </DropdownMenuItem>
+                  {project.artistId && (
+                    <DropdownMenuItem onClick={() => handleViewArtist(project.artistId)}>
+                      <Music className="h-4 w-4 mr-2" />
+                      View Artist Profile
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={() => handleToggleFavorite(project.id)}>
+                    {project.isFavorite ? (
+                      <><StarOff className="h-4 w-4 mr-2" />Remove from Favorites</>
+                    ) : (
+                      <><Star className="h-4 w-4 mr-2" />Add to Favorites</>
+                    )}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {project.status === 'active' ? (
+                    <DropdownMenuItem onClick={() => handleArchiveProject(project.id)}>
+                      <Archive className="h-4 w-4 mr-2" />
+                      Archive
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem onClick={() => handleRestoreProject(project.id)}>
+                      <ArchiveRestore className="h-4 w-4 mr-2" />
+                      Restore
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           ))}
         </div>
       )}
@@ -212,11 +329,39 @@ export function TeamWorkspace({
   )
 
   return (
-    <div className="flex h-full bg-background">
+    <div className="flex h-full bg-background relative">
+      {/* Mobile Menu Toggle */}
+      <Button
+        variant="ghost"
+        size="sm"
+        className="fixed top-4 left-4 z-50 lg:hidden shadow-lg bg-background"
+        onClick={() => setExpandedSections(prev => ({ ...prev, mobileMenu: !prev.mobileMenu as any }))}
+      >
+        <FolderOpen className="h-4 w-4" />
+      </Button>
+
+      {/* Mobile Chat Toggle - Only show when project is selected */}
+      {selectedProject && (
+        <Button
+          variant="default"
+          size="sm"
+          className="fixed bottom-4 right-4 z-50 lg:hidden shadow-lg rounded-full h-12 w-12 p-0"
+          onClick={() => setIsChatOpen(true)}
+        >
+          <MessageCircle className="h-5 w-5" />
+        </Button>
+      )}
+
       {/* Sidebar */}
-      <div className="w-80 border-r bg-muted/20 flex flex-col">
+      <div className={cn(
+        "w-[85vw] sm:w-80 border-r bg-background flex flex-col",
+        "fixed lg:relative inset-y-0 left-0 z-40",
+        "transform transition-transform duration-300 ease-in-out",
+        "lg:translate-x-0 shadow-xl lg:shadow-none",
+        expandedSections.mobileMenu ? "translate-x-0" : "-translate-x-full"
+      )}>
         {/* Header */}
-        <div className="p-4 border-b">
+        <div className="p-3 lg:p-4 border-b">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <FolderOpen className="h-4 w-4 text-primary-foreground" />
@@ -227,17 +372,17 @@ export function TeamWorkspace({
         </div>
 
         {/* Projects List with Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
           {/* Tabs List */}
-          <div className="px-4 border-b">
-            <TabsList className="grid w-full grid-cols-2">
+          <div className="px-3 lg:px-4 border-b">
+            <TabsList className="grid w-full grid-cols-2 h-9">
               <TabsTrigger value="team">Team</TabsTrigger>
               <TabsTrigger value="personal">Personal</TabsTrigger>
             </TabsList>
           </div>
 
           {/* Search */}
-          <div className="p-4 border-b">
+          <div className="p-3 lg:p-4 border-b">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -248,7 +393,7 @@ export function TeamWorkspace({
               />
             </div>
           </div>
-          <TabsContent value="team" className="mt-0 p-4 space-y-4">
+          <TabsContent value="team" className="mt-0 p-3 lg:p-4 space-y-3 lg:space-y-4 overflow-y-auto flex-1">
             {/* Recent */}
             <ProjectSection
               title="Recent"
@@ -300,7 +445,7 @@ export function TeamWorkspace({
             />
           </TabsContent>
 
-          <TabsContent value="personal" className="mt-0 p-4">
+          <TabsContent value="personal" className="mt-0 p-3 lg:p-4 overflow-y-auto flex-1">
             <div className="text-center py-8 text-muted-foreground">
               <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>Personal projects coming soon</p>
@@ -309,7 +454,7 @@ export function TeamWorkspace({
         </Tabs>
 
         {/* Online Team Members */}
-        <div className="border-t p-4">
+        <div className="border-t p-3 lg:p-4">
           <div className="flex items-center gap-2 mb-3">
             <Users className="h-4 w-4 text-muted-foreground" />
             <span className="font-medium text-sm">Team Online</span>
@@ -318,9 +463,9 @@ export function TeamWorkspace({
             </Badge>
           </div>
           
-          <div className="space-y-2 max-h-40 overflow-y-auto">
+          <div className="space-y-2 max-h-32 lg:max-h-40 overflow-y-auto">
             {onlineMembers.map(member => (
-              <div key={member.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50">
+              <div key={member.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors">
                 <div className="relative">
                   <Avatar className="h-6 w-6">
                     <AvatarImage src={member.avatar} />
@@ -340,47 +485,81 @@ export function TeamWorkspace({
         </div>
 
         {/* Add Project Button */}
-        <div className="border-t p-4">
+        <div className="border-t p-3 lg:p-4">
           <Button 
             onClick={onNewProject}
-            className="w-full gap-2" 
+            className="w-full gap-2 h-9" 
             variant="outline"
           >
             <Plus className="h-4 w-4" />
-            New Project
+            <span className="hidden sm:inline">New Project</span>
+            <span className="sm:hidden">New</span>
           </Button>
         </div>
       </div>
 
+      {/* Overlay for mobile */}
+      {expandedSections.mobileMenu && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          onClick={() => setExpandedSections(prev => ({ ...prev, mobileMenu: false as any }))}
+        />
+      )}
+
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {selectedProject ? (
           <>
             {/* Project Header */}
-            <div className="border-b p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold">{selectedProject.name}</h1>
-                  <p className="text-muted-foreground mt-1">
-                    Created on {selectedProject.createdAt.toLocaleDateString()}
-                  </p>
+            <div className="border-b p-4 lg:p-6">
+              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                <div className="flex items-center gap-3 lg:gap-4">
+                  {selectedProject.profileImage && (
+                    <img 
+                      src={selectedProject.profileImage} 
+                      alt={selectedProject.name}
+                      className="h-12 w-12 lg:h-16 lg:w-16 rounded-lg object-cover"
+                    />
+                  )}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h1 className="text-xl lg:text-2xl font-bold">{selectedProject.name}</h1>
+                      {selectedProject.isFavorite && (
+                        <Star className="h-5 w-5 fill-yellow-500 text-yellow-500" />
+                      )}
+                    </div>
+                    <p className="text-sm lg:text-base text-muted-foreground mt-1">
+                      {selectedProject.genre && `${selectedProject.genre} • `}
+                      Created {selectedProject.createdAt.toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setIsCreateTaskOpen(true)}
+                  >
+                    <Plus className="h-4 w-4 lg:mr-2" />
+                    <span className="hidden lg:inline">New Task</span>
+                  </Button>
+                  {selectedProject.artistId && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleViewArtist(selectedProject.artistId)}
+                    >
+                      <Music className="h-4 w-4 lg:mr-2" />
+                      <span className="hidden lg:inline">Artist Profile</span>
+                    </Button>
+                  )}
                   <Button 
                     variant="outline" 
                     size="sm"
                     onClick={() => setIsChatOpen(true)}
                   >
-                    <MessageCircle className="h-4 w-4 mr-2" />
-                    Chat
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Bell className="h-4 w-4 mr-2" />
-                    Notifications
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Settings className="h-4 w-4 mr-2" />
-                    Settings
+                    <MessageCircle className="h-4 w-4 lg:mr-2" />
+                    <span className="hidden lg:inline">Chat</span>
                   </Button>
                 </div>
               </div>
@@ -395,10 +574,10 @@ export function TeamWorkspace({
                   <TabsTrigger value="calendar">Calendar</TabsTrigger>
                 </TabsList>
                 
-                <TabsContent value="board" className="mt-0">
+                <TabsContent value="board" className="mt-0 overflow-y-auto">
                   {/* Task Board */}
-                  <div className="p-6">
-                    <div className="grid grid-cols-4 gap-6">
+                  <div className="p-4 lg:p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
                       {/* To Do Column */}
                       <div className="space-y-4">
                         <div className="flex items-center gap-2">
@@ -413,23 +592,7 @@ export function TeamWorkspace({
                           {selectedProject.tasks
                             .filter(task => task.status === 'todo')
                             .map(task => (
-                              <Card key={task.id} className="p-4 cursor-pointer hover:shadow-md transition-shadow">
-                                <h4 className="font-medium text-sm mb-2">{task.title}</h4>
-                                {task.description && (
-                                  <p className="text-xs text-muted-foreground mb-3">{task.description}</p>
-                                )}
-                                {task.assignee && (
-                                  <div className="flex items-center gap-2">
-                                    <Avatar className="h-5 w-5">
-                                      <AvatarImage src={task.assignee.avatar} />
-                                      <AvatarFallback className="text-xs">
-                                        {task.assignee.name.split(' ').map(n => n[0]).join('')}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-xs text-muted-foreground">{task.assignee.name}</span>
-                                  </div>
-                                )}
-                              </Card>
+                              <TaskCard key={task.id} task={task} onClick={() => handleTaskClick(task)} />
                             ))}
                         </div>
                       </div>
@@ -448,23 +611,7 @@ export function TeamWorkspace({
                           {selectedProject.tasks
                             .filter(task => task.status === 'in_progress')
                             .map(task => (
-                              <Card key={task.id} className="p-4 cursor-pointer hover:shadow-md transition-shadow">
-                                <h4 className="font-medium text-sm mb-2">{task.title}</h4>
-                                {task.description && (
-                                  <p className="text-xs text-muted-foreground mb-3">{task.description}</p>
-                                )}
-                                {task.assignee && (
-                                  <div className="flex items-center gap-2">
-                                    <Avatar className="h-5 w-5">
-                                      <AvatarImage src={task.assignee.avatar} />
-                                      <AvatarFallback className="text-xs">
-                                        {task.assignee.name.split(' ').map(n => n[0]).join('')}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-xs text-muted-foreground">{task.assignee.name}</span>
-                                  </div>
-                                )}
-                              </Card>
+                              <TaskCard key={task.id} task={task} onClick={() => handleTaskClick(task)} />
                             ))}
                         </div>
                       </div>
@@ -483,23 +630,7 @@ export function TeamWorkspace({
                           {selectedProject.tasks
                             .filter(task => task.status === 'in_review')
                             .map(task => (
-                              <Card key={task.id} className="p-4 cursor-pointer hover:shadow-md transition-shadow">
-                                <h4 className="font-medium text-sm mb-2">{task.title}</h4>
-                                {task.description && (
-                                  <p className="text-xs text-muted-foreground mb-3">{task.description}</p>
-                                )}
-                                {task.assignee && (
-                                  <div className="flex items-center gap-2">
-                                    <Avatar className="h-5 w-5">
-                                      <AvatarImage src={task.assignee.avatar} />
-                                      <AvatarFallback className="text-xs">
-                                        {task.assignee.name.split(' ').map(n => n[0]).join('')}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-xs text-muted-foreground">{task.assignee.name}</span>
-                                  </div>
-                                )}
-                              </Card>
+                              <TaskCard key={task.id} task={task} onClick={() => handleTaskClick(task)} />
                             ))}
                         </div>
                       </div>
@@ -518,23 +649,7 @@ export function TeamWorkspace({
                           {selectedProject.tasks
                             .filter(task => task.status === 'completed')
                             .map(task => (
-                              <Card key={task.id} className="p-4 cursor-pointer hover:shadow-md transition-shadow opacity-75">
-                                <h4 className="font-medium text-sm mb-2 line-through">{task.title}</h4>
-                                {task.description && (
-                                  <p className="text-xs text-muted-foreground mb-3">{task.description}</p>
-                                )}
-                                {task.assignee && (
-                                  <div className="flex items-center gap-2">
-                                    <Avatar className="h-5 w-5">
-                                      <AvatarImage src={task.assignee.avatar} />
-                                      <AvatarFallback className="text-xs">
-                                        {task.assignee.name.split(' ').map(n => n[0]).join('')}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-xs text-muted-foreground">{task.assignee.name}</span>
-                                  </div>
-                                )}
-                              </Card>
+                              <TaskCard key={task.id} task={task} onClick={() => handleTaskClick(task)} />
                             ))}
                         </div>
                       </div>
@@ -542,15 +657,15 @@ export function TeamWorkspace({
                   </div>
                 </TabsContent>
                 
-                <TabsContent value="timeline" className="mt-0">
-                  <div className="p-6 text-center text-muted-foreground">
+                <TabsContent value="timeline" className="mt-0 overflow-y-auto">
+                  <div className="p-4 lg:p-6 text-center text-muted-foreground">
                     <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>Timeline view coming soon</p>
                   </div>
                 </TabsContent>
                 
-                <TabsContent value="calendar" className="mt-0">
-                  <div className="p-6 text-center text-muted-foreground">
+                <TabsContent value="calendar" className="mt-0 overflow-y-auto">
+                  <div className="p-4 lg:p-6 text-center text-muted-foreground">
                     <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>Calendar view coming soon</p>
                   </div>
@@ -559,15 +674,25 @@ export function TeamWorkspace({
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <FolderOpen className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-              <h2 className="text-xl font-semibold mb-2">Select a Project</h2>
-              <p className="text-muted-foreground mb-4">Choose a project from the sidebar to view tasks and collaborate with your team.</p>
-              <Button onClick={onNewProject} className="gap-2">
-                <Plus className="h-4 w-4" />
-                Create New Project
-              </Button>
+          <div className="flex-1 flex items-center justify-center p-4">
+            <div className="text-center max-w-md">
+              <FolderOpen className="h-12 w-12 lg:h-16 lg:w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+              <h2 className="text-lg lg:text-xl font-semibold mb-2">Select a Project</h2>
+              <p className="text-sm lg:text-base text-muted-foreground mb-4">Choose a project from the sidebar to view tasks and collaborate with your team.</p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <Button 
+                  onClick={() => setExpandedSections(prev => ({ ...prev, mobileMenu: true }))}
+                  variant="outline"
+                  className="gap-2 lg:hidden"
+                >
+                  <FolderOpen className="h-4 w-4" />
+                  Open Sidebar
+                </Button>
+                <Button onClick={onNewProject} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Create New Project
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -582,6 +707,28 @@ export function TeamWorkspace({
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
         onMinimize={() => setIsChatOpen(false)}
+      />
+
+      {/* Create Task Dialog */}
+      {selectedProject && (
+        <CreateTaskDialog
+          open={isCreateTaskOpen}
+          onOpenChange={setIsCreateTaskOpen}
+          projectId={selectedProject.id}
+          projectName={selectedProject.name}
+          teamMembers={teamMembers}
+          onCreateTask={handleCreateTask}
+        />
+      )}
+
+      {/* Task Details Dialog */}
+      <TaskDetailsDialog
+        task={selectedTask}
+        open={isTaskDetailsOpen}
+        onOpenChange={setIsTaskDetailsOpen}
+        teamMembers={teamMembers}
+        onUpdateTask={onTaskUpdate}
+        onDeleteTask={handleDeleteTask}
       />
     </div>
   )

@@ -1,9 +1,13 @@
 'use client'
 
 import { TeamWorkspace } from '@/components/team/team-workspace'
-import { useTeamWorkspace } from '@/hooks/use-team-workspace'
+import { useTeamWorkspaceReal } from '@/hooks/use-team-workspace-real'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AddTeamMemberDialog } from '@/components/team/add-team-member-dialog'
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { UserPlus } from 'lucide-react'
 
 export default function TeamPage() {
   const {
@@ -11,12 +15,14 @@ export default function TeamPage() {
     teamMembers,
     currentUser,
     isLoading,
-    createProject,
-    updateProject,
     createTask,
     updateTask,
-    toggleFavorite
-  } = useTeamWorkspace()
+    deleteTask,
+    toggleFavorite,
+    updateProjectStatus
+  } = useTeamWorkspaceReal()
+  
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false)
 
   if (isLoading || !currentUser) {
     return (
@@ -52,22 +58,38 @@ export default function TeamPage() {
   }
 
   const handleNewProject = () => {
-    // Aquí podrías abrir un modal o navegar a una página de creación
-    console.log('Create new project')
+    // Navigate to create new artist (which becomes a project)
+    window.location.href = '/artists/new'
   }
 
-  const handleNewTask = (projectId: string) => {
-    // Aquí podrías abrir un modal para crear una nueva tarea
-    console.log('Create new task for project:', projectId)
+  const handleNewTask = async (projectId: string, taskData: any) => {
+    await createTask(projectId, taskData)
   }
 
   const handleProjectSelect = (project: any) => {
     console.log('Selected project:', project.name)
   }
 
+  const handleAddTeamMember = () => {
+    setIsAddMemberOpen(true)
+  }
+
   return (
     <DashboardLayout>
-      <div className="h-[calc(100vh-8rem)] overflow-hidden -mx-4 -my-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 px-4 lg:px-0">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold">Team Workspace</h1>
+          <p className="text-sm lg:text-base text-muted-foreground mt-1">
+            Collaborate on projects and manage tasks with your team
+          </p>
+        </div>
+        <Button onClick={handleAddTeamMember} className="gap-2 w-full sm:w-auto">
+          <UserPlus className="h-4 w-4" />
+          Add Team Member
+        </Button>
+      </div>
+      
+      <div className="h-[calc(100vh-10rem)] sm:h-[calc(100vh-12rem)] overflow-hidden -mx-4">
         <TeamWorkspace
           currentUser={currentUser}
           projects={projects}
@@ -76,8 +98,15 @@ export default function TeamPage() {
           onTaskUpdate={updateTask}
           onNewProject={handleNewProject}
           onNewTask={handleNewTask}
+          onToggleFavorite={toggleFavorite}
+          onUpdateProjectStatus={updateProjectStatus}
         />
       </div>
+
+      <AddTeamMemberDialog
+        open={isAddMemberOpen}
+        onOpenChange={setIsAddMemberOpen}
+      />
     </DashboardLayout>
   )
 }

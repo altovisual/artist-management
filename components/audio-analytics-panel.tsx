@@ -48,13 +48,11 @@ interface RecentEvent {
 
 interface AudioAnalyticsPanelProps {
   userId?: string
-  dateRange?: {
-    start: Date
-    end: Date
-  }
+  startDate?: string
+  endDate?: string
 }
 
-export function AudioAnalyticsPanel({ userId, dateRange }: AudioAnalyticsPanelProps) {
+export function AudioAnalyticsPanel({ userId, startDate, endDate }: AudioAnalyticsPanelProps) {
   const supabase = createClient()
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null)
   const [topTracks, setTopTracks] = useState<TopTrack[]>([])
@@ -78,8 +76,8 @@ export function AudioAnalyticsPanel({ userId, dateRange }: AudioAnalyticsPanelPr
       const { data: summaryData, error: summaryError } = await supabase
         .rpc('get_audio_analytics_summary', {
           p_user_id: targetUserId,
-          p_start_date: dateRange?.start?.toISOString() || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-          p_end_date: dateRange?.end?.toISOString() || new Date().toISOString()
+          p_start_date: startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          p_end_date: endDate || new Date().toISOString()
         })
 
       if (summaryError) {
@@ -93,7 +91,7 @@ export function AudioAnalyticsPanel({ userId, dateRange }: AudioAnalyticsPanelPr
         .rpc('get_top_audio_tracks', {
           p_user_id: targetUserId,
           p_limit: 10,
-          p_start_date: dateRange?.start?.toISOString() || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+          p_start_date: startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
         })
 
       if (topTracksError) {
@@ -125,7 +123,8 @@ export function AudioAnalyticsPanel({ userId, dateRange }: AudioAnalyticsPanelPr
 
   useEffect(() => {
     fetchAnalytics()
-  }, [userId, dateRange])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, startDate, endDate])
 
   const formatDuration = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000)

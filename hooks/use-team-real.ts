@@ -64,7 +64,8 @@ export function useTeamReal() {
       console.error('Error fetching team members:', err)
       setError(err.message)
     }
-  }, [supabase])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Obtener usuarios disponibles para agregar
   const fetchAvailableUsers = useCallback(async () => {
@@ -78,7 +79,8 @@ export function useTeamReal() {
         return
       }
 
-      console.warn('RPC failed, using fallback method:', rpcError)
+      // Silenciar el warning - el RPC no está disponible
+      // console.warn('RPC failed, using fallback method:', rpcError)
       
       // Fallback: obtener solo team members existentes
       const { data: membersData, error: membersError } = await supabase
@@ -102,7 +104,8 @@ export function useTeamReal() {
       // Fallback a array vacío si todo falla
       setAvailableUsers([])
     }
-  }, [supabase])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Agregar miembro al equipo
   const addTeamMember = async (email: string, role: 'admin' | 'manager' | 'member' = 'member') => {
@@ -205,7 +208,8 @@ export function useTeamReal() {
     }
 
     loadData()
-  }, [fetchTeamMembers, fetchAvailableUsers])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Actualizar estado online al montar/desmontar
   useEffect(() => {
@@ -235,7 +239,8 @@ export function useTeamReal() {
     return () => {
       channel.unsubscribe()
     }
-  }, [supabase, fetchTeamMembers])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return {
     teamMembers,
