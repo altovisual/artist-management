@@ -26,7 +26,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { LayoutDashboard, Calendar, Music, Shield, User, LogOut, DollarSign, Menu, BarChart, Users } from "lucide-react"
+import { LayoutDashboard, Calendar, Music, Shield, User, LogOut, DollarSign, Menu, BarChart, Users, Share2 } from "lucide-react"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { useTheme } from "next-themes"
 
@@ -34,6 +34,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isAdmin, setIsAdmin] = React.useState(false);
+  const [isAdminLoaded, setIsAdminLoaded] = React.useState(false);
   const [userEmail, setUserEmail] = React.useState<string | null>(null);
   const [isSheetOpen, setIsSheetOpen] = React.useState(false); // State for mobile sheet
 
@@ -42,7 +43,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   // Refs for desktop navigation links
   const navRefs = React.useRef<(HTMLAnchorElement | null)[]>([]);
-  const [underlineStyle, setUnderlineStyle] = React.useState({ left: 0, width: 0 });
+  const [underlineStyle, setUnderlineStyle] = React.useState({ left: 0, width: 0, opacity: 0 });
   const [isMounted, setIsMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -54,19 +55,23 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase.auth.getUser();
       if (error) {
         console.error("Error fetching user in layout:", error);
+        setIsAdminLoaded(true);
         return;
       }
       if (data.user) {
         setIsAdmin(data.user.app_metadata?.role === 'admin');
         setUserEmail(data.user.email || null);
       }
+      setIsAdminLoaded(true);
     };
     fetchUser();
   }, [supabase]);
 
   // Effect to update underline position and width
   React.useEffect(() => {
-    if (isMounted) {
+    if (!isMounted || !isAdminLoaded) return;
+
+    const updateUnderline = () => {
       const activeLink = navRefs.current.reduce((bestMatch, currentRef) => {
         if (!currentRef) return bestMatch;
 
@@ -83,33 +88,44 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         setUnderlineStyle({
           left: activeLink.offsetLeft,
           width: activeLink.offsetWidth,
+          opacity: 1,
         });
       } else {
         const firstLink = navRefs.current[0];
         if (firstLink) {
-          setUnderlineStyle({ left: firstLink.offsetLeft, width: 0 });
+          setUnderlineStyle({ left: firstLink.offsetLeft, width: 0, opacity: 0 });
         }
       }
-    }
-  }, [pathname, isMounted, isAdmin]);
+    };
+
+    // Use requestAnimationFrame to ensure DOM is ready
+    requestAnimationFrame(() => {
+      updateUnderline();
+    });
+  }, [pathname, isMounted, isAdminLoaded, isAdmin]);
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push("/auth/login");
   };
 
-  const navLinks = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/team", label: "Team", icon: Users },
-    { href: "/dashboard/analytics", label: "Analytics", icon: BarChart },
-    { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
-    { href: "/dashboard/finance", label: "Finance", icon: DollarSign },
-    { href: "/dashboard/releases", label: "Releases", icon: Music },
-  ];
+  const navLinks = React.useMemo(() => {
+    const links = [
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/team", label: "Team", icon: Users },
+      { href: "/dashboard/analytics", label: "Analytics", icon: BarChart },
+      { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
+      { href: "/dashboard/finance", label: "Finance", icon: DollarSign },
+      { href: "/dashboard/releases", label: "Releases", icon: Music },
+    ];
 
-  // Conditionally add the Management link
-  if (isAdmin) {
-    navLinks.push({ href: "/management", label: "Management", icon: Shield });
-  }
+    // Conditionally add admin-only links
+    if (isAdmin) {
+      links.push({ href: "/management", label: "Management", icon: Shield });
+      links.push({ href: "/share-tracks", label: "Share Tracks", icon: Share2 });
+    }
+
+    return links;
+  }, [isAdmin]);
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -161,7 +177,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   key={link.href}
                   href={link.href}
                   ref={el => { navRefs.current[index] = el; }} // Assign ref
-                  className={`flex items-center gap-2 transition-colors hover:text-foreground ${pathname === link.href ? 'text-foreground' : 'text-muted-foreground'}`}
+                  className={`flex items-center gap-2 transition-all duration-200 hover:text-foreground ${pathname === link.href ? 'text-foreground' : 'text-muted-foreground'}`}
                 >
                   <link.icon className="h-4 w-4" />
                   {link.label}
@@ -169,8 +185,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               ))}
               {/* Underline element - now inside nav */}
               <span
-                className="absolute bottom-[-8px] h-[2px] bg-primary/40 transition-all duration-300 ease-out"
-                style={underlineStyle}
+                className="absolute bottom-[-8px] h-[2px] bg-primary/40 transition-all duration-300 ease-in-out"
+                style={{
+                  left: `${underlineStyle.left}px`,
+                  width: `${underlineStyle.width}px`,
+                  opacity: underlineStyle.opacity,
+                }}
               ></span>
             </nav>
           </div>

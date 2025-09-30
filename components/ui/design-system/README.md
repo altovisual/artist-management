@@ -131,6 +131,33 @@ import { PageLayout } from '@/components/ui/design-system'
 </PageLayout>
 ```
 
+### 6. BackButton
+Botón de navegación hacia atrás con estilo consistente.
+
+```tsx
+import { BackButton } from '@/components/ui/design-system'
+
+// Navegación simple (router.back())
+<BackButton label="Back" />
+
+// Navegación a ruta específica
+<BackButton label="Back to Tracks" href="/share-tracks" />
+
+// Con variantes
+<BackButton 
+  label="Back to Assets" 
+  href="/artists/123/assets"
+  variant="outline"
+  className="bg-transparent"
+/>
+```
+
+**Props:**
+- `label` (string, opcional): Texto del botón. Default: "Back"
+- `href` (string, opcional): Ruta específica. Si no se provee, usa `router.back()`
+- `variant` ('default' | 'ghost' | 'outline', opcional): Variante del botón. Default: 'ghost'
+- `className` (string, opcional): Clases CSS adicionales
+
 ## Patrones de Uso
 
 ### Página Típica

@@ -4,6 +4,7 @@ export { StatsGrid } from './stats-grid'
 export { ContentSection } from './content-section'
 export { PageLayout } from './page-layout'
 export { DataTable } from './data-table'
+export { BackButton } from './back-button'
 
 // Re-export commonly used components
 export { StatsCard } from '@/components/dashboard/stats-card'

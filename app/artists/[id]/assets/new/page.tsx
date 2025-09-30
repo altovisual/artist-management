@@ -11,8 +11,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AnimatedTitle } from "@/components/animated-title";
-import { ArrowLeft, Upload, Save, X } from "lucide-react"
-import Link from "next/link"
+import { BackButton } from "@/components/ui/design-system/back-button"
+import { Upload, Save, X } from "lucide-react"
 import Image from "next/image"
 
 const assetCategories = {
@@ -239,12 +239,12 @@ export default function NewAssetPage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link href={`/artists/${params.id}/assets`}>
-                <Button variant="outline" size="sm" className="flex items-center gap-2 bg-transparent">
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to Assets
-                </Button>
-              </Link>
+              <BackButton 
+                label="Back to Assets" 
+                href={`/artists/${params.id}/assets`}
+                variant="outline"
+                className="bg-transparent"
+              />
               <div>
                 <AnimatedTitle text="Upload New Asset" level={1} className="text-2xl font-bold" />
                 <p className="text-muted-foreground">Add a new visual asset to the artist&apos;s kit</p>
@@ -444,11 +444,14 @@ export default function NewAssetPage() {
                 <Save className="h-4 w-4" />
                 {isLoading ? "Uploading..." : "Save Asset"}
               </Button>
-              <Link href={`/artists/${params.id}/assets`}>
-                <Button type="button" variant="outline" className="bg-transparent">
-                  Cancel
-                </Button>
-              </Link>
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="bg-transparent"
+                onClick={() => router.push(`/artists/${params.id}/assets`)}
+              >
+                Cancel
+              </Button>
             </div>
           </form>
         </div>

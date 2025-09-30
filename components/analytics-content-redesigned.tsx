@@ -16,6 +16,7 @@ import { PageHeader } from '@/components/ui/design-system/page-header'
 import { StatsGrid } from '@/components/ui/design-system/stats-grid'
 import { ContentSection } from '@/components/ui/design-system/content-section'
 import { DataTable } from '@/components/ui/design-system/data-table'
+import { useAudioAnalytics } from '@/hooks/use-audio-analytics'
 
 // --- Interfaces ---
 interface ArtistProfile {
@@ -79,6 +80,25 @@ export const AnalyticsContentRedesigned = ({ artistId }: AnalyticsContentProps) 
   const [isSpotifyModalOpen, setIsSpotifyModalOpen] = useState(false)
   const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null)
   const [isAlbumModalOpen, setIsAlbumModalOpen] = useState(false)
+  const [currentTrack, setCurrentTrack] = useState<TopTrack | null>(null)
+
+  // Audio Analytics Integration
+  useAudioAnalytics({
+    trackInfo: currentTrack ? {
+      trackId: currentTrack.id,
+      trackName: currentTrack.name,
+      artistName: currentTrack.artists?.[0]?.name || 'Unknown',
+      albumName: currentTrack.album?.name,
+      durationMs: currentTrack.duration_ms,
+      source: 'spotify'
+    } : {
+      trackId: '',
+      trackName: '',
+      source: 'spotify'
+    },
+    audioElement: audioRef,
+    enabled: !!currentTrack && !!audioRef
+  })
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -306,6 +326,7 @@ export const AnalyticsContentRedesigned = ({ artistId }: AnalyticsContentProps) 
     audio.src = track.preview_url
     setAudioRef(audio)
     setCurrentlyPlaying(track.id)
+    setCurrentTrack(track) // Set current track for analytics
 
     // Intentar reproducir
     audio.play().then(() => {

@@ -17,6 +17,7 @@ import { PageHeader } from '@/components/ui/design-system/page-header'
 import { StatsGrid } from '@/components/ui/design-system/stats-grid'
 import { ContentSection } from '@/components/ui/design-system/content-section'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { useAudioAnalytics } from '@/hooks/use-audio-analytics'
 
 interface MusoAiAnalyticsProps {
   artistId: string;
@@ -33,6 +34,25 @@ export const MusoAiAnalyticsRedesigned = ({ artistId }: MusoAiAnalyticsProps) =>
   const [selectedCredit, setSelectedCredit] = useState<any | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showAllCredits, setShowAllCredits] = useState(false);
+  const [currentCredit, setCurrentCredit] = useState<any | null>(null);
+
+  // Audio Analytics Integration
+  useAudioAnalytics({
+    trackInfo: currentCredit ? {
+      trackId: currentCredit.track?.id || currentCredit.id || '',
+      trackName: currentCredit.track?.title || 'Unknown',
+      artistName: currentCredit.artists?.[0]?.name || currentCredit.artists?.[0] || 'Unknown',
+      albumName: currentCredit.album?.name,
+      durationMs: currentCredit.track?.duration,
+      source: 'muso_ai'
+    } : {
+      trackId: '',
+      trackName: '',
+      source: 'muso_ai'
+    },
+    audioElement: audioRef,
+    enabled: !!currentCredit && !!audioRef
+  });
 
   useEffect(() => {
     async function fetchMusoAiData() {
@@ -160,6 +180,7 @@ export const MusoAiAnalyticsRedesigned = ({ artistId }: MusoAiAnalyticsProps) =>
     const audio = new Audio(previewUrl)
     setAudioRef(audio)
     setCurrentlyPlaying(trackId)
+    setCurrentCredit(credit) // Set current credit for analytics
 
     // Configurar eventos del audio
     audio.addEventListener('ended', () => {
