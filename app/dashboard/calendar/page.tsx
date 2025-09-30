@@ -160,12 +160,8 @@ export default function CalendarPage() {
       <div className="space-y-8">
         {/* Page Header */}
         <PageHeader
-          title="Calendar"
+          title="Event Calendar"
           description="View and manage all artist-related events"
-          avatar={{
-            src: '/placeholder.svg',
-            fallback: 'C'
-          }}
           badge={{
             text: `${stats.total} Events`,
             variant: 'secondary' as const

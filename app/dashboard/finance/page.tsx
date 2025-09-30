@@ -278,10 +278,6 @@ export default function FinancePage() {
             <PageHeader
               title="Finance Overview"
               description="Track your artist's income and expenses"
-              avatar={{
-                src: '/placeholder.svg',
-                fallback: 'F'
-              }}
               badge={{
                 text: `$${netBalance} Balance`,
                 variant: parseFloat(netBalance) >= 0 ? 'default' : 'secondary'

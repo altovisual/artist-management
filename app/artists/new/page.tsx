@@ -1,87 +1,120 @@
 'use client'
 
-import type React from "react"
-
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Plus, Trash2, User, Users, Music, Settings, CreditCard, Phone, MapPin, Calendar, FileText } from "lucide-react"
-import Link from "next/link"
-import { createClient } from "@/lib/supabase/client"
-import { useToast } from "@/components/ui/use-toast"
-
-import { Separator } from "@/components/ui/separator";
-import { DashboardLayout } from "@/components/dashboard-layout"
-import { AnimatedTitle } from "@/components/animated-title"
-import { DatePickerField } from "@/components/ui/datepicker"
-
-// Modern form components
-import { FormLayout } from "@/components/forms/form-layout"
-import { FormSection } from "@/components/forms/form-section"
-import { FormField } from "@/components/forms/form-field"
-import { FormHeader } from "@/components/forms/form-header"
-import { ImageUpload } from "@/components/forms/image-upload"
+import React, { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { MultiStepForm, FormFieldGroup, FormFieldItem } from '@/components/forms/multi-step-form'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Button } from '@/components/ui/button'
+import { User, Music, Users, CreditCard, Plus, Trash2, Upload, ArrowLeft } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/ui/use-toast'
+import { DateInput } from '@/components/ui/date-input'
+import { CountrySelect } from '@/components/ui/country-select'
+import { Label } from '@/components/ui/label'
+import { DashboardLayout } from '@/components/dashboard-layout'
+import Link from 'next/link'
 
 interface SocialAccount {
   platform: string
   username: string
-  followers: string   // <- se mantiene en UI, pero NO se envía al DB
   url: string
 }
 
 interface DistributionAccount {
-  id: string | null;
-  distributor: string;
-  service: string;
-  monthly_listeners: string;
-  username: string;
-  email: string;
-  notes: string;
-  url: string;
-  account_id: string;
+  distributor: string
+  service: string
+  username: string
+  email: string
+  url: string
 }
 
-export default function NewArtistPage() {
+export default function NewArtistMultiStepPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(false)
   const supabase = createClient()
+  
+  const [currentStep, setCurrentStep] = useState(0)
+  const [isLoading, setIsLoading] = useState(false)
 
-  // Basic artist info
-  const [name, setName] = useState("")
-  const [genre, setGenre] = useState("")
-  const [location, setLocation] = useState("")
-  const [bio, setBio] = useState("")
-  const [firstName, setFirstName] = useState("")
-  const [lastName, setLastName] = useState("")
+  // Step 1: Basic Information
+  const [name, setName] = useState('')
+  const [genre, setGenre] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>()
+  const [location, setLocation] = useState('')
   const [profileImage, setProfileImage] = useState<File | null>(null)
+  const [profileImagePreview, setProfileImagePreview] = useState<string>('')
 
-  // New participant-related fields
-  const [idNumber, setIdNumber] = useState("")
-  const [address, setAddress] = useState("")
-  const [phone, setPhone] = useState("")
-  const [bankInfo, setBankInfo] = useState("") // Will be JSON string
-  const [managementEntity, setManagementEntity] = useState("")
-  const [ipi, setIpi] = useState("")
+  // Step 2: Contact & Legal
+  const [idNumber, setIdNumber] = useState('')
+  const [address, setAddress] = useState('')
+  const [phone, setPhone] = useState('')
+  const [managementEntity, setManagementEntity] = useState('')
+  const [ipi, setIpi] = useState('')
 
-  // Social accounts
+  // Step 3: Bio & Description
+  const [bio, setBio] = useState('')
+
+  // Step 4: Social Media
   const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([
-    { platform: "", username: "", followers: "", url: "" },
+    { platform: '', username: '', url: '' }
   ])
 
-  // Distribution accounts
+  // Step 5: Distribution
   const [distributionAccounts, setDistributionAccounts] = useState<DistributionAccount[]>([
-    { id: null, distributor: "", service: "", monthly_listeners: "", username: "", email: "", notes: "", url: "", account_id: "" },
+    { distributor: '', service: '', username: '', email: '', url: '' }
   ])
+
+  const steps = [
+    {
+      id: 'basic',
+      title: 'Basic Info',
+      description: 'Essential artist details',
+      icon: <User className="w-5 h-5" />
+    },
+    {
+      id: 'contact',
+      title: 'Contact',
+      description: 'Legal and contact information',
+      icon: <CreditCard className="w-5 h-5" />
+    },
+    {
+      id: 'bio',
+      title: 'Biography',
+      description: 'Tell us about the artist',
+      icon: <Music className="w-5 h-5" />
+    },
+    {
+      id: 'social',
+      title: 'Social Media',
+      description: 'Connect social accounts',
+      icon: <Users className="w-5 h-5" />
+    },
+    {
+      id: 'distribution',
+      title: 'Distribution',
+      description: 'Streaming platforms',
+      icon: <Music className="w-5 h-5" />
+    }
+  ]
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setProfileImage(file)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setProfileImagePreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
 
   const addSocialAccount = () => {
-    setSocialAccounts([...socialAccounts, { platform: "", username: "", followers: "", url: "" }])
+    setSocialAccounts([...socialAccounts, { platform: '', username: '', url: '' }])
   }
 
   const removeSocialAccount = (index: number) => {
@@ -95,7 +128,7 @@ export default function NewArtistPage() {
   }
 
   const addDistributionAccount = () => {
-    setDistributionAccounts([...distributionAccounts, { id: null, distributor: "", service: "", monthly_listeners: "", username: "", email: "", notes: "", url: "", account_id: "" }]);
+    setDistributionAccounts([...distributionAccounts, { distributor: '', service: '', username: '', email: '', url: '' }])
   }
 
   const removeDistributionAccount = (index: number) => {
@@ -108,140 +141,133 @@ export default function NewArtistPage() {
     setDistributionAccounts(updated)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const canGoNext = () => {
+    switch (currentStep) {
+      case 0: // Basic Info
+        return name.trim() !== '' && genre.trim() !== '' && location.trim() !== ''
+      case 1: // Contact
+        return true // Optional fields
+      case 2: // Bio
+        return true // Optional
+      case 3: // Social
+        return true // Optional
+      case 4: // Distribution
+        return true // Optional
+      default:
+        return true
+    }
+  }
+
+  const handleComplete = async () => {
     setIsLoading(true)
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast({ title: "Error", description: "You must be logged in to create an artist.", variant: "destructive" });
-      setIsLoading(false);
-      router.push("/auth/login");
-      return;
-    }
-
-    let parsedBankInfo = null;
-    if (bankInfo) {
-      try {
-        parsedBankInfo = JSON.parse(bankInfo);
-      } catch (jsonError) {
-        toast({ title: "Error", description: "Bank Info must be valid JSON.", variant: "destructive" });
-        setIsLoading(false);
-        return;
-      }
-    }
-
     try {
-      let imageUrl: string | null = null
+      // Upload profile image if exists
+      let profileImageUrl = null
       if (profileImage) {
-        const fileName = `${Date.now()}_${profileImage.name}`
+        const fileExt = profileImage.name.split('.').pop()
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+        
+        // Try to upload, if bucket doesn't exist, handle gracefully
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("artist-profiles")
+          .from('artist-images')
           .upload(fileName, profileImage)
 
         if (uploadError) {
-          throw uploadError
-        }
+          console.error('Upload error:', uploadError)
+          // Continue without image if bucket doesn't exist
+          toast({
+            title: 'Warning',
+            description: 'Could not upload image. Artist will be created without profile picture.',
+            variant: 'default'
+          })
+        } else {
+          const { data: { publicUrl } } = supabase.storage
+            .from('artist-images')
+            .getPublicUrl(fileName)
 
-        const { data: urlData } = supabase.storage.from("artist-profiles").getPublicUrl(uploadData.path)
-        imageUrl = urlData.publicUrl
+          profileImageUrl = publicUrl
+        }
       }
 
-      // 1) Insert artist
+      // Create artist - only include fields that have values
+      const artistPayload: any = {
+        name,
+        genre,
+        country: location || 'us', // Default to 'us' if no country selected (required field)
+      }
+
+      // Add optional fields only if they have values
+      if (bio) artistPayload.bio = bio
+      if (firstName) artistPayload.first_name = firstName
+      if (lastName) artistPayload.last_name = lastName
+      if (dateOfBirth) artistPayload.date_of_birth = dateOfBirth.toISOString()
+      if (profileImageUrl) artistPayload.image_url = profileImageUrl
+      if (idNumber) artistPayload.id_number = idNumber
+      if (address) artistPayload.address = address
+      if (phone) artistPayload.phone = phone
+      if (managementEntity) artistPayload.management_entity = managementEntity
+      if (ipi) artistPayload.ipi = ipi
+
+      console.log('Creating artist with payload:', artistPayload)
+
       const { data: artistData, error: artistError } = await supabase
-        .from("artists")
-        .insert({
-          user_id: user.id,
-          name,
-          genre,
-          country: location,
-          bio,
-          profile_image: imageUrl,
-          total_streams: 0,
-          monthly_listeners: 0,
-          first_name: firstName,
-          last_name: lastName,
-          date_of_birth: dateOfBirth,
-          // New participant-related fields
-          id_number: idNumber || null,
-          address: address || null,
-          phone: phone || null,
-          bank_info: parsedBankInfo,
-          management_entity: managementEntity || null,
-          ipi: ipi || null,
-        })
+        .from('artists')
+        .insert(artistPayload)
         .select()
         .single()
 
-      if (artistError) throw artistError
-      const artistId = artistData.id
-
-      // 2) Insert social_accounts (schema: artist_id, platform, handle, username, url, ...)
-      const validSocialAccounts = socialAccounts.filter((acc) => acc.platform && acc.username)
-      if (validSocialAccounts.length > 0) {
-        const socialAccountsData = validSocialAccounts.map((acc) => ({
-          artist_id: artistId,
-          platform: acc.platform,
-          handle: acc.username || acc.url || acc.platform, // <- handle OBLIGATORIO
-          username: acc.username || null,
-          url: acc.url || null,
-          // followers NO existe en tabla; si lo quieres persistir, agrega la columna vía SQL
-        }))
-
-        const { error: socialError } = await supabase
-          .from("social_accounts")
-          .insert(socialAccountsData)
-          .select("id") // solo columnas existentes
-
-        if (socialError) {
-          console.error("Error inserting social accounts:", socialError)
-        }
+      if (artistError) {
+        console.error('Artist creation error:', artistError)
+        throw new Error(artistError.message || 'Failed to create artist')
       }
 
-      // 3) Insert distribution_accounts (schema: artist_id, service, account_id?, email?)
-      const validDistributionAccounts = distributionAccounts.filter((acc) => acc.distributor && acc.service) // Filter by distributor and service
-      if (validDistributionAccounts.length > 0) {
-        const distributionAccountsData = validDistributionAccounts.map((acc) => ({
-          ...(acc.id && { id: acc.id }), // Conditionally add id only if it exists
-          artist_id: artistId,
+      if (!artistData) {
+        throw new Error('No artist data returned')
+      }
+
+      // Insert social accounts
+      const validSocialAccounts = socialAccounts.filter(acc => acc.platform && acc.username)
+      if (validSocialAccounts.length > 0) {
+        const socialData = validSocialAccounts.map(acc => ({
+          artist_id: artistData.id,
+          platform: acc.platform,
+          username: acc.username,
+          url: acc.url
+        }))
+
+        await supabase.from('social_accounts').insert(socialData)
+      }
+
+      // Insert distribution accounts
+      const validDistAccounts = distributionAccounts.filter(acc => acc.distributor && acc.service)
+      if (validDistAccounts.length > 0) {
+        const distData = validDistAccounts.map(acc => ({
+          artist_id: artistData.id,
           distributor: acc.distributor,
           service: acc.service,
-          monthly_listeners: Number.parseInt(acc.monthly_listeners || '0'),
-          username: acc.username || null,
-          email: acc.email || null,
-          notes: acc.notes || null,
-          url: acc.url || null,
-          account_id: acc.account_id || null,
+          username: acc.username,
+          email: acc.email,
+          url: acc.url
         }))
 
-        const { error: distributionError } = await supabase
-          .from("distribution_accounts")
-          .insert(distributionAccountsData)
-          .select("id") // solo columnas existentes
-
-        if (distributionError) {
-          console.error("Error inserting distribution accounts:", distributionError.message)
-          toast({
-            title: "Error",
-            description: `Failed to add distribution account: ${distributionError.message}`,
-            variant: "destructive",
-          });
-        }
+        await supabase.from('distribution_accounts').insert(distData)
       }
 
-      toast({ title: "Success!", description: "Artist created successfully." })
-      router.push("/dashboard")
-    } catch (error) {
-      console.error("Error creating artist:", error)
-      if (error instanceof Error) {
-        console.error("Error name:", error.name)
-        console.error("Error message:", error.message)
-        console.error("Error stack:", error.stack)
-      }
       toast({
-        title: "Error",
-        description: "Failed to create artist. Please try again.",
-        variant: "destructive",
+        title: 'Success!',
+        description: 'Artist created successfully',
+      })
+
+      // Redirect to dashboard or artist profile
+      router.push('/dashboard')
+    } catch (error: any) {
+      console.error('Error creating artist:', error)
+      const errorMessage = error?.message || error?.error_description || 'Failed to create artist. Please check all required fields.'
+      toast({
+        title: 'Error Creating Artist',
+        description: errorMessage,
+        variant: 'destructive'
       })
     } finally {
       setIsLoading(false)
@@ -250,392 +276,358 @@ export default function NewArtistPage() {
 
   return (
     <DashboardLayout>
-      <FormHeader 
-        title="Add New Artist"
-        description="Create a comprehensive artist profile with all essential information"
-        backHref="/dashboard"
-      />
+      <div className="space-y-8">
+        {/* Header with Back Button */}
+        <div className="flex items-start gap-4">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => router.back()}
+            className="mt-1"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold tracking-tight">Add New Artist</h1>
+            <p className="text-muted-foreground mt-2">
+              Create a comprehensive artist profile with all essential information
+            </p>
+          </div>
+        </div>
 
-      <div className="p-4 sm:p-6">
-        <form onSubmit={handleSubmit}>
-          <FormLayout>
-            {/* Basic Information */}
-            <FormSection 
-              title="Basic Information" 
-              description="Essential artist details and profile setup"
-              icon={User}
-            >
-              <div className="space-y-6">
-                {/* Profile Image */}
-                <FormField label="Profile Image" hint="Upload a professional artist photo">
-                  <ImageUpload 
-                    value={profileImage}
-                    onChange={setProfileImage}
+        <MultiStepForm
+          steps={steps}
+          currentStep={currentStep}
+          onStepChange={setCurrentStep}
+          onComplete={handleComplete}
+          canGoNext={canGoNext() && !isLoading}
+          isLastStep={currentStep === steps.length - 1}
+          mode="create"
+          allowStepNavigation={false}
+        >
+      {/* Step 1: Basic Information */}
+      {currentStep === 0 && (
+        <div className="space-y-6">
+          {/* Profile Image */}
+          <FormFieldGroup>
+            <FormFieldItem label="Profile Image" isLast>
+              <div className="flex items-center gap-4">
+                <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                  {profileImagePreview ? (
+                    <img src={profileImagePreview} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-10 h-10 text-muted-foreground" />
+                  )}
+                </div>
+                <label className="cursor-pointer">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium">
+                    <Upload className="w-4 h-4" />
+                    Upload Image
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
                   />
-                </FormField>
-
-                {/* Name Fields */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                  <FormField label="Artist Name" required>
-                    <Input
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Enter stage/artist name"
-                      required
-                    />
-                  </FormField>
-                  <FormField label="Genre" required>
-                    <Select value={genre} onValueChange={setGenre} required>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select music genre" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Pop">Pop</SelectItem>
-                        <SelectItem value="Rock">Rock</SelectItem>
-                        <SelectItem value="Hip Hop">Hip Hop</SelectItem>
-                        <SelectItem value="R&B">R&B</SelectItem>
-                        <SelectItem value="Electronic">Electronic</SelectItem>
-                        <SelectItem value="Country">Country</SelectItem>
-                        <SelectItem value="Jazz">Jazz</SelectItem>
-                        <SelectItem value="Classical">Classical</SelectItem>
-                        <SelectItem value="Reggaeton">Reggaeton</SelectItem>
-                        <SelectItem value="Folk">Folk</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormField>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                  <FormField label="First Name">
-                    <Input
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      placeholder="Legal first name"
-                    />
-                  </FormField>
-                  <FormField label="Last Name">
-                    <Input
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      placeholder="Legal last name"
-                    />
-                  </FormField>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                  <FormField label="Date of Birth">
-                    <DatePickerField date={dateOfBirth} onDateChange={setDateOfBirth} />
-                  </FormField>
-                  <FormField label="Location">
-                    <Input
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      placeholder="City, Country"
-                    />
-                  </FormField>
-                </div>
-
-                <FormField label="Biography" hint="Tell us about the artist's background, style, and achievements">
-                  <Textarea
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    placeholder="Write a compelling artist biography..."
-                    rows={4}
-                  />
-                </FormField>
+                </label>
               </div>
-            </FormSection>
+            </FormFieldItem>
+          </FormFieldGroup>
 
-            {/* Contact Information */}
-            <FormSection 
-              title="Contact Information" 
-              description="Contact details and identification"
-              icon={Phone}
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                <FormField label="Phone Number">
-                  <Input
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+1 (555) 123-4567"
-                    type="tel"
-                  />
-                </FormField>
-                <FormField label="ID Number" hint="Government identification number">
-                  <Input
-                    value={idNumber}
-                    onChange={(e) => setIdNumber(e.target.value)}
-                    placeholder="Identification number"
-                  />
-                </FormField>
-              </div>
+          {/* Artist Name & Genre */}
+          <FormFieldGroup>
+            <FormFieldItem label="Artist Name *">
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter stage/artist name"
+                className="border-0 bg-transparent focus-visible:ring-0 px-0"
+              />
+            </FormFieldItem>
+            <FormFieldItem label="Genre *" isLast>
+              <Select value={genre} onValueChange={setGenre}>
+                <SelectTrigger className="border-0 bg-transparent focus:ring-0 px-0">
+                  <SelectValue placeholder="Select music genre" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pop">Pop</SelectItem>
+                  <SelectItem value="rock">Rock</SelectItem>
+                  <SelectItem value="hip-hop">Hip Hop</SelectItem>
+                  <SelectItem value="electronic">Electronic</SelectItem>
+                  <SelectItem value="r&b">R&B</SelectItem>
+                  <SelectItem value="country">Country</SelectItem>
+                  <SelectItem value="jazz">Jazz</SelectItem>
+                  <SelectItem value="classical">Classical</SelectItem>
+                  <SelectItem value="reggaeton">Reggaeton</SelectItem>
+                  <SelectItem value="latin">Latin</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormFieldItem>
+          </FormFieldGroup>
 
-              <FormField label="Address">
+          {/* Legal Name */}
+          <FormFieldGroup>
+            <FormFieldItem label="First Name">
+              <Input
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Legal first name"
+                className="border-0 bg-transparent focus-visible:ring-0 px-0"
+              />
+            </FormFieldItem>
+            <FormFieldItem label="Last Name" isLast>
+              <Input
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Legal last name"
+                className="border-0 bg-transparent focus-visible:ring-0 px-0"
+              />
+            </FormFieldItem>
+          </FormFieldGroup>
+
+          {/* Date & Location */}
+          <FormFieldGroup>
+            <FormFieldItem label="Date of Birth">
+              <DateInput
+                value={dateOfBirth}
+                onChange={setDateOfBirth}
+              />
+            </FormFieldItem>
+            <FormFieldItem label="Country *" isLast>
+              <CountrySelect
+                value={location}
+                onChange={setLocation}
+                placeholder="Select country (required)"
+              />
+            </FormFieldItem>
+          </FormFieldGroup>
+        </div>
+      )}
+
+      {/* Step 2: Contact & Legal */}
+      {currentStep === 1 && (
+        <div className="space-y-6">
+          <FormFieldGroup>
+            <FormFieldItem label="ID Number">
+              <Input
+                value={idNumber}
+                onChange={(e) => setIdNumber(e.target.value)}
+                placeholder="National ID or passport"
+                className="border-0 bg-transparent focus-visible:ring-0 px-0"
+              />
+            </FormFieldItem>
+            <FormFieldItem label="Phone">
+              <Input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+1 (555) 000-0000"
+                className="border-0 bg-transparent focus-visible:ring-0 px-0"
+              />
+            </FormFieldItem>
+            <FormFieldItem label="Address" isLast>
+              <Input
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Full address"
+                className="border-0 bg-transparent focus-visible:ring-0 px-0"
+              />
+            </FormFieldItem>
+          </FormFieldGroup>
+
+          <FormFieldGroup>
+            <FormFieldItem label="Management Entity">
+              <Input
+                value={managementEntity}
+                onChange={(e) => setManagementEntity(e.target.value)}
+                placeholder="Management company name"
+                className="border-0 bg-transparent focus-visible:ring-0 px-0"
+              />
+            </FormFieldItem>
+            <FormFieldItem label="IPI Number" isLast>
+              <Input
+                value={ipi}
+                onChange={(e) => setIpi(e.target.value)}
+                placeholder="International IPI number"
+                className="border-0 bg-transparent focus-visible:ring-0 px-0"
+              />
+            </FormFieldItem>
+          </FormFieldGroup>
+        </div>
+      )}
+
+      {/* Step 3: Biography */}
+      {currentStep === 2 && (
+        <div className="space-y-6">
+          <FormFieldGroup>
+            <FormFieldItem label="Biography" isLast>
+              <Textarea
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="Tell us about the artist's background, style, and achievements..."
+                className="border-0 bg-transparent focus-visible:ring-0 px-0 min-h-[200px] resize-none"
+              />
+            </FormFieldItem>
+          </FormFieldGroup>
+        </div>
+      )}
+
+      {/* Step 4: Social Media */}
+      {currentStep === 3 && (
+        <div className="space-y-6">
+          {socialAccounts.map((account, index) => (
+            <FormFieldGroup key={index}>
+              <FormFieldItem label="Platform">
+                <Select
+                  value={account.platform}
+                  onValueChange={(value) => updateSocialAccount(index, 'platform', value)}
+                >
+                  <SelectTrigger className="border-0 bg-transparent focus:ring-0 px-0">
+                    <SelectValue placeholder="Select platform" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="spotify">Spotify</SelectItem>
+                    <SelectItem value="instagram">Instagram</SelectItem>
+                    <SelectItem value="tiktok">TikTok</SelectItem>
+                    <SelectItem value="youtube">YouTube</SelectItem>
+                    <SelectItem value="twitter">Twitter/X</SelectItem>
+                    <SelectItem value="facebook">Facebook</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormFieldItem>
+              <FormFieldItem label="Username">
                 <Input
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Full address including city and postal code"
+                  value={account.username}
+                  onChange={(e) => updateSocialAccount(index, 'username', e.target.value)}
+                  placeholder="@username"
+                  className="border-0 bg-transparent focus-visible:ring-0 px-0"
                 />
-              </FormField>
-            </FormSection>
-
-            {/* Professional Information */}
-            <FormSection 
-              title="Professional Information" 
-              description="Management and industry details"
-              icon={Settings}
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                <FormField label="Management Entity" hint="PRO, publisher, or management company">
+              </FormFieldItem>
+              <FormFieldItem label="URL" isLast>
+                <div className="flex items-center gap-2">
                   <Input
-                    value={managementEntity}
-                    onChange={(e) => setManagementEntity(e.target.value)}
-                    placeholder="e.g., ASCAP, BMI, management company"
+                    value={account.url}
+                    onChange={(e) => updateSocialAccount(index, 'url', e.target.value)}
+                    placeholder="https://..."
+                    className="border-0 bg-transparent focus-visible:ring-0 px-0"
                   />
-                </FormField>
-                <FormField label="IPI Number" hint="International Performer Identifier">
-                  <Input
-                    value={ipi}
-                    onChange={(e) => setIpi(e.target.value)}
-                    placeholder="IPI number (if applicable)"
-                  />
-                </FormField>
-              </div>
+                  {socialAccounts.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeSocialAccount(index)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </FormFieldItem>
+            </FormFieldGroup>
+          ))}
 
-              <FormField label="Bank Information" hint="Enter bank details as JSON format">
-                <Textarea
-                  value={bankInfo}
-                  onChange={(e) => setBankInfo(e.target.value)}
-                  placeholder='{"bank": "Bank Name", "account": "123456789", "routing": "987654321"}'
-                  rows={3}
+          <Button
+            variant="outline"
+            onClick={addSocialAccount}
+            className="w-full"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Social Account
+          </Button>
+        </div>
+      )}
+
+      {/* Step 5: Distribution */}
+      {currentStep === 4 && (
+        <div className="space-y-6">
+          {distributionAccounts.map((account, index) => (
+            <FormFieldGroup key={index}>
+              <FormFieldItem label="Distributor">
+                <Select
+                  value={account.distributor}
+                  onValueChange={(value) => updateDistributionAccount(index, 'distributor', value)}
+                >
+                  <SelectTrigger className="border-0 bg-transparent focus:ring-0 px-0">
+                    <SelectValue placeholder="Select distributor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="distrokid">DistroKid</SelectItem>
+                    <SelectItem value="tunecore">TuneCore</SelectItem>
+                    <SelectItem value="cdbaby">CD Baby</SelectItem>
+                    <SelectItem value="amuse">Amuse</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormFieldItem>
+              <FormFieldItem label="Service">
+                <Select
+                  value={account.service}
+                  onValueChange={(value) => updateDistributionAccount(index, 'service', value)}
+                >
+                  <SelectTrigger className="border-0 bg-transparent focus:ring-0 px-0">
+                    <SelectValue placeholder="Select service" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="spotify">Spotify</SelectItem>
+                    <SelectItem value="apple-music">Apple Music</SelectItem>
+                    <SelectItem value="youtube-music">YouTube Music</SelectItem>
+                    <SelectItem value="amazon-music">Amazon Music</SelectItem>
+                    <SelectItem value="all">All Platforms</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormFieldItem>
+              <FormFieldItem label="Username">
+                <Input
+                  value={account.username}
+                  onChange={(e) => updateDistributionAccount(index, 'username', e.target.value)}
+                  placeholder="Account username"
+                  className="border-0 bg-transparent focus-visible:ring-0 px-0"
                 />
-              </FormField>
-            </FormSection>
+              </FormFieldItem>
+              <FormFieldItem label="Email">
+                <Input
+                  value={account.email}
+                  onChange={(e) => updateDistributionAccount(index, 'email', e.target.value)}
+                  placeholder="account@email.com"
+                  type="email"
+                  className="border-0 bg-transparent focus-visible:ring-0 px-0"
+                />
+              </FormFieldItem>
+              <FormFieldItem label="URL" isLast>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={account.url}
+                    onChange={(e) => updateDistributionAccount(index, 'url', e.target.value)}
+                    placeholder="https://..."
+                    className="border-0 bg-transparent focus-visible:ring-0 px-0"
+                  />
+                  {distributionAccounts.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeDistributionAccount(index)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </FormFieldItem>
+            </FormFieldGroup>
+          ))}
 
-            {/* Social Media Accounts */}
-            <FormSection 
-              title="Social Media Accounts" 
-              description="Connect artist's social media presence"
-              icon={Users}
-              headerAction={
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addSocialAccount}
-                  className="flex items-center gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Account
-                </Button>
-              }
-            >
-              <div className="space-y-4">
-                {socialAccounts.map((account, index) => (
-                  <div key={index} className="p-4 sm:p-6 border rounded-xl bg-muted/20 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium text-sm sm:text-base">Social Account {index + 1}</h4>
-                      {socialAccounts.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => removeSocialAccount(index)}
-                          className="flex items-center gap-1 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                          Remove
-                        </Button>
-                      )}
-                    </div>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormField label="Platform">
-                        <Select
-                          value={account.platform}
-                          onValueChange={(value) => updateSocialAccount(index, "platform", value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select platform" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Instagram">📷 Instagram</SelectItem>
-                            <SelectItem value="Twitter">🐦 Twitter</SelectItem>
-                            <SelectItem value="YouTube">📺 YouTube</SelectItem>
-                            <SelectItem value="TikTok">🎵 TikTok</SelectItem>
-                            <SelectItem value="Facebook">👥 Facebook</SelectItem>
-                            <SelectItem value="Spotify">🎧 Spotify</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormField>
-                      
-                      <FormField label="Username">
-                        <Input
-                          value={account.username}
-                          onChange={(e) => updateSocialAccount(index, "username", e.target.value)}
-                          placeholder="@username"
-                        />
-                      </FormField>
-                      
-                      <FormField label="Followers" hint="Display only - not saved to database">
-                        <Input
-                          value={account.followers}
-                          onChange={(e) => updateSocialAccount(index, "followers", e.target.value)}
-                          placeholder="125K"
-                        />
-                      </FormField>
-                      
-                      <FormField label="Profile URL">
-                        <Input
-                          value={account.url}
-                          onChange={(e) => updateSocialAccount(index, "url", e.target.value)}
-                          placeholder="https://..."
-                          type="url"
-                        />
-                      </FormField>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </FormSection>
-
-            {/* Distribution Accounts */}
-            <FormSection 
-              title="Distribution Accounts" 
-              description="Music distribution and streaming platforms"
-              icon={Music}
-              headerAction={
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addDistributionAccount}
-                  className="flex items-center gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Account
-                </Button>
-              }
-            >
-              <div className="space-y-4">
-                {distributionAccounts.map((account, index) => (
-                  <div key={index} className="p-4 sm:p-6 border rounded-xl bg-muted/20 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium text-sm sm:text-base">Distribution Account {index + 1}</h4>
-                      {distributionAccounts.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => removeDistributionAccount(index)}
-                          className="flex items-center gap-1 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                          Remove
-                        </Button>
-                      )}
-                    </div>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormField label="Distributor">
-                        <Input
-                          value={account.distributor || ''}
-                          onChange={(e) => updateDistributionAccount(index, "distributor", e.target.value)}
-                          placeholder="e.g., DistroKid, CD Baby"
-                        />
-                      </FormField>
-                      
-                      <FormField label="Service">
-                        <Select
-                          value={account.service || ''}
-                          onValueChange={(value) => updateDistributionAccount(index, "service", value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select service" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Spotify">🎧 Spotify</SelectItem>
-                            <SelectItem value="Apple Music">🍎 Apple Music</SelectItem>
-                            <SelectItem value="YouTube Music">📺 YouTube Music</SelectItem>
-                            <SelectItem value="Amazon Music">📦 Amazon Music</SelectItem>
-                            <SelectItem value="Bandcamp">🎵 Bandcamp</SelectItem>
-                            <SelectItem value="SoundCloud">☁️ SoundCloud</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormField>
-                      
-                      <FormField label="Username">
-                        <Input
-                          value={account.username || ''}
-                          onChange={(e) => updateDistributionAccount(index, "username", e.target.value)}
-                          placeholder="artist_username"
-                        />
-                      </FormField>
-                      
-                      <FormField label="Email">
-                        <Input
-                          type="email"
-                          value={account.email || ''}
-                          onChange={(e) => updateDistributionAccount(index, "email", e.target.value)}
-                          placeholder="contact@distro.com"
-                        />
-                      </FormField>
-                      
-                      <FormField label="Profile URL">
-                        <Input
-                          value={account.url || ''}
-                          onChange={(e) => updateDistributionAccount(index, "url", e.target.value)}
-                          placeholder="https://..."
-                          type="url"
-                        />
-                      </FormField>
-                      
-                      <FormField label="Monthly Listeners">
-                        <Input
-                          value={account.monthly_listeners || ''}
-                          onChange={(e) => updateDistributionAccount(index, "monthly_listeners", e.target.value)}
-                          placeholder="250,000"
-                        />
-                      </FormField>
-                    </div>
-                    
-                    <FormField label="Notes" hint="Additional information about this distribution account">
-                      <Textarea
-                        value={account.notes || ''}
-                        onChange={(e) => updateDistributionAccount(index, "notes", e.target.value)}
-                        placeholder="Add any relevant notes about this account..."
-                        rows={2}
-                      />
-                    </FormField>
-                  </div>
-                ))}
-              </div>
-            </FormSection>
-
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-center justify-end gap-3 sm:gap-4 pt-6">
-              <Link href="/dashboard" className="w-full sm:w-auto">
-                <Button type="button" variant="outline" className="w-full sm:w-auto">
-                  Cancel
-                </Button>
-              </Link>
-              <Button 
-                type="submit" 
-                disabled={isLoading}
-                className="w-full sm:w-auto bg-primary hover:bg-primary/90"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Creating Artist...
-                  </>
-                ) : (
-                  "Create Artist"
-                )}
-              </Button>
-            </div>
-          </FormLayout>
-        </form>
+          <Button
+            variant="outline"
+            onClick={addDistributionAccount}
+            className="w-full"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Distribution Account
+          </Button>
+        </div>
+      )}
+        </MultiStepForm>
       </div>
     </DashboardLayout>
   )

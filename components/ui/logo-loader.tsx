@@ -1,0 +1,156 @@
+'use client'
+
+import React, { useEffect, useRef } from 'react'
+import { motion } from 'framer-motion'
+import { useTheme } from 'next-themes'
+
+interface LogoLoaderProps {
+  size?: 'sm' | 'md' | 'lg'
+  text?: string
+}
+
+const DarkLogo = React.forwardRef<SVGSVGElement>((props, ref) => (
+  <svg ref={ref} {...props} id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 759.7 144.99">
+    <g id="Layer_1-2" data-name="Layer 1">
+      <g>
+        <path fill="none" stroke="#fff" strokeMiterlimit="10" strokeWidth="2" d="M35.98,20.29l52.47,113.01,56.97-113.01h35.98c.11,0,1.5,1.39,1.5,1.5v120.5h-35.98V35.29l-55.43,107.07-35.36-.24L7,37.29v105H0V20.29h35.98Z"/>
+        <path fill="none" stroke="#fff" strokeMiterlimit="10" strokeWidth="2" d="M395.72,15.99l31.97,23c20.06-33.86,73.12-35.73,107.39-26.93,35.96,9.24,70.93,42.68,23.44,67.3-12.09,6.27-46.12,16.68-58.78,13.03-6.08-1.75-.75-4.86-.12-8.97,2.04-13.38-14.43-15.79-24.39-16.47-15.31-1.05-31.48,1.51-46.52,4.04v66h-32.98V15.99ZM428.7,44.49c-1.46,5.65,1.08,17.13,0,23.5,7.07-1.05,13.68-4.67,20.77-6.72,15.25-4.41,49.31-10.9,62.21.19,10.83,9.31-2.71,18.35-7.19,25.86-.81,1.36-1.67,1.89.63,1.64,24.24-2.58,51.78-25.34,32.03-49.99-21.78-27.19-76.28-25.33-100.99-3.01-1.43,1.29-7.14,7.26-7.47,8.53Z"/>
+        <path fill="none" stroke="#fff" strokeMiterlimit="10" strokeWidth="2" d="M378.97,20.29c.74.66-3.83,7.65-4.58,8.92-20.37,34.04-42.21,69.9-63.97,103-1.56,2.38-5.49,9.63-7.9,10.09-2.84.54-32.81.65-34.29-.22l-65.17-97.29-1.99-4.5h34.48c22.08,31.11,42.35,63.54,63.98,95l59.46-94h-58.97v-21h78.96Z"/>
+        <path className="logo-color-path" fill="#e1348f" stroke="#e1348f" strokeMiterlimit="10" strokeWidth="2" d="M701.08,47.34c16.69-13.98,35.39-31.18,52.58-43.9,6.3-4.66,3.78,1.26,1.02,5.02-8.77,11.94-20.39,23.53-29.93,35.05-7.86,9.49-15.61,19.13-23.05,28.98l58.01,72.5-72.48-58.01c-15.37,11.87-29.93,24.73-44.99,36.98-2.81,2.28-6.47,3.98-8.97,6.02-4.99,4.08-9.09,11.92-16.48,13l56.63-70.5L614.78,0l71.95,58.51c2.03.91,5-3.43,6.5-4.52,3.8-2.76,4.84-4.13,7.85-6.65Z"/>
+      </g>
+    </g>
+  </svg>
+))
+DarkLogo.displayName = 'DarkLogo'
+
+const LightLogo = React.forwardRef<SVGSVGElement>((props, ref) => (
+  <svg ref={ref} {...props} id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 759.7 144.99">
+    <g id="Layer_1-2" data-name="Layer 1">
+      <g>
+        <path fill="none" stroke="#000" strokeMiterlimit="10" strokeWidth="2" d="M35.98,20.29l52.47,113.01,56.97-113.01h35.98c.11,0,1.5,1.39,1.5,1.5v120.5h-35.98V35.29l-55.43,107.07-35.36-.24L7,37.29v105H0V20.29h35.98Z"/>
+        <path fill="none" stroke="#000" strokeMiterlimit="10" strokeWidth="2" d="M395.72,15.99l31.97,23c20.06-33.86,73.12-35.73,107.39-26.93,35.96,9.24,70.93,42.68,23.44,67.3-12.09,6.27-46.12,16.68-58.78,13.03-6.08-1.75-.75-4.86-.12-8.97,2.04-13.38-14.43-15.79-24.39-16.47-15.31-1.05-31.48,1.51-46.52,4.04v66h-32.98V15.99ZM428.7,44.49c-1.46,5.65,1.08,17.13,0,23.5,7.07-1.05,13.68-4.67,20.77-6.72,15.25-4.41,49.31-10.9,62.21.19,10.83,9.31-2.71,18.35-7.19,25.86-.81,1.36-1.67,1.89.63,1.64,24.24-2.58,51.78-25.34,32.03-49.99-21.78-27.19-76.28-25.33-100.99-3.01-1.43,1.29-7.14,7.26-7.47,8.53Z"/>
+        <path fill="none" stroke="#000" strokeMiterlimit="10" strokeWidth="2" d="M378.97,20.29c.74.66-3.83,7.65-4.58,8.92-20.37,34.04-42.21,69.9-63.97,103-1.56,2.38-5.49,9.63-7.9,10.09-2.84.54-32.81.65-34.29-.22l-65.17-97.29-1.99-4.5h34.48c22.08,31.11,42.35,63.54,63.98,95l59.46-94h-58.97v-21h78.96Z"/>
+        <path className="logo-color-path" fill="#e1348f" stroke="#e1348f" strokeMiterlimit="10" strokeWidth="2" d="M701.08,47.34c16.69-13.98,35.39-31.18,52.58-43.9,6.3-4.66,3.78,1.26,1.02,5.02-8.77,11.94-20.39,23.53-29.93,35.05-7.86,9.49-15.61,19.13-23.05,28.98l58.01,72.5-72.48-58.01c-15.37,11.87-29.93,24.73-44.99,36.98-2.81,2.28-6.47,3.98-8.97,6.02-4.99,4.08-9.09,11.92-16.48,13l56.63-70.5L614.78,0l71.95,58.51c2.03.91,5-3.43,6.5-4.52,3.8-2.76,4.84-4.13,7.85-6.65Z"/>
+      </g>
+    </g>
+  </svg>
+))
+LightLogo.displayName = 'LightLogo'
+
+export function LogoLoader({ size = 'md', text }: LogoLoaderProps) {
+  const { theme } = useTheme()
+  const logoRef = useRef<SVGSVGElement>(null)
+
+  const sizes = {
+    sm: { width: 150, height: 32 },
+    md: { width: 240, height: 48 },
+    lg: { width: 380, height: 72 }
+  }
+
+  useEffect(() => {
+    const anime = (window as any).anime
+    if (logoRef.current && anime) {
+      const paths = logoRef.current.querySelectorAll('path')
+      
+      // Animate paths drawing in a loop
+      const animation = anime.timeline({
+        loop: true,
+        easing: 'easeInOutSine',
+      })
+      .add({
+        targets: paths,
+        strokeDashoffset: [anime.setDashoffset, 0],
+        duration: 400,
+        delay: (el: SVGPathElement, i: number) => i * 100,
+        begin: () => {
+          paths.forEach(path => {
+            path.style.fill = 'none'
+          })
+        },
+        complete: () => {
+          paths.forEach(path => {
+            if (path.classList.contains('logo-color-path')) {
+              path.style.fill = '#e1348f'
+            } else {
+              path.style.fill = theme === 'dark' ? '#fff' : '#000'
+            }
+          })
+        }
+      })
+      .add({
+        targets: logoRef.current,
+        opacity: [1, 1],
+        duration: 400,
+      })
+      .add({
+        targets: paths,
+        strokeDashoffset: [0, anime.setDashoffset],
+        duration: 600,
+        delay: (el: SVGPathElement, i: number) => i * 80,
+        begin: () => {
+          paths.forEach(path => {
+            path.style.fill = 'none'
+          })
+        }
+      })
+
+      return () => {
+        animation.pause()
+      }
+    }
+  }, [theme])
+
+  return (
+    <div className="flex flex-col items-center justify-center gap-6">
+      {/* Logo MVP Animado */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ 
+          opacity: 1,
+          scale: [0.95, 1, 0.95],
+        }}
+        transition={{
+          scale: {
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }
+        }}
+        style={{ 
+          width: sizes[size].width, 
+          height: sizes[size].height 
+        }}
+      >
+        {theme === 'dark' 
+          ? <DarkLogo ref={logoRef} /> 
+          : <LightLogo ref={logoRef} />}
+      </motion.div>
+
+      {/* Texto de carga */}
+      {text && (
+        <motion.p
+          className="text-sm text-muted-foreground"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          {text}
+        </motion.p>
+      )}
+
+      {/* Barra de progreso animada */}
+      <div className="w-64 h-1 bg-muted rounded-full overflow-hidden">
+        <motion.div
+          className="h-full bg-primary"
+          initial={{ x: '-100%' }}
+          animate={{ x: '100%' }}
+          transition={{
+            duration: 1.5,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
+      </div>
+    </div>
+  )
+}

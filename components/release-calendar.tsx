@@ -69,6 +69,8 @@ interface ReleaseCalendarProps {
   initialArtists: any[];
   initialArtistId: string | null;
   isLoading: boolean;
+  showAddModal?: boolean;
+  onCloseAddModal?: () => void;
 }
 
 // Helper Component for Form Fields
@@ -166,6 +168,8 @@ export function ReleaseCalendar({
   initialArtists,
   initialArtistId,
   isLoading: initialLoading,
+  showAddModal = false,
+  onCloseAddModal,
 }: ReleaseCalendarProps) {
   const supabase = createClient()
   const { toast } = useToast()
@@ -175,9 +179,22 @@ export function ReleaseCalendar({
   const [currentView, setCurrentView] = useState<View>("month");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isMobile, setIsMobile] = useState(false);
-  const [showAddReleaseModal, setShowAddReleaseModal] = useState(false)
+  const [showAddReleaseModal, setShowAddReleaseModal] = useState(showAddModal)
   const [selectedRelease, setSelectedRelease] = useState<ReleaseEvent | null>(null)
   const [showEditReleaseModal, setShowEditReleaseModal] = useState(false)
+
+  // Sync external modal state
+  useEffect(() => {
+    setShowAddReleaseModal(showAddModal)
+  }, [showAddModal])
+
+  // Handle modal close
+  const handleCloseAddModal = () => {
+    setShowAddReleaseModal(false)
+    if (onCloseAddModal) {
+      onCloseAddModal()
+    }
+  }
 
   const initialFormState = useMemo(() => ({
     newReleaseTitle: "",
@@ -366,7 +383,7 @@ export function ReleaseCalendar({
     toast({ title: "Success", description: "Release added successfully." });
     const newEvent: ReleaseEvent = { id: String(finalProjectData.id), title: finalProjectData.name, start: new Date(finalProjectData.release_date), end: new Date(finalProjectData.release_date), allDay: true, resource: finalProjectData as ProjectRow };
     setEvents((prev) => [...prev, newEvent]);
-    setShowAddReleaseModal(false);
+    handleCloseAddModal();
     setIsSavingRelease(false);
   }
 
@@ -453,41 +470,11 @@ export function ReleaseCalendar({
 
   return (
     <>
-      <div className="min-h-screen bg-background">
-        <header className="border-b bg-card">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex-grow text-center sm:text-left">
-                    <AnimatedTitle text="Release Calendar" level={1} className="text-2xl font-bold tracking-tight" />
-                    <p className="text-muted-foreground">View and manage all upcoming music releases.</p>
-                </div>
-                <Button className="flex items-center gap-2 w-full sm:w-auto" onClick={() => {
-                  setSelectedRelease(null);
-                  setForm(initialFormState);
-                  setCoverArtFile(null);
-                  setMusicFile(null);
-                  setShowAddReleaseModal(true);
-                  if (initialArtistId) {
-                    setForm(f => ({ ...f, selectedArtistId: initialArtistId }));
-                  } else if (artists.length > 0) {
-                    setForm(f => ({ ...f, selectedArtistId: artists[0].id }));
-                  } else {
-                    setForm(f => ({ ...f, selectedArtistId: null }));
-                  }
-                }}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Release
-                </Button>
-            </div>
-          </div>
-        </header>
-
-        <main className="container mx-auto px-4 py-8">
-          {isLoading ? (
-            <ReleaseCalendarSkeleton />
-          ) : (
-            <div className="h-[600px] overflow-y-auto">
-              <Calendar
+      {isLoading ? (
+        <ReleaseCalendarSkeleton />
+      ) : (
+        <div className="h-[600px] md:h-[700px] lg:h-[75vh] overflow-y-auto rounded-lg border bg-card p-4">
+          <Calendar
                 localizer={localizer}
                 events={events}
                 startAccessor="start"
@@ -519,10 +506,8 @@ export function ReleaseCalendar({
                   toolbar: CalendarToolbar,
                 }}
               />
-            </div>
-          )}
-        </main>
-      </div>
+        </div>
+      )}
 
       {/* MODAL: Añadir */}
       <Dialog open={showAddReleaseModal} onOpenChange={setShowAddReleaseModal}>
@@ -537,7 +522,7 @@ export function ReleaseCalendar({
             </div>
           </ScrollArea>
           <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setShowAddReleaseModal(false)}>Cancel</Button>
+            <Button variant="outline" onClick={handleCloseAddModal}>Cancel</Button>
             <Button onClick={handleAddRelease} disabled={isSavingRelease}>
               {isSavingRelease ? "Saving..." : "Save Release"}
             </Button>

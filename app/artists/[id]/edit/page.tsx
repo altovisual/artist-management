@@ -1,77 +1,34 @@
 'use client'
 
-import React, { useState, useEffect } from "react"
-import { useRouter, useParams } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Plus, Trash2, User, Users, Music, Settings, Phone } from "lucide-react"
-import Image from "next/image"
-import { createClient } from "@/lib/supabase/client"
-import { useToast } from "@/components/ui/use-toast"
-import { CredentialManager } from "@/components/credential-manager"
-import { Separator } from "@/components/ui/separator"
-import { encrypt } from "@/lib/crypto"
-import { DashboardLayout } from "@/components/dashboard-layout"
-import { AnimatedTitle } from "@/components/animated-title"
-import { DatePickerField } from "@/components/ui/datepicker"
-import { EditArtistSkeleton } from "./edit-artist-skeleton"
-
-// Modern form components
-import { FormLayout } from "@/components/forms/form-layout"
-import { FormSection } from "@/components/forms/form-section"
-import { FormField } from "@/components/forms/form-field"
-import { FormHeader } from "@/components/forms/form-header"
-import { ImageUpload } from "@/components/forms/image-upload"
-
-// Helper function to extract Spotify ID from URL
-const extractSpotifyId = (urlOrId: string): string | null => {
-  const trimmedUrl = urlOrId.trim()
-  if (!trimmedUrl) return null
-  try {
-    if (trimmedUrl.includes('spotify.com')) {
-      const url = new URL(trimmedUrl)
-      const pathParts = url.pathname.split('/')
-      const artistId = pathParts.find(part => part.length === 22) // Spotify IDs are 22 chars
-      return artistId || null
-    }
-    if (trimmedUrl.startsWith('spotify:artist:')) {
-      return trimmedUrl.split(':')[2]
-    }
-    return trimmedUrl
-  } catch (error) {
-    console.error("Invalid Spotify URL, returning original value", error)
-    return urlOrId
-  }
-}
+import React, { useState, useEffect } from 'react'
+import { useRouter, useParams } from 'next/navigation'
+import { MultiStepForm, FormFieldGroup, FormFieldItem } from '@/components/forms/multi-step-form'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Button } from '@/components/ui/button'
+import { User, Music, Users, CreditCard, Plus, Trash2, Upload, ArrowLeft } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/ui/use-toast'
+import { DateInput } from '@/components/ui/date-input'
+import { CountrySelect } from '@/components/ui/country-select'
+import { Label } from '@/components/ui/label'
+import { DashboardLayout } from '@/components/dashboard-layout'
+import { LogoLoader } from '@/components/ui/logo-loader'
+import Link from 'next/link'
 
 interface SocialAccount {
-  id: string | null
   platform: string
   username: string
-  handle: string
   url: string
-  followers: string
-  email?: string
-  password?: string
-  newPassword?: string
 }
 
 interface DistributionAccount {
-  id: string | null
   distributor: string
   service: string
-  monthly_listeners: string
   username: string
   email: string
-  notes: string
   url: string
-  account_id: string
-  password?: string
-  newPassword?: string
 }
 
 export default function EditArtistPage() {
@@ -79,776 +36,702 @@ export default function EditArtistPage() {
   const params = useParams()
   const { toast } = useToast()
   const supabase = createClient()
-
-  // Loading states
+  
+  const [currentStep, setCurrentStep] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingData, setIsLoadingData] = useState(true)
 
-  // Artist data state
-  const [artist, setArtist] = useState<any>(null)
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-
-  // Form state
-  const [name, setName] = useState("")
-  const [genre, setGenre] = useState("")
-  const [location, setLocation] = useState("")
-  const [bio, setBio] = useState("")
-  const [firstName, setFirstName] = useState("")
-  const [lastName, setLastName] = useState("")
+  // Step 1: Basic Information
+  const [name, setName] = useState('')
+  const [genre, setGenre] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>()
-  const [spotifyInput, setSpotifyInput] = useState("")
-  const [newProfileImage, setNewProfileImage] = useState<File | null>(null)
-  const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([])
-  const [distributionAccounts, setDistributionAccounts] = useState<DistributionAccount[]>([])
+  const [location, setLocation] = useState('')
+  const [profileImage, setProfileImage] = useState<File | null>(null)
+  const [profileImagePreview, setProfileImagePreview] = useState<string>('')
+  const [existingImageUrl, setExistingImageUrl] = useState<string>('')
 
-  // New participant-related fields
-  const [idNumber, setIdNumber] = useState("")
-  const [address, setAddress] = useState("")
-  const [phone, setPhone] = useState("")
-  const [bankInfo, setBankInfo] = useState("") // Will be JSON string
-  const [managementEntity, setManagementEntity] = useState("")
-  const [ipi, setIpi] = useState("")
+  // Step 2: Contact & Legal
+  const [idNumber, setIdNumber] = useState('')
+  const [address, setAddress] = useState('')
+  const [phone, setPhone] = useState('')
+  const [managementEntity, setManagementEntity] = useState('')
+  const [ipi, setIpi] = useState('')
 
-  // State to track original IDs for deletion
-  const [initialSocialAccountIds, setInitialSocialAccountIds] = useState<string[]>([]);
-  const [initialDistributionAccountIds, setInitialDistributionAccountIds] = useState<string[]>([]);
+  // Step 3: Bio & Description
+  const [bio, setBio] = useState('')
 
-  const addSocialAccount = () => {
-    setSocialAccounts([...socialAccounts, { id: null, platform: "", username: "", handle: "", url: "", followers: "", email: "" }]);
-  };
+  // Step 4: Social Media
+  const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([
+    { platform: '', username: '', url: '' }
+  ])
 
-  const removeSocialAccount = (indexToRemove: number) => {
-    setSocialAccounts(socialAccounts.filter((_, index) => index !== indexToRemove));
-  };
+  // Step 5: Distribution
+  const [distributionAccounts, setDistributionAccounts] = useState<DistributionAccount[]>([
+    { distributor: '', service: '', username: '', email: '', url: '' }
+  ])
 
-  const updateSocialAccount = (index: number, field: keyof SocialAccount, value: string) => {
-    const updatedAccounts = [...socialAccounts];
-    (updatedAccounts[index] as any)[field] = value;
-    setSocialAccounts(updatedAccounts);
-  };
-
-  const addDistributionAccount = () => {
-    setDistributionAccounts([...distributionAccounts, { id: null, distributor: "", service: "", monthly_listeners: "", username: "", email: "", notes: "", url: "", account_id: "" }]);
-  };
-
-  const removeDistributionAccount = (indexToRemove: number) => {
-    setDistributionAccounts(distributionAccounts.filter((_, index) => index !== indexToRemove));
-  };
-
-  const updateDistributionAccount = (index: number, field: keyof DistributionAccount, value: string) => {
-    const updatedAccounts = [...distributionAccounts];
-    (updatedAccounts[index] as any)[field] = value;
-    setDistributionAccounts(updatedAccounts);
-  };
-
+  // Load artist data
   useEffect(() => {
-    const fetchArtistData = async () => {
+    async function loadArtist() {
       const artistId = params.id as string
       if (!artistId) {
         setIsLoadingData(false)
         return
       }
 
-      setIsLoadingData(true)
       try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          setCurrentUserId(user.id)
-        }
-
-        const { data: artistData, error: artistError } = await supabase
-          .from("artists")
-          .select(`*, social_accounts (*), distribution_accounts (*)`)
-          .eq("id", artistId)
+        const { data: artistData, error } = await supabase
+          .from('artists')
+          .select('*')
+          .eq('id', artistId)
           .single()
 
-        if (artistError || !artistData) {
-          toast({ title: "Error", description: "Failed to load artist data.", variant: "destructive" })
-          router.push("/dashboard")
-          return
+        if (error) throw error
+
+        if (artistData) {
+          setName(artistData.name || '')
+          setGenre(artistData.genre || '')
+          setFirstName(artistData.first_name || '')
+          setLastName(artistData.last_name || '')
+          setLocation(artistData.country || '')
+          setBio(artistData.bio || '')
+          setIdNumber(artistData.id_number || '')
+          setAddress(artistData.address || '')
+          setPhone(artistData.phone || '')
+          setManagementEntity(artistData.management_entity || '')
+          setIpi(artistData.ipi || '')
+          
+          if (artistData.date_of_birth) {
+            setDateOfBirth(new Date(artistData.date_of_birth))
+          }
+          
+          if (artistData.image_url) {
+            setExistingImageUrl(artistData.image_url)
+            setProfileImagePreview(artistData.image_url)
+          }
         }
 
-        setArtist(artistData)
-        setName(artistData.name || "")
-        setGenre(artistData.genre || "")
-        setLocation(artistData.country || "")
-        setBio(artistData.bio || "")
-        setFirstName(artistData.first_name || "")
-        setLastName(artistData.last_name || "")
-        if (artistData.date_of_birth) {
-          setDateOfBirth(new Date(artistData.date_of_birth))
+        // Load social accounts
+        const { data: socialData } = await supabase
+          .from('social_accounts')
+          .select('*')
+          .eq('artist_id', artistId)
+
+        if (socialData && socialData.length > 0) {
+          setSocialAccounts(socialData.map(acc => ({
+            platform: acc.platform || '',
+            username: acc.username || '',
+            url: acc.url || ''
+          })))
         }
-        setSpotifyInput(artistData.spotify_artist_id || "")
 
-        // Set new participant fields
-        setIdNumber(artistData.id_number || "");
-        setAddress(artistData.address || "");
-        setPhone(artistData.phone || "");
-        setBankInfo(artistData.bank_info ? JSON.stringify(artistData.bank_info, null, 2) : "");
-        setManagementEntity(artistData.management_entity || "");
-        setIpi(artistData.ipi || "");
+        // Load distribution accounts
+        const { data: distData } = await supabase
+          .from('distribution_accounts')
+          .select('*')
+          .eq('artist_id', artistId)
 
-        const loadedSocialAccounts = artistData.social_accounts || [];
-        setSocialAccounts(loadedSocialAccounts);
-        setInitialSocialAccountIds(loadedSocialAccounts.map((a: any) => a.id).filter(Boolean));
-
-        const loadedDistributionAccounts = artistData.distribution_accounts || [];
-        setDistributionAccounts(loadedDistributionAccounts);
-        setInitialDistributionAccountIds(loadedDistributionAccounts.map((a: any) => a.id).filter(Boolean));
-
+        if (distData && distData.length > 0) {
+          setDistributionAccounts(distData.map(acc => ({
+            distributor: acc.distributor || '',
+            service: acc.service || '',
+            username: acc.username || '',
+            email: acc.email || '',
+            url: acc.url || ''
+          })))
+        }
       } catch (error) {
-        toast({ title: "Error", description: "Failed to load artist data.", variant: "destructive" })
-        router.push("/dashboard")
+        console.error('Error loading artist:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to load artist data',
+          variant: 'destructive'
+        })
       } finally {
         setIsLoadingData(false)
       }
     }
 
-    fetchArtistData()
-  }, [params.id, router, supabase, toast])
+    loadArtist()
+  }, [params.id, supabase, toast])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const steps = [
+    {
+      id: 'basic',
+      title: 'Basic Info',
+      description: 'Essential artist details',
+      icon: <User className="w-5 h-5" />
+    },
+    {
+      id: 'contact',
+      title: 'Contact',
+      description: 'Legal and contact information',
+      icon: <CreditCard className="w-5 h-5" />
+    },
+    {
+      id: 'bio',
+      title: 'Biography',
+      description: 'Tell us about the artist',
+      icon: <Music className="w-5 h-5" />
+    },
+    {
+      id: 'social',
+      title: 'Social Media',
+      description: 'Connect social accounts',
+      icon: <Users className="w-5 h-5" />
+    },
+    {
+      id: 'distribution',
+      title: 'Distribution',
+      description: 'Streaming platforms',
+      icon: <Music className="w-5 h-5" />
+    }
+  ]
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setProfileImage(file)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setProfileImagePreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const addSocialAccount = () => {
+    setSocialAccounts([...socialAccounts, { platform: '', username: '', url: '' }])
+  }
+
+  const removeSocialAccount = (index: number) => {
+    setSocialAccounts(socialAccounts.filter((_, i) => i !== index))
+  }
+
+  const updateSocialAccount = (index: number, field: keyof SocialAccount, value: string) => {
+    const updated = [...socialAccounts]
+    updated[index][field] = value
+    setSocialAccounts(updated)
+  }
+
+  const addDistributionAccount = () => {
+    setDistributionAccounts([...distributionAccounts, { distributor: '', service: '', username: '', email: '', url: '' }])
+  }
+
+  const removeDistributionAccount = (index: number) => {
+    setDistributionAccounts(distributionAccounts.filter((_, i) => i !== index))
+  }
+
+  const updateDistributionAccount = (index: number, field: keyof DistributionAccount, value: string) => {
+    const updated = [...distributionAccounts]
+    updated[index][field] = value
+    setDistributionAccounts(updated)
+  }
+
+  const canGoNext = () => {
+    switch (currentStep) {
+      case 0: // Basic Info
+        return name.trim() !== '' && genre.trim() !== '' && location.trim() !== ''
+      case 1: // Contact
+        return true // Optional fields
+      case 2: // Bio
+        return true // Optional
+      case 3: // Social
+        return true // Optional
+      case 4: // Distribution
+        return true // Optional
+      default:
+        return true
+    }
+  }
+
+  const handleComplete = async () => {
     setIsLoading(true)
-
-    const finalSpotifyId = extractSpotifyId(spotifyInput)
     const artistId = params.id as string
 
-    let parsedBankInfo = null;
-    if (bankInfo) {
-      try {
-        parsedBankInfo = JSON.parse(bankInfo);
-      } catch (jsonError) {
-        toast({ title: "Error", description: "Bank Info must be valid JSON.", variant: "destructive" });
-        setIsLoading(false);
-        return;
-      }
-    }
-
     try {
-      let imageUrl: string | undefined = artist.profile_image
+      // Handle profile image upload - only if a new image was selected
+      let imageUrlToSave = existingImageUrl // Keep existing by default
+      
+      if (profileImage) {
+        // User selected a new image, upload it
+        const fileExt = profileImage.name.split('.').pop()
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+        
+        const { error: uploadError } = await supabase.storage
+          .from('artist-images')
+          .upload(fileName, profileImage)
 
-      if (newProfileImage) {
-        const fileName = `${Date.now()}_${newProfileImage.name}`
-        const { data: uploadData, error: uploadError } = await supabase.storage.from("artist-profiles").upload(fileName, newProfileImage)
-        if (uploadError) throw uploadError
-        const { data: urlData } = supabase.storage.from("artist-profiles").getPublicUrl(uploadData.path)
-        imageUrl = urlData.publicUrl
+        if (uploadError) {
+          console.error('Upload error:', uploadError)
+          toast({
+            title: 'Warning',
+            description: 'Could not upload new image. Keeping existing image.',
+            variant: 'default'
+          })
+        } else {
+          const { data: { publicUrl } } = supabase.storage
+            .from('artist-images')
+            .getPublicUrl(fileName)
+
+          imageUrlToSave = publicUrl
+        }
       }
 
-      const updateData: any = {
+      // Build update payload - only include fields that have values
+      const artistPayload: any = {
         name,
         genre,
-        country: location,
-        bio,
-        profile_image: imageUrl,
-        spotify_artist_id: finalSpotifyId,
-        first_name: firstName,
-        last_name: lastName,
-        date_of_birth: dateOfBirth ? dateOfBirth.toISOString() : null,
-        id_number: idNumber || null,
-        address: address || null,
-        phone: phone || null,
-        bank_info: parsedBankInfo,
-        management_entity: managementEntity || null,
-        ipi: ipi || null,
+        country: location || 'us',
       }
 
-      const { error: artistError } = await supabase.from("artists").update(updateData).eq("id", artistId)
-      if (artistError) throw new Error(`Error updating artist details: ${artistError.message}`)
+      // Add optional fields only if they have values (not empty strings)
+      if (bio !== undefined && bio !== null) artistPayload.bio = bio || null
+      if (firstName) artistPayload.first_name = firstName
+      if (lastName) artistPayload.last_name = lastName
+      if (dateOfBirth) artistPayload.date_of_birth = dateOfBirth.toISOString()
+      if (imageUrlToSave) artistPayload.image_url = imageUrlToSave
+      if (idNumber !== undefined && idNumber !== null) artistPayload.id_number = idNumber || null
+      if (address !== undefined && address !== null) artistPayload.address = address || null
+      if (phone !== undefined && phone !== null) artistPayload.phone = phone || null
+      if (managementEntity !== undefined && managementEntity !== null) artistPayload.management_entity = managementEntity || null
+      if (ipi !== undefined && ipi !== null) artistPayload.ipi = ipi || null
 
-      // Handle social account deletions
-      const finalSocialAccountIds = socialAccounts.map(a => a.id).filter(Boolean)
-      const socialAccountIdsToDelete = initialSocialAccountIds.filter(id => !finalSocialAccountIds.includes(id))
-      if (socialAccountIdsToDelete.length > 0) {
-        const { error: deleteError } = await supabase.from('social_accounts').delete().in('id', socialAccountIdsToDelete)
-        if (deleteError) throw new Error(`Error deleting social accounts: ${deleteError.message}`)
+      console.log('Updating artist with payload:', artistPayload)
+
+      const { error: artistError } = await supabase
+        .from('artists')
+        .update(artistPayload)
+        .eq('id', artistId)
+
+      if (artistError) {
+        console.error('Artist update error:', artistError)
+        throw new Error(artistError.message || 'Failed to update artist')
       }
 
-      // Handle social account inserts and updates
-      const socialToInsert = [];
-      const socialToUpdate = [];
-
-      for (const a of socialAccounts) {
-        if (!a.platform) continue;
-
-        let password = a.password;
-        if (a.newPassword) {
-          const { encrypted, iv } = await encrypt(a.newPassword);
-          password = JSON.stringify({ encrypted, iv });
-        }
-
-        const cleanedFollowers = String(a.followers || '').replace(/\D/g, '');
-        const followersCount = cleanedFollowers ? parseInt(cleanedFollowers, 10) : 0;
-
-        const accountData = {
+      // Update social accounts - delete and recreate only if there are changes
+      const validSocialAccounts = socialAccounts.filter(acc => acc.platform && acc.username)
+      
+      // Delete existing and insert new ones
+      await supabase.from('social_accounts').delete().eq('artist_id', artistId)
+      
+      if (validSocialAccounts.length > 0) {
+        const socialData = validSocialAccounts.map(acc => ({
           artist_id: artistId,
-          platform: a.platform,
-          username: a.username || null,
-          handle: a.handle || null,
-          url: a.url || null,
-          followers: followersCount,
-          email: a.email || null,
-          password: password
-        };
+          platform: acc.platform,
+          username: acc.username,
+          url: acc.url || null
+        }))
 
-        if (a.id) {
-          socialToUpdate.push({ id: a.id, ...accountData });
-        } else {
-          socialToInsert.push(accountData);
-        }
+        await supabase.from('social_accounts').insert(socialData)
       }
 
-      if (socialToInsert.length > 0) {
-        const { error } = await supabase.from('social_accounts').insert(socialToInsert);
-        if (error) throw new Error(`Error inserting social accounts: ${error.message}`);
-      }
-
-      for (const acc of socialToUpdate) {
-        const { id, ...data } = acc;
-        const { error } = await supabase.from('social_accounts').update(data).eq('id', id);
-        if (error) throw new Error(`Error updating social account ${id}: ${error.message}`);
-      }
-
-      // Handle distribution account deletions
-      const finalDistributionAccountIds = distributionAccounts.map(a => a.id).filter(Boolean);
-      const distributionAccountIdsToDelete = initialDistributionAccountIds.filter(id => !finalDistributionAccountIds.includes(id));
-      if (distributionAccountIdsToDelete.length > 0) {
-        const { error: deleteError } = await supabase.from('distribution_accounts').delete().in('id', distributionAccountIdsToDelete);
-        if (deleteError) throw new Error(`Error deleting distribution accounts: ${deleteError.message}`);
-      }
-
-      // Handle distribution account inserts and updates
-      const distroToInsert = [];
-      const distroToUpdate = [];
-
-      for (const a of distributionAccounts) {
-        if (!a.distributor || !a.service) continue;
-
-        let password = a.password;
-        if (a.newPassword) {
-          const { encrypted, iv } = await encrypt(a.newPassword);
-          password = JSON.stringify({ encrypted, iv });
-        }
-
-        const cleanedListeners = String(a.monthly_listeners || '').replace(/\D/g, '');
-        const listenersCount = cleanedListeners ? parseInt(cleanedListeners, 10) : 0;
-
-        const accountData = {
+      // Update distribution accounts - delete and recreate only if there are changes
+      const validDistAccounts = distributionAccounts.filter(acc => acc.distributor && acc.service)
+      
+      // Delete existing and insert new ones
+      await supabase.from('distribution_accounts').delete().eq('artist_id', artistId)
+      
+      if (validDistAccounts.length > 0) {
+        const distData = validDistAccounts.map(acc => ({
           artist_id: artistId,
-          distributor: a.distributor,
-          service: a.service,
-          monthly_listeners: listenersCount,
-          username: a.username || null,
-          email: a.email || null,
-          notes: a.notes || null,
-          url: a.url || null,
-          account_id: a.account_id || null,
-          password: password
-        };
+          distributor: acc.distributor,
+          service: acc.service,
+          username: acc.username || null,
+          email: acc.email || null,
+          url: acc.url || null
+        }))
 
-        if (a.id) {
-          distroToUpdate.push({ id: a.id, ...accountData });
-        } else {
-          distroToInsert.push(accountData);
-        }
+        await supabase.from('distribution_accounts').insert(distData)
       }
 
-      if (distroToInsert.length > 0) {
-        const { error } = await supabase.from('distribution_accounts').insert(distroToInsert);
-        if (error) throw new Error(`Error inserting distribution accounts: ${error.message}`);
-      }
+      toast({
+        title: 'Success!',
+        description: 'Artist updated successfully',
+      })
 
-      for (const acc of distroToUpdate) {
-        const { id, ...data } = acc;
-        const { error } = await supabase.from('distribution_accounts').update(data).eq('id', id);
-        if (error) throw new Error(`Error updating distribution account ${id}: ${error.message}`);
-      }
-
-      toast({ title: "Success!", description: "Artist updated successfully." })
+      // Redirect back to artist profile
       router.push(`/artists/${artistId}`)
     } catch (error: any) {
-      console.error("Error updating artist:", error)
-      if (error.code === '23505') {
-        toast({ title: "Error", description: "Spotify Artist ID is already in use by another artist.", variant: "destructive" });
-      } else {
-        toast({ title: "Error updating artist", description: error.message || "An unknown error occurred", variant: "destructive" });
-      }
+      console.error('Error updating artist:', error)
+      const errorMessage = error?.message || error?.error_description || 'Failed to update artist. Please check all required fields.'
+      toast({
+        title: 'Error Updating Artist',
+        description: errorMessage,
+        variant: 'destructive'
+      })
     } finally {
       setIsLoading(false)
     }
   }
 
+  if (isLoadingData) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-screen">
+          <LogoLoader size="lg" text="Loading artist data..." />
+        </div>
+      </DashboardLayout>
+    )
+  }
+
   return (
     <DashboardLayout>
-      {isLoadingData ? (
-        <EditArtistSkeleton />
-      ) : !artist ? (
-        <div className="flex h-full items-center justify-center"><p>Artist not found.</p></div>
-      ) : (
-        <>
-          <FormHeader 
-            title="Edit Artist"
-            description={`Update ${artist.name}'s profile and information`}
-            backHref={`/artists/${artist.id}`}
-          />
-
-          <div className="p-4 sm:p-6">
-            <form onSubmit={handleSubmit}>
-              <FormLayout>
-                {/* Basic Information */}
-                <FormSection 
-                  title="Basic Information" 
-                  description="Essential artist details and profile setup"
-                  icon={User}
-                >
-                  <div className="space-y-6">
-                    {/* Profile Image */}
-                    <FormField label="Profile Image" hint="Upload a new image to replace the current one">
-                      <div className="flex items-center gap-4">
-                        {artist?.profile_image && (
-                          <Image 
-                            src={artist.profile_image} 
-                            alt={artist.name} 
-                            width={80} 
-                            height={80} 
-                            className="rounded-full object-cover border-2 border-muted" 
-                          />
-                        )}
-                        <div>
-                          <Input 
-                            type="file" 
-                            accept="image/*" 
-                            onChange={(e) => setNewProfileImage(e.target.files ? e.target.files[0] : null)} 
-                            className="w-full"
-                          />
-                        </div>
-                      </div>
-                    </FormField>
-
-                    {/* Name Fields */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                      <FormField label="Artist Name" required>
-                        <Input
-                          value={name}
-                          onChange={(e) => setName(e.target.value)}
-                          placeholder="Enter stage/artist name"
-                          required
-                        />
-                      </FormField>
-                      <FormField label="Genre" required>
-                        <Select value={genre} onValueChange={setGenre} required>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select music genre" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Pop">Pop</SelectItem>
-                            <SelectItem value="Rock">Rock</SelectItem>
-                            <SelectItem value="Hip Hop">Hip Hop</SelectItem>
-                            <SelectItem value="R&B">R&B</SelectItem>
-                            <SelectItem value="Electronic">Electronic</SelectItem>
-                            <SelectItem value="Country">Country</SelectItem>
-                            <SelectItem value="Jazz">Jazz</SelectItem>
-                            <SelectItem value="Classical">Classical</SelectItem>
-                            <SelectItem value="Reggaeton">Reggaeton</SelectItem>
-                            <SelectItem value="Folk">Folk</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormField>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                      <FormField label="First Name">
-                        <Input
-                          value={firstName}
-                          onChange={(e) => setFirstName(e.target.value)}
-                          placeholder="Legal first name"
-                        />
-                      </FormField>
-                      <FormField label="Last Name">
-                        <Input
-                          value={lastName}
-                          onChange={(e) => setLastName(e.target.value)}
-                          placeholder="Legal last name"
-                        />
-                      </FormField>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                      <FormField label="Date of Birth">
-                        <DatePickerField date={dateOfBirth} onDateChange={setDateOfBirth} />
-                      </FormField>
-                      <FormField label="Location">
-                        <Input
-                          value={location}
-                          onChange={(e) => setLocation(e.target.value)}
-                          placeholder="City, Country"
-                        />
-                      </FormField>
-                    </div>
-
-                    <FormField label="Spotify Artist URL or ID" hint="You can paste the full URL from the share button on your Spotify artist profile">
-                      <Input
-                        value={spotifyInput}
-                        onChange={(e) => setSpotifyInput(e.target.value)}
-                        placeholder="Paste Spotify URL, URI, or ID"
-                      />
-                    </FormField>
-
-                    <FormField label="Biography" hint="Tell us about the artist's background, style, and achievements">
-                      <Textarea
-                        value={bio}
-                        onChange={(e) => setBio(e.target.value)}
-                        placeholder="Write a compelling artist biography..."
-                        rows={4}
-                      />
-                    </FormField>
-                  </div>
-                </FormSection>
-
-                {/* Contact Information */}
-                <FormSection 
-                  title="Contact Information" 
-                  description="Contact details and identification"
-                  icon={Phone}
-                >
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                    <FormField label="Phone Number">
-                      <Input
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="+1 (555) 123-4567"
-                        type="tel"
-                      />
-                    </FormField>
-                    <FormField label="ID Number" hint="Government identification number">
-                      <Input
-                        value={idNumber}
-                        onChange={(e) => setIdNumber(e.target.value)}
-                        placeholder="Identification number"
-                      />
-                    </FormField>
-                  </div>
-
-                  <FormField label="Address">
-                    <Input
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      placeholder="Full address including city and postal code"
-                    />
-                  </FormField>
-                </FormSection>
-
-                {/* Professional Information */}
-                <FormSection 
-                  title="Professional Information" 
-                  description="Management and industry details"
-                  icon={Settings}
-                >
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                    <FormField label="Management Entity" hint="PRO, publisher, or management company">
-                      <Input
-                        value={managementEntity}
-                        onChange={(e) => setManagementEntity(e.target.value)}
-                        placeholder="e.g., ASCAP, BMI, management company"
-                      />
-                    </FormField>
-                    <FormField label="IPI Number" hint="International Performer Identifier">
-                      <Input
-                        value={ipi}
-                        onChange={(e) => setIpi(e.target.value)}
-                        placeholder="IPI number (if applicable)"
-                      />
-                    </FormField>
-                  </div>
-
-                  <FormField label="Bank Information" hint="Enter bank details as JSON format">
-                    <Textarea
-                      value={bankInfo}
-                      onChange={(e) => setBankInfo(e.target.value)}
-                      placeholder='{"bank": "Bank Name", "account": "123456789", "routing": "987654321"}'
-                      rows={3}
-                    />
-                  </FormField>
-                </FormSection>
-
-                {/* Social Media Accounts */}
-                <FormSection 
-                  title="Social Media Accounts" 
-                  description="Connect artist's social media presence"
-                  icon={Users}
-                  headerAction={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={addSocialAccount}
-                      className="flex items-center gap-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add Account
-                    </Button>
-                  }
-                >
-                  <div className="space-y-4">
-                    {socialAccounts.map((account, index) => (
-                      <div key={account.id || index} className="p-4 sm:p-6 border rounded-xl bg-muted/20 space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium text-sm sm:text-base">Social Account {index + 1}</h4>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeSocialAccount(index)}
-                            className="flex items-center gap-1 text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                            Remove
-                          </Button>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <FormField label="Platform">
-                            <Select
-                              value={account.platform}
-                              onValueChange={(value) => updateSocialAccount(index, "platform", value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select platform" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Instagram">📷 Instagram</SelectItem>
-                                <SelectItem value="Twitter">🐦 Twitter</SelectItem>
-                                <SelectItem value="YouTube">📺 YouTube</SelectItem>
-                                <SelectItem value="TikTok">🎵 TikTok</SelectItem>
-                                <SelectItem value="Facebook">👥 Facebook</SelectItem>
-                                <SelectItem value="Spotify">🎧 Spotify</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </FormField>
-                          
-                          <FormField label="Username">
-                            <Input
-                              value={account.username || ''}
-                              onChange={(e) => updateSocialAccount(index, "username", e.target.value)}
-                              placeholder="@username"
-                            />
-                          </FormField>
-                          
-                          <FormField label="Email">
-                            <Input
-                              type="email"
-                              value={account.email || ''}
-                              onChange={(e) => updateSocialAccount(index, "email", e.target.value)}
-                              placeholder="contact@example.com"
-                            />
-                          </FormField>
-                          
-                          <FormField label="Handle">
-                            <Input
-                              value={account.handle || ''}
-                              onChange={(e) => updateSocialAccount(index, "handle", e.target.value)}
-                              placeholder="@handle"
-                            />
-                          </FormField>
-                          
-                          <FormField label="Followers">
-                            <Input
-                              value={account.followers || ''}
-                              onChange={(e) => updateSocialAccount(index, "followers", e.target.value)}
-                              placeholder="125K"
-                            />
-                          </FormField>
-                          
-                          <FormField label="Profile URL">
-                            <Input
-                              value={account.url || ''}
-                              onChange={(e) => updateSocialAccount(index, "url", e.target.value)}
-                              placeholder="https://..."
-                              type="url"
-                            />
-                          </FormField>
-                        </div>
-
-                        <Separator className="my-4" />
-                        <div>
-                          <Label className="text-sm font-medium">Password Management</Label>
-                          <p className="text-xs text-muted-foreground mb-2">Save or view the password for this account.</p>
-                          {account.id && currentUserId ? (
-                            <CredentialManager
-                              accountId={account.id}
-                              tableName="social_accounts"
-                            />
-                          ) : (
-                            <div className="space-y-2">
-                              <Label>New Password</Label>
-                              <Input type="password" onChange={(e) => updateSocialAccount(index, "newPassword", e.target.value)} placeholder="Enter new password" />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </FormSection>
-
-                {/* Distribution Accounts */}
-                <FormSection 
-                  title="Distribution Accounts" 
-                  description="Music distribution and streaming platforms"
-                  icon={Music}
-                  headerAction={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={addDistributionAccount}
-                      className="flex items-center gap-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add Account
-                    </Button>
-                  }
-                >
-                  <div className="space-y-4">
-                    {distributionAccounts.map((account, index) => (
-                      <div key={account.id || index} className="p-4 sm:p-6 border rounded-xl bg-muted/20 space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium text-sm sm:text-base">Distribution Account {index + 1}</h4>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeDistributionAccount(index)}
-                            className="flex items-center gap-1 text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                            Remove
-                          </Button>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <FormField label="Distributor">
-                            <Input
-                              value={account.distributor || ''}
-                              onChange={(e) => updateDistributionAccount(index, "distributor", e.target.value)}
-                              placeholder="e.g., DistroKid, CD Baby"
-                            />
-                          </FormField>
-                          
-                          <FormField label="Service">
-                            <Select
-                              value={account.service || ''}
-                              onValueChange={(value) => updateDistributionAccount(index, "service", value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select service" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Spotify">🎧 Spotify</SelectItem>
-                                <SelectItem value="Apple Music">🍎 Apple Music</SelectItem>
-                                <SelectItem value="YouTube Music">📺 YouTube Music</SelectItem>
-                                <SelectItem value="Amazon Music">📦 Amazon Music</SelectItem>
-                                <SelectItem value="Bandcamp">🎵 Bandcamp</SelectItem>
-                                <SelectItem value="SoundCloud">☁️ SoundCloud</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </FormField>
-                          
-                          <FormField label="Username">
-                            <Input
-                              value={account.username || ''}
-                              onChange={(e) => updateDistributionAccount(index, "username", e.target.value)}
-                              placeholder="artist_username"
-                            />
-                          </FormField>
-                          
-                          <FormField label="Email">
-                            <Input
-                              type="email"
-                              value={account.email || ''}
-                              onChange={(e) => updateDistributionAccount(index, "email", e.target.value)}
-                              placeholder="contact@distro.com"
-                            />
-                          </FormField>
-                          
-                          <FormField label="Profile URL">
-                            <Input
-                              value={account.url || ''}
-                              onChange={(e) => updateDistributionAccount(index, "url", e.target.value)}
-                              placeholder="https://..."
-                              type="url"
-                            />
-                          </FormField>
-                          
-                          <FormField label="Monthly Listeners">
-                            <Input
-                              value={account.monthly_listeners || ''}
-                              onChange={(e) => updateDistributionAccount(index, "monthly_listeners", e.target.value)}
-                              placeholder="250,000"
-                            />
-                          </FormField>
-                        </div>
-                        
-                        <FormField label="Notes" hint="Additional information about this distribution account">
-                          <Textarea
-                            value={account.notes || ''}
-                            onChange={(e) => updateDistributionAccount(index, "notes", e.target.value)}
-                            placeholder="Add any relevant notes about this account..."
-                            rows={2}
-                          />
-                        </FormField>
-
-                        <Separator className="my-4" />
-                        <div>
-                          <Label className="text-sm font-medium">Password Management</Label>
-                          <p className="text-xs text-muted-foreground mb-2">Save or view the password for this account.</p>
-                          {account.id && currentUserId ? (
-                            <CredentialManager
-                              accountId={account.id}
-                              tableName="distribution_accounts"
-                            />
-                          ) : (
-                            <div className="space-y-2">
-                              <Label>New Password</Label>
-                              <Input type="password" onChange={(e) => updateDistributionAccount(index, "newPassword", e.target.value)} placeholder="Enter new password" />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </FormSection>
-
-                {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row items-center justify-end gap-3 sm:gap-4 pt-6">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => router.back()}
-                    className="w-full sm:w-auto"
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={isLoading}
-                    className="w-full sm:w-auto bg-primary hover:bg-primary/90"
-                  >
-                    {isLoading ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Updating Artist...
-                      </>
-                    ) : (
-                      "Update Artist"
-                    )}
-                  </Button>
-                </div>
-              </FormLayout>
-            </form>
+      <div className="space-y-8">
+        {/* Header with Back Button */}
+        <div className="flex items-start gap-4">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => router.back()}
+            className="mt-1"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold tracking-tight">Edit Artist</h1>
+            <p className="text-muted-foreground mt-2">
+              Update artist information - Click on any step to edit that section
+            </p>
           </div>
-        </>
+        </div>
+
+        <MultiStepForm
+          steps={steps}
+          currentStep={currentStep}
+          onStepChange={setCurrentStep}
+          onComplete={handleComplete}
+          canGoNext={canGoNext() && !isLoading}
+          isLastStep={currentStep === steps.length - 1}
+          mode="edit"
+          allowStepNavigation={true}
+        >
+      {/* Step 1: Basic Information */}
+      {currentStep === 0 && (
+        <div className="space-y-6">
+          {/* Profile Image */}
+          <FormFieldGroup>
+            <FormFieldItem label="Profile Image" isLast>
+              <div className="flex items-center gap-4">
+                <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                  {profileImagePreview ? (
+                    <img src={profileImagePreview} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-10 h-10 text-muted-foreground" />
+                  )}
+                </div>
+                <label className="cursor-pointer">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium">
+                    <Upload className="w-4 h-4" />
+                    Upload Image
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            </FormFieldItem>
+          </FormFieldGroup>
+
+          {/* Artist Name & Genre */}
+          <FormFieldGroup>
+            <FormFieldItem label="Artist Name *">
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter stage/artist name"
+                className="border-0 bg-transparent focus-visible:ring-0 px-0"
+              />
+            </FormFieldItem>
+            <FormFieldItem label="Genre *" isLast>
+              <Select value={genre} onValueChange={setGenre}>
+                <SelectTrigger className="border-0 bg-transparent focus:ring-0 px-0">
+                  <SelectValue placeholder="Select music genre" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pop">Pop</SelectItem>
+                  <SelectItem value="rock">Rock</SelectItem>
+                  <SelectItem value="hip-hop">Hip Hop</SelectItem>
+                  <SelectItem value="electronic">Electronic</SelectItem>
+                  <SelectItem value="r&b">R&B</SelectItem>
+                  <SelectItem value="country">Country</SelectItem>
+                  <SelectItem value="jazz">Jazz</SelectItem>
+                  <SelectItem value="classical">Classical</SelectItem>
+                  <SelectItem value="reggaeton">Reggaeton</SelectItem>
+                  <SelectItem value="latin">Latin</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormFieldItem>
+          </FormFieldGroup>
+
+          {/* Legal Name */}
+          <FormFieldGroup>
+            <FormFieldItem label="First Name">
+              <Input
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Legal first name"
+                className="border-0 bg-transparent focus-visible:ring-0 px-0"
+              />
+            </FormFieldItem>
+            <FormFieldItem label="Last Name" isLast>
+              <Input
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Legal last name"
+                className="border-0 bg-transparent focus-visible:ring-0 px-0"
+              />
+            </FormFieldItem>
+          </FormFieldGroup>
+
+          {/* Date & Location */}
+          <FormFieldGroup>
+            <FormFieldItem label="Date of Birth">
+              <DateInput
+                value={dateOfBirth}
+                onChange={setDateOfBirth}
+              />
+            </FormFieldItem>
+            <FormFieldItem label="Country *" isLast>
+              <CountrySelect
+                value={location}
+                onChange={setLocation}
+                placeholder="Select country (required)"
+              />
+            </FormFieldItem>
+          </FormFieldGroup>
+        </div>
       )}
+
+      {/* Step 2: Contact & Legal */}
+      {currentStep === 1 && (
+        <div className="space-y-6">
+          <FormFieldGroup>
+            <FormFieldItem label="ID Number">
+              <Input
+                value={idNumber}
+                onChange={(e) => setIdNumber(e.target.value)}
+                placeholder="National ID or passport"
+                className="border-0 bg-transparent focus-visible:ring-0 px-0"
+              />
+            </FormFieldItem>
+            <FormFieldItem label="Phone">
+              <Input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+1 (555) 000-0000"
+                className="border-0 bg-transparent focus-visible:ring-0 px-0"
+              />
+            </FormFieldItem>
+            <FormFieldItem label="Address" isLast>
+              <Input
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Full address"
+                className="border-0 bg-transparent focus-visible:ring-0 px-0"
+              />
+            </FormFieldItem>
+          </FormFieldGroup>
+
+          <FormFieldGroup>
+            <FormFieldItem label="Management Entity">
+              <Input
+                value={managementEntity}
+                onChange={(e) => setManagementEntity(e.target.value)}
+                placeholder="Management company name"
+                className="border-0 bg-transparent focus-visible:ring-0 px-0"
+              />
+            </FormFieldItem>
+            <FormFieldItem label="IPI Number" isLast>
+              <Input
+                value={ipi}
+                onChange={(e) => setIpi(e.target.value)}
+                placeholder="International IPI number"
+                className="border-0 bg-transparent focus-visible:ring-0 px-0"
+              />
+            </FormFieldItem>
+          </FormFieldGroup>
+        </div>
+      )}
+
+      {/* Step 3: Biography */}
+      {currentStep === 2 && (
+        <div className="space-y-6">
+          <FormFieldGroup>
+            <FormFieldItem label="Biography" isLast>
+              <Textarea
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="Tell us about the artist's background, style, and achievements..."
+                className="border-0 bg-transparent focus-visible:ring-0 px-0 min-h-[200px] resize-none"
+              />
+            </FormFieldItem>
+          </FormFieldGroup>
+        </div>
+      )}
+
+      {/* Step 4: Social Media */}
+      {currentStep === 3 && (
+        <div className="space-y-6">
+          {socialAccounts.map((account, index) => (
+            <FormFieldGroup key={index}>
+              <FormFieldItem label="Platform">
+                <Select
+                  value={account.platform}
+                  onValueChange={(value) => updateSocialAccount(index, 'platform', value)}
+                >
+                  <SelectTrigger className="border-0 bg-transparent focus:ring-0 px-0">
+                    <SelectValue placeholder="Select platform" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="spotify">Spotify</SelectItem>
+                    <SelectItem value="instagram">Instagram</SelectItem>
+                    <SelectItem value="tiktok">TikTok</SelectItem>
+                    <SelectItem value="youtube">YouTube</SelectItem>
+                    <SelectItem value="twitter">Twitter/X</SelectItem>
+                    <SelectItem value="facebook">Facebook</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormFieldItem>
+              <FormFieldItem label="Username">
+                <Input
+                  value={account.username}
+                  onChange={(e) => updateSocialAccount(index, 'username', e.target.value)}
+                  placeholder="@username"
+                  className="border-0 bg-transparent focus-visible:ring-0 px-0"
+                />
+              </FormFieldItem>
+              <FormFieldItem label="URL" isLast>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={account.url}
+                    onChange={(e) => updateSocialAccount(index, 'url', e.target.value)}
+                    placeholder="https://..."
+                    className="border-0 bg-transparent focus-visible:ring-0 px-0"
+                  />
+                  {socialAccounts.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeSocialAccount(index)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </FormFieldItem>
+            </FormFieldGroup>
+          ))}
+
+          <Button
+            variant="outline"
+            onClick={addSocialAccount}
+            className="w-full"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Social Account
+          </Button>
+        </div>
+      )}
+
+      {/* Step 5: Distribution */}
+      {currentStep === 4 && (
+        <div className="space-y-6">
+          {distributionAccounts.map((account, index) => (
+            <FormFieldGroup key={index}>
+              <FormFieldItem label="Distributor">
+                <Select
+                  value={account.distributor}
+                  onValueChange={(value) => updateDistributionAccount(index, 'distributor', value)}
+                >
+                  <SelectTrigger className="border-0 bg-transparent focus:ring-0 px-0">
+                    <SelectValue placeholder="Select distributor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="distrokid">DistroKid</SelectItem>
+                    <SelectItem value="tunecore">TuneCore</SelectItem>
+                    <SelectItem value="cdbaby">CD Baby</SelectItem>
+                    <SelectItem value="amuse">Amuse</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormFieldItem>
+              <FormFieldItem label="Service">
+                <Select
+                  value={account.service}
+                  onValueChange={(value) => updateDistributionAccount(index, 'service', value)}
+                >
+                  <SelectTrigger className="border-0 bg-transparent focus:ring-0 px-0">
+                    <SelectValue placeholder="Select service" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="spotify">Spotify</SelectItem>
+                    <SelectItem value="apple-music">Apple Music</SelectItem>
+                    <SelectItem value="youtube-music">YouTube Music</SelectItem>
+                    <SelectItem value="amazon-music">Amazon Music</SelectItem>
+                    <SelectItem value="all">All Platforms</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormFieldItem>
+              <FormFieldItem label="Username">
+                <Input
+                  value={account.username}
+                  onChange={(e) => updateDistributionAccount(index, 'username', e.target.value)}
+                  placeholder="Account username"
+                  className="border-0 bg-transparent focus-visible:ring-0 px-0"
+                />
+              </FormFieldItem>
+              <FormFieldItem label="Email">
+                <Input
+                  value={account.email}
+                  onChange={(e) => updateDistributionAccount(index, 'email', e.target.value)}
+                  placeholder="account@email.com"
+                  type="email"
+                  className="border-0 bg-transparent focus-visible:ring-0 px-0"
+                />
+              </FormFieldItem>
+              <FormFieldItem label="URL" isLast>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={account.url}
+                    onChange={(e) => updateDistributionAccount(index, 'url', e.target.value)}
+                    placeholder="https://..."
+                    className="border-0 bg-transparent focus-visible:ring-0 px-0"
+                  />
+                  {distributionAccounts.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeDistributionAccount(index)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </FormFieldItem>
+            </FormFieldGroup>
+          ))}
+
+          <Button
+            variant="outline"
+            onClick={addDistributionAccount}
+            className="w-full"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Distribution Account
+          </Button>
+        </div>
+      )}
+        </MultiStepForm>
+      </div>
     </DashboardLayout>
   )
 }

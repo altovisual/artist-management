@@ -360,6 +360,10 @@ export function Dashboard() {
               teamMembers={teamMembers}
               currentUser={currentUser}
               teamStats={teamStats}
+              resizable={true}
+              maxWidth="lg"
+              minWidth={400}
+              minHeight={500}
               onNotificationClick={(notification) => {
                 // Marcar como leída automáticamente
                 markNotificationAsRead(notification.id);

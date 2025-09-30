@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -19,11 +19,14 @@ import {
   Star,
   Hash,
   ExternalLink,
-  ArrowUpRight
+  ArrowUpRight,
+  GripHorizontal
 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { cn } from "@/lib/utils"
 import { RealTeamSection } from './real-team-section'
+import { ChatList } from '../chat/chat-list'
+import { useTeamReal } from '@/hooks/use-team-real'
 
 // Interfaces compactas
 interface CompactNotification {
@@ -77,6 +80,10 @@ interface CompactWorkspaceWidgetProps {
   onInviteMember?: (email: string, role: 'admin' | 'manager' | 'member') => Promise<void>
   onRemoveMember?: (memberId: string) => Promise<void>
   className?: string
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
+  resizable?: boolean
+  minWidth?: number
+  minHeight?: number
 }
 
 export function CompactWorkspaceWidget({
@@ -91,14 +98,70 @@ export function CompactWorkspaceWidget({
   onUpdateOnlineStatus,
   onInviteMember,
   onRemoveMember,
-  className
+  className,
+  maxWidth = 'sm',
+  resizable = false,
+  minWidth = 384,
+  minHeight = 400
 }: CompactWorkspaceWidgetProps) {
   const router = useRouter()
-  const [activeView, setActiveView] = useState<'overview' | 'notifications' | 'projects' | 'team'>('overview')
+  const { teamMembers: realTeamMembers } = useTeamReal()
+  const [activeView, setActiveView] = useState<'overview' | 'notifications' | 'projects' | 'team' | 'messages'>('overview')
   const [isAnimating, setIsAnimating] = useState(false)
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+  
+  // Resizable state
+  const cardRef = useRef<HTMLDivElement>(null)
+  const [isResizing, setIsResizing] = useState(false)
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
+  
+  useEffect(() => {
+    if (cardRef.current && resizable) {
+      const rect = cardRef.current.getBoundingClientRect()
+      setDimensions({ width: rect.width, height: rect.height })
+    }
+  }, [resizable])
+  
+  useEffect(() => {
+    if (!resizable) return
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing || !cardRef.current) return
+      
+      const rect = cardRef.current.getBoundingClientRect()
+      const newHeight = Math.max(minHeight, e.clientY - rect.top)
+      
+      // Solo cambiar la altura, mantener ancho fijo
+      setDimensions({ width: 0, height: newHeight })
+    }
+    
+    const handleMouseUp = () => {
+      setIsResizing(false)
+      document.body.style.cursor = 'default'
+      document.body.style.userSelect = 'auto'
+    }
+    
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = 'ns-resize'
+      document.body.style.userSelect = 'none'
+    }
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isResizing, resizable, minHeight])
+  
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsResizing(true)
+  }
 
   const unreadCount = notifications.filter(n => !n.isRead).length
-  const onlineCount = teamMembers.filter(m => m.isOnline).length
+  // Usar datos reales del equipo
+  const onlineCount = realTeamMembers.filter(m => m.isOnline).length
   const activeProjectsCount = projects.filter(p => p.status === 'active').length
 
   const recentNotifications = notifications.slice(0, 3)
@@ -108,11 +171,22 @@ export function CompactWorkspaceWidget({
   const handleViewChange = (view: typeof activeView) => {
     if (view === activeView) return
     
+    // Reset selectedUserId cuando se sale de messages
+    if (activeView === 'messages' && view !== 'messages') {
+      setSelectedUserId(null)
+    }
+    
     setIsAnimating(true)
     setTimeout(() => {
       setActiveView(view)
       setIsAnimating(false)
     }, 150)
+  }
+
+  const handleMemberClick = (memberId: string) => {
+    console.log('Member clicked:', memberId)
+    setSelectedUserId(memberId)
+    handleViewChange('messages')
   }
 
   const handleNotificationClick = (notification: CompactNotification) => {
@@ -141,9 +215,33 @@ export function CompactWorkspaceWidget({
     }
   }
 
+  const maxWidthClasses = {
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-xl',
+    full: 'max-w-full'
+  }
+
+  const cardStyle = resizable && dimensions.height > 0 ? {
+    height: `${dimensions.height}px`
+  } : {}
+
   return (
-    <Card className={cn("w-full max-w-sm bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/20 dark:border-gray-700/30 shadow-2xl", className)}>
-      <div className="p-4 space-y-4">
+    <Card 
+      ref={cardRef}
+      className={cn(
+        "w-full bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/20 dark:border-gray-700/30 shadow-2xl relative",
+        !resizable && maxWidthClasses[maxWidth],
+        resizable && "overflow-hidden",
+        className
+      )}
+      style={cardStyle}
+    >
+      <div className={cn(
+        "p-4 space-y-4",
+        resizable && "h-full flex flex-col overflow-y-auto"
+      )}>
         {/* Header con Stats */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -210,7 +308,8 @@ export function CompactWorkspaceWidget({
 
         {/* Content Area con animaciones */}
         <div className={cn(
-          "min-h-[200px] transition-all duration-300 ease-in-out",
+          "transition-all duration-300 ease-in-out min-h-[300px] max-h-[500px] overflow-y-auto",
+          resizable && "flex-1",
           isAnimating && "opacity-50 scale-95"
         )}>
           {/* Overview */}
@@ -253,8 +352,11 @@ export function CompactWorkspaceWidget({
 
           {/* Notifications View */}
           {activeView === 'notifications' && (
-            <div className="space-y-3 animate-in slide-in-from-right-2 duration-300">
-              <div className="flex items-center justify-between">
+            <div className={cn(
+              "space-y-3 animate-in slide-in-from-bottom-2 duration-300",
+              resizable && "flex flex-col h-full"
+            )}>
+              <div className="flex items-center justify-between flex-shrink-0">
                 <h4 className="font-medium text-sm flex items-center gap-2">
                   <Bell className="h-4 w-4" />
                   Notifications
@@ -269,7 +371,7 @@ export function CompactWorkspaceWidget({
                 </Button>
               </div>
               
-              <div className="space-y-1 max-h-48 overflow-y-auto">
+              <div className="space-y-1">
                 {notifications.map((notification) => (
                   <button
                     key={notification.id}
@@ -309,8 +411,11 @@ export function CompactWorkspaceWidget({
 
           {/* Projects View */}
           {activeView === 'projects' && (
-            <div className="space-y-3 animate-in slide-in-from-right-2 duration-300">
-              <div className="flex items-center justify-between">
+            <div className={cn(
+              "space-y-3 animate-in slide-in-from-right-2 duration-300",
+              resizable && "flex flex-col h-full"
+            )}>
+              <div className="flex items-center justify-between flex-shrink-0">
                 <h4 className="font-medium text-sm flex items-center gap-2">
                   <FolderOpen className="h-4 w-4" />
                   Projects
@@ -325,7 +430,7 @@ export function CompactWorkspaceWidget({
                 </Button>
               </div>
               
-              <div className="space-y-2 max-h-48 overflow-y-auto">
+              <div className="space-y-2">
                 {projects.map((project) => (
                   <button
                     key={project.id}
@@ -361,14 +466,16 @@ export function CompactWorkspaceWidget({
 
           {/* Team View */}
           {activeView === 'team' && (
-            <div className="space-y-3 animate-in slide-in-from-right-2 duration-300">
-              <div className="flex items-center justify-between">
+            <div className={cn(
+              "space-y-3 animate-in slide-in-from-left-2 duration-300",
+              resizable ? "flex flex-col h-full" : "max-h-48"
+            )}>
+              <div className="flex items-center justify-between flex-shrink-0">
                 <h4 className="font-medium text-sm flex items-center gap-2">
                   <Users className="h-4 w-4" />
                   Team Management
                 </h4>
                 <Button
-                  variant="ghost"
                   size="sm"
                   onClick={() => handleViewChange('overview')}
                   className="text-xs p-1 h-6"
@@ -377,13 +484,42 @@ export function CompactWorkspaceWidget({
                 </Button>
               </div>
               
-              <div className="max-h-48 overflow-y-auto">
-                <RealTeamSection className="h-full" />
+              <div>
+                <RealTeamSection 
+                  className="h-full"
+                  onMemberClick={handleMemberClick}
+                />
               </div>
+            </div>
+          )}
+
+          {/* Messages View */}
+          {activeView === 'messages' && (
+            <div className="h-full animate-in slide-in-from-right-2 duration-300">
+              <ChatList initialUserId={selectedUserId} />
             </div>
           )}
         </div>
       </div>
+      
+      {/* Resize Handle - Solo visible en web cuando resizable está activado */}
+      {resizable && (
+        <div
+          onMouseDown={handleResizeStart}
+          className="absolute left-0 right-0 bottom-0 h-2 cursor-ns-resize group hidden md:block z-10 hover:h-3 transition-all"
+          style={{ touchAction: 'none' }}
+        >
+          {/* Visual indicator */}
+          <div className="absolute inset-0 bg-gray-300/0 dark:bg-gray-600/0 group-hover:bg-gray-300/50 dark:group-hover:bg-gray-600/50 transition-colors rounded-b-xl" />
+          
+          {/* Grip dots in the middle */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500" />
+            <div className="w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500" />
+            <div className="w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500" />
+          </div>
+        </div>
+      )}
     </Card>
   )
 }
