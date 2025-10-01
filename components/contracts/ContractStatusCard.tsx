@@ -63,8 +63,16 @@ const signatureStatusConfig = {
     label: 'Firmado', 
     color: 'bg-green-100 text-green-800' 
   },
+  completed: { 
+    label: 'Completado', 
+    color: 'bg-green-100 text-green-800' 
+  },
   expired: { 
     label: 'Expirado', 
+    color: 'bg-red-100 text-red-800' 
+  },
+  failed: { 
+    label: 'Fallido', 
     color: 'bg-red-100 text-red-800' 
   }
 };
@@ -188,7 +196,7 @@ export function ContractStatusCard({ contractId, workName }: ContractStatusCardP
             </h4>
             <div className="space-y-3">
               {contractStatus.signatures.map((signature) => {
-                const sigStatus = signatureStatusConfig[signature.status];
+                const sigStatus = signatureStatusConfig[signature.status] || signatureStatusConfig.pending;
                 return (
                   <div key={signature.id} className="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-lg touch-manipulation">
                     <div className="min-w-0 flex-1">
