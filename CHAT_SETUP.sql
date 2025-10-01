@@ -90,4 +90,18 @@ SELECT
 FROM pg_policies
 WHERE tablename = 'team_chat_messages';
 
+-- 10. IMPORTANT: Enable Realtime for instant message delivery
+ALTER PUBLICATION supabase_realtime ADD TABLE team_chat_messages;
+
+-- 11. Verify Realtime is enabled
+SELECT 
+  schemaname,
+  tablename,
+  pubname
+FROM pg_publication_tables
+WHERE tablename = 'team_chat_messages';
+
+-- Expected: Should show 'supabase_realtime' as pubname
+
 -- Done! Now test sending a message from the app.
+-- Messages should appear instantly without refreshing!

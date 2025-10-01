@@ -45,6 +45,8 @@ import { CreateTaskDialog } from './create-task-dialog'
 import { TaskDetailsDialog } from './task-details-dialog'
 import { TaskCard } from './task-card'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/ui/use-toast'
 
 interface Project {
   id: string
@@ -106,6 +108,8 @@ export function TeamWorkspace({
   onUpdateProjectStatus
 }: TeamWorkspaceProps) {
   const router = useRouter()
+  const { toast } = useToast()
+  const supabase = createClient()
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState("team")
@@ -113,6 +117,7 @@ export function TeamWorkspace({
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [isTaskDetailsOpen, setIsTaskDetailsOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
   const [expandedSections, setExpandedSections] = useState<any>({
     recent: true,
     projects: true,
@@ -121,6 +126,90 @@ export function TeamWorkspace({
     deleted: false,
     mobileMenu: false
   })
+
+  // Subscribe to new messages for notifications
+  useEffect(() => {
+    if (!currentUser?.id) return
+
+    // Fetch initial unread count
+    const fetchUnreadCount = async () => {
+      const { count } = await supabase
+        .from('team_chat_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_read', false)
+        .neq('sender_id', currentUser.id)
+
+      setUnreadCount(count || 0)
+    }
+
+    fetchUnreadCount()
+
+    // Subscribe to new messages
+    const channel = supabase
+      .channel('workspace_notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'team_chat_messages'
+        },
+        async (payload) => {
+          const newMsg = payload.new as any
+          
+          // Only notify if not from current user
+          if (newMsg.sender_id !== currentUser.id) {
+            // No notificar si el chat está abierto y es del mismo proyecto
+            const isChatOpenForThisProject = isChatOpen && selectedProject?.id === newMsg.project_id
+            
+            if (!isChatOpenForThisProject) {
+              // Get project name
+              const { data: project } = await supabase
+                .from('artists')
+                .select('name')
+                .eq('id', newMsg.project_id)
+                .single()
+
+              // Get sender name
+              const { data: sender } = await supabase
+                .from('profiles')
+                .select('full_name')
+                .eq('id', newMsg.sender_id)
+                .single()
+
+              // Update unread count
+              setUnreadCount(prev => prev + 1)
+
+              // Show toast notification
+              toast({
+                title: `💬 New message in ${project?.name || 'Project'}`,
+                description: `${sender?.full_name || 'Someone'}: ${newMsg.content.substring(0, 50)}${newMsg.content.length > 50 ? '...' : ''}`,
+                duration: 5000,
+              })
+
+              // Show browser notification if supported
+              if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(`New message in ${project?.name || 'Project'}`, {
+                  body: `${sender?.full_name || 'Someone'}: ${newMsg.content}`,
+                  icon: '/icon-192.png',
+                  badge: '/icon-192.png'
+                })
+              }
+            }
+          }
+        }
+      )
+      .subscribe()
+
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+
+    return () => {
+      channel.unsubscribe()
+    }
+  }, [currentUser?.id, supabase, toast])
 
   // Filtrar proyectos
   const filteredProjects = projects.filter(project => 
@@ -149,9 +238,31 @@ export function TeamWorkspace({
     }))
   }
 
-  const handleProjectClick = (project: Project) => {
+  const handleProjectClick = async (project: Project) => {
     setSelectedProject(project)
+    setIsChatOpen(true)
     onProjectSelect?.(project)
+
+    // Mark messages as read for this project
+    if (currentUser?.id) {
+      const { error } = await supabase
+        .from('team_chat_messages')
+        .update({ is_read: true })
+        .eq('project_id', project.id)
+        .neq('sender_id', currentUser.id)
+        .eq('is_read', false)
+
+      if (!error) {
+        // Update unread count
+        const { count } = await supabase
+          .from('team_chat_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('is_read', false)
+          .neq('sender_id', currentUser.id)
+
+        setUnreadCount(count || 0)
+      }
+    }
   }
 
   const handleCreateTask = async (projectId: string, taskData: any) => {
@@ -362,11 +473,24 @@ export function TeamWorkspace({
       )}>
         {/* Header */}
         <div className="p-3 lg:p-4 border-b">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <FolderOpen className="h-4 w-4 text-primary-foreground" />
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                <FolderOpen className="h-4 w-4 text-primary-foreground" />
+              </div>
+              <h1 className="font-semibold text-lg">All Projects</h1>
             </div>
-            <h1 className="font-semibold text-lg">All Projects</h1>
+            {unreadCount > 0 && (
+              <div className="relative">
+                <Bell className="h-5 w-5 text-muted-foreground" />
+                <Badge 
+                  variant="destructive" 
+                  className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs"
+                >
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Badge>
+              </div>
+            )}
           </div>
           
         </div>
@@ -484,7 +608,7 @@ export function TeamWorkspace({
           </div>
         </div>
 
-        {/* Add Project Button */}
+        {/* Add Task Button */}
         <div className="border-t p-3 lg:p-4">
           <Button 
             onClick={onNewProject}
@@ -492,7 +616,7 @@ export function TeamWorkspace({
             variant="outline"
           >
             <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">New Project</span>
+            <span className="hidden sm:inline">New Task</span>
             <span className="sm:hidden">New</span>
           </Button>
         </div>
@@ -690,7 +814,7 @@ export function TeamWorkspace({
                 </Button>
                 <Button onClick={onNewProject} className="gap-2">
                   <Plus className="h-4 w-4" />
-                  Create New Project
+                  Create New Task
                 </Button>
               </div>
             </div>

@@ -49,6 +49,15 @@ select {
   min-height: -webkit-fill-available;
 }
 
+/* Safe area for iOS notch and home indicator */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
 /* iOS Safari Glassmorphism Fixes */
 @supports (-webkit-backdrop-filter: blur(10px)) or (backdrop-filter: blur(10px)) {
   .backdrop-blur-sm {

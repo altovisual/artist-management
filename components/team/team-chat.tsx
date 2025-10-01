@@ -158,12 +158,18 @@ export function TeamChat({
       
       <Card className={cn(
         "fixed flex flex-col shadow-lg z-50",
-        "bottom-0 left-0 right-0 h-[85vh] rounded-b-none",
+        "bottom-0 left-0 right-0 h-[90vh] rounded-t-2xl",
         "lg:bottom-4 lg:right-4 lg:left-auto lg:w-96 lg:h-[500px] lg:rounded-lg",
+        "border-t-2 border-x-0 border-b-0",
         className
       )}>
+      {/* Mobile Drag Handle */}
+      <div className="lg:hidden flex justify-center pt-2 pb-1 bg-background rounded-t-2xl">
+        <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
+      </div>
+
       {/* Header */}
-      <div className="flex items-center justify-between p-3 lg:p-4 border-b bg-background">
+      <div className="flex items-center justify-between p-3 lg:p-4 border-b bg-background sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div className="flex -space-x-2">
             {onlineMembers.slice(0, 2).map(member => (
@@ -243,7 +249,7 @@ export function TeamChat({
       )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-3 lg:p-4 space-y-3 lg:space-y-4 bg-muted/20">
+      <div className="flex-1 overflow-y-auto p-4 lg:p-4 space-y-4 bg-gradient-to-b from-muted/10 to-muted/5">
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
@@ -299,10 +305,10 @@ export function TeamChat({
                   )}
                   
                   <div className={cn(
-                    "inline-block px-3 py-2 rounded-lg text-sm",
+                    "inline-block px-4 py-2.5 rounded-2xl text-sm shadow-sm",
                     message.senderId === currentUser.id
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
+                      ? "bg-primary text-primary-foreground rounded-br-md"
+                      : "bg-card border border-border rounded-bl-md"
                   )}>
                     {message.content}
                   </div>
@@ -337,16 +343,27 @@ export function TeamChat({
       </div>
 
       {/* Input */}
-      <div className="border-t p-3 lg:p-4 bg-background relative">
+      <div className="border-t p-3 lg:p-4 bg-background relative safe-area-bottom">
         {/* Emoji Picker */}
         {showEmojiPicker && (
-          <div className="absolute bottom-full left-3 mb-2 bg-background border rounded-lg shadow-lg p-3 z-10">
+          <div className="absolute bottom-full left-3 right-3 mb-2 bg-background border rounded-xl shadow-xl p-4 z-10">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-medium">Quick Emojis</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0"
+                onClick={() => setShowEmojiPicker(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
             <div className="grid grid-cols-6 gap-2">
               {commonEmojis.map((emoji) => (
                 <button
                   key={emoji}
                   onClick={() => addEmoji(emoji)}
-                  className="text-2xl hover:bg-muted rounded p-1 transition-colors"
+                  className="text-2xl hover:bg-muted rounded-lg p-2 transition-colors active:scale-95"
                 >
                   {emoji}
                 </button>
@@ -355,14 +372,14 @@ export function TeamChat({
           </div>
         )}
 
-        <div className="flex items-center gap-1 lg:gap-2">
+        <div className="flex items-center gap-2">
           <Button 
             variant="ghost" 
             size="sm" 
-            className="p-1 hidden sm:inline-flex"
+            className="h-10 w-10 p-0 flex-shrink-0"
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
           >
-            <Smile className="h-4 w-4" />
+            <Smile className="h-5 w-5" />
           </Button>
           
           <Input
@@ -370,16 +387,16 @@ export function TeamChat({
             value={newMessage}
             onChange={handleInputChange}
             onKeyPress={handleKeyPress}
-            className="flex-1"
+            className="flex-1 h-10 text-base rounded-full px-4"
           />
           
           <Button 
             onClick={handleSendMessage}
             disabled={!newMessage.trim()}
             size="sm"
-            className="p-2"
+            className="h-10 w-10 p-0 rounded-full flex-shrink-0"
           >
-            <Send className="h-4 w-4" />
+            <Send className="h-5 w-5" />
           </Button>
         </div>
       </div>

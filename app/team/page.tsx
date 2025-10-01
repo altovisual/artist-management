@@ -5,9 +5,11 @@ import { useTeamWorkspaceReal } from '@/hooks/use-team-workspace-real'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AddTeamMemberDialog } from '@/components/team/add-team-member-dialog'
+import { CreateTaskDialog } from '@/components/team/create-task-dialog'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { UserPlus } from 'lucide-react'
+import { useToast } from '@/components/ui/use-toast'
 
 export default function TeamPage() {
   const {
@@ -23,6 +25,9 @@ export default function TeamPage() {
   } = useTeamWorkspaceReal()
   
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false)
+  const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false)
+  const [selectedProjectForTask, setSelectedProjectForTask] = useState<string | null>(null)
+  const { toast } = useToast()
 
   if (isLoading || !currentUser) {
     return (
@@ -58,8 +63,18 @@ export default function TeamPage() {
   }
 
   const handleNewProject = () => {
-    // Navigate to create new artist (which becomes a project)
-    window.location.href = '/artists/new'
+    // Si hay proyectos, usar el primero como default
+    // Si no, mostrar mensaje para crear un proyecto primero
+    if (projects.length > 0) {
+      setSelectedProjectForTask(projects[0].id)
+      setIsCreateTaskOpen(true)
+    } else {
+      toast({
+        title: 'No Projects Available',
+        description: 'Please create a project first (add an artist) to create tasks.',
+        variant: 'destructive'
+      })
+    }
   }
 
   const handleNewTask = async (projectId: string, taskData: any) => {
@@ -107,6 +122,17 @@ export default function TeamPage() {
         open={isAddMemberOpen}
         onOpenChange={setIsAddMemberOpen}
       />
+
+      {selectedProjectForTask && (
+        <CreateTaskDialog
+          open={isCreateTaskOpen}
+          onOpenChange={setIsCreateTaskOpen}
+          projectId={selectedProjectForTask}
+          projectName={projects.find(p => p.id === selectedProjectForTask)?.name || 'Project'}
+          teamMembers={teamMembers}
+          onCreateTask={handleNewTask}
+        />
+      )}
     </DashboardLayout>
   )
 }

@@ -29,17 +29,43 @@ export async function POST(req: Request) {
       codesToSync = documentCodes;
       console.log(`Syncing specific documents: ${codesToSync.join(', ')}`);
     } else {
-      // Obtener códigos existentes de nuestra BD
-      const existingDocsQuery = `
-        SELECT DISTINCT signature_request_id 
-        FROM public.signatures 
-        WHERE signature_request_id IS NOT NULL 
-        AND signature_request_id != '';
-      `;
-      
-      const existingDocs = await dbClient.query(existingDocsQuery);
-      codesToSync = existingDocs.rows.map(row => row.signature_request_id);
-      console.log(`Found ${codesToSync.length} existing documents in our DB to sync`);
+      // Primero, obtener TODOS los documentos de Auco
+      try {
+        console.log('Fetching ALL documents from Auco...');
+        const allAucoDocsResponse: any = await aucoFetch('/document/list', 'GET');
+        const allAucoDocs = allAucoDocsResponse?.data || allAucoDocsResponse || [];
+        
+        if (Array.isArray(allAucoDocs) && allAucoDocs.length > 0) {
+          codesToSync = allAucoDocs.map((doc: any) => doc.code || doc.id).filter(Boolean);
+          console.log(`Found ${codesToSync.length} documents in Auco to sync`);
+        } else {
+          console.log('No documents found in Auco, falling back to existing DB documents');
+          // Fallback: obtener códigos existentes de nuestra BD
+          const existingDocsQuery = `
+            SELECT DISTINCT signature_request_id 
+            FROM public.signatures 
+            WHERE signature_request_id IS NOT NULL 
+            AND signature_request_id != '';
+          `;
+          
+          const existingDocs = await dbClient.query(existingDocsQuery);
+          codesToSync = existingDocs.rows.map(row => row.signature_request_id);
+          console.log(`Found ${codesToSync.length} existing documents in our DB to sync`);
+        }
+      } catch (aucoError) {
+        console.error('Error fetching from Auco, using DB documents:', aucoError);
+        // Fallback: obtener códigos existentes de nuestra BD
+        const existingDocsQuery = `
+          SELECT DISTINCT signature_request_id 
+          FROM public.signatures 
+          WHERE signature_request_id IS NOT NULL 
+          AND signature_request_id != '';
+        `;
+        
+        const existingDocs = await dbClient.query(existingDocsQuery);
+        codesToSync = existingDocs.rows.map(row => row.signature_request_id);
+        console.log(`Found ${codesToSync.length} existing documents in our DB to sync`);
+      }
     }
     
     const documents = [];

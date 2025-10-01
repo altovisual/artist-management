@@ -172,6 +172,8 @@ export function useTeamChat(projectId?: string, currentUserId?: string, teamMemb
 
     fetchMessages()
 
+    console.log('🔌 Setting up realtime subscription for project:', projectId)
+
     const channel = supabase
       .channel(`team_chat:${projectId}`)
       .on(
@@ -183,6 +185,7 @@ export function useTeamChat(projectId?: string, currentUserId?: string, teamMemb
           filter: `project_id=eq.${projectId}`
         },
         (payload) => {
+          console.log('📨 New message received via realtime:', payload)
           const newMsg = payload.new
           const sender = teamMembers.find(m => m.id === newMsg.sender_id)
           
@@ -197,11 +200,15 @@ export function useTeamChat(projectId?: string, currentUserId?: string, teamMemb
             isRead: newMsg.is_read
           }
 
+          console.log('✅ Adding message to state:', message)
+
           setMessages(prev => {
             // Avoid duplicates
             if (prev.some(m => m.id === message.id)) {
+              console.log('⚠️ Duplicate message detected, skipping')
               return prev
             }
+            console.log('➕ Adding new message to list')
             return [...prev, message]
           })
         }
@@ -215,6 +222,7 @@ export function useTeamChat(projectId?: string, currentUserId?: string, teamMemb
           filter: `project_id=eq.${projectId}`
         },
         (payload) => {
+          console.log('🔄 Message updated via realtime:', payload)
           const updatedMsg = payload.new
           setMessages(prev =>
             prev.map(msg =>
@@ -234,12 +242,23 @@ export function useTeamChat(projectId?: string, currentUserId?: string, teamMemb
           filter: `project_id=eq.${projectId}`
         },
         (payload) => {
+          console.log('🗑️ Message deleted via realtime:', payload)
           setMessages(prev => prev.filter(msg => msg.id !== payload.old.id))
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('📡 Realtime subscription status:', status)
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to realtime updates')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Error subscribing to realtime channel')
+        } else if (status === 'TIMED_OUT') {
+          console.error('⏱️ Realtime subscription timed out')
+        }
+      })
 
     return () => {
+      console.log('🔌 Unsubscribing from realtime channel')
       channel.unsubscribe()
     }
   }, [projectId, supabase, teamMembers, fetchMessages])
