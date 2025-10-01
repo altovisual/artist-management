@@ -1,66 +1,82 @@
 /**
- * Generates a PDF from an HTML string using PDFShift API
+ * Generates a PDF from an HTML string using PDFShift API or jsPDF as fallback
  * @param html The HTML content to convert.
  * @returns A Promise that resolves with the PDF buffer.
  */
 export async function generatePdfFromHtml(html: string): Promise<Buffer> {
-  try {
-    console.log('Generating PDF with PDFShift...');
-    
-    const apiKey = process.env.PDFSHIFT_API_KEY;
-    
-    if (!apiKey) {
-      console.warn('PDFSHIFT_API_KEY not found, using fallback method');
-      return generatePdfFallback(html);
+  const apiKey = process.env.PDFSHIFT_API_KEY;
+  
+  // Try PDFShift first if API key is available
+  if (apiKey) {
+    try {
+      console.log('Generating PDF with PDFShift...');
+      
+      const response = await fetch('https://api.pdfshift.io/v3/convert/pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${Buffer.from(`api:${apiKey}`).toString('base64')}`
+        },
+        body: JSON.stringify({
+          source: html,
+          format: 'A4',
+          margin: '20px',
+          print_background: true
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`PDFShift error: ${response.status} ${response.statusText}`, errorText);
+        throw new Error(`PDFShift error: ${response.status}`);
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      console.log('PDF generated successfully with PDFShift');
+      return Buffer.from(arrayBuffer);
+    } catch (error) {
+      console.error('Error with PDFShift, trying fallback:', error);
+      // Continue to fallback
     }
-
-    const response = await fetch('https://api.pdfshift.io/v3/convert/pdf', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`api:${apiKey}`).toString('base64')}`
-      },
-      body: JSON.stringify({
-        source: html,
-        format: 'A4',
-        margin: '20px',
-        print_background: true
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`PDFShift error: ${response.status} ${response.statusText}`);
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
-  } catch (error) {
-    console.error('Error generating PDF:', error);
-    console.log('Trying fallback method...');
-    return generatePdfFallback(html);
   }
+
+  // Fallback: Use simple HTML to text conversion with jsPDF
+  console.log('Using jsPDF fallback method...');
+  return generatePdfFallback(html);
 }
 
 /**
- * Fallback method using a simple HTML to PDF conversion
+ * Fallback method using jsPDF (client-side library that works in Node.js)
  */
-async function generatePdfFallback(html: string): Promise<Buffer> {
+function generatePdfFallback(html: string): Buffer {
   try {
-    // Use html-pdf-node as fallback (lightweight alternative)
-    const htmlPdf = require('html-pdf-node');
+    const { jsPDF } = require('jspdf');
     
-    const options = { 
-      format: 'A4',
-      printBackground: true,
-      margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
-    };
-    
-    const file = { content: html };
-    const pdfBuffer = await htmlPdf.generatePdf(file, options);
-    
-    return Buffer.from(pdfBuffer);
+    // Create a new PDF document
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    // Strip HTML tags and get plain text
+    const plainText = html
+      .replace(/<style[^>]*>.*?<\/style>/gi, '')
+      .replace(/<script[^>]*>.*?<\/script>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // Add text to PDF
+    const lines = doc.splitTextToSize(plainText, 180);
+    doc.text(lines, 15, 15);
+
+    // Get PDF as buffer
+    const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
+    console.log('PDF generated with jsPDF fallback');
+    return pdfBuffer;
   } catch (fallbackError) {
-    console.error('Fallback PDF generation also failed:', fallbackError);
-    throw new Error('Failed to generate PDF from HTML. Please check your configuration.');
+    console.error('Fallback PDF generation failed:', fallbackError);
+    throw new Error('Failed to generate PDF. Please configure PDFSHIFT_API_KEY in your environment variables.');
   }
 }
