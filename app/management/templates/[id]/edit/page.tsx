@@ -31,7 +31,7 @@ const formSchema = z.object({
   version: z.string().min(1, {
     message: "Version is required.",
   }),
-  
+  jurisdiction: z.string().optional(),
 });
 
 export default function EditTemplatePage() {
@@ -46,7 +46,7 @@ export default function EditTemplatePage() {
       language: "",
       template_html: "",
       version: "",
-      
+      jurisdiction: "",
     },
   });
 
@@ -56,7 +56,20 @@ export default function EditTemplatePage() {
         const res = await fetch(`/api/templates/${id}`);
         if (res.ok) {
           const data = await res.json();
-          form.reset(data);
+          console.log('Loaded template data:', data);
+          
+          // Mapear auco_template_id a template_html para el formulario
+          // Asegurar que todos los campos tengan valores no-null
+          const formData = {
+            type: data.type || '',
+            language: data.language || '',
+            template_html: data.auco_template_id || data.template_html || '',
+            version: data.version || '',
+            jurisdiction: data.jurisdiction || ''
+          };
+          
+          console.log('Form data to reset:', formData);
+          form.reset(formData);
         }
       }
       getTemplate();
@@ -64,19 +77,39 @@ export default function EditTemplatePage() {
   }, [id, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const res = await fetch(`/api/templates/${id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(values),
-    });
+    try {
+      console.log('Updating template:', values);
+      
+      const res = await fetch(`/api/templates/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(values),
+      });
 
-    if (res.ok) {
-      router.push("/management/templates");
-    } else {
-      // Handle error
-      console.error("Failed to update template");
+      console.log('Response status:', res.status);
+
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Template updated successfully:', data);
+        router.push("/management/templates");
+      } else {
+        const errorText = await res.text();
+        console.error("Error response:", errorText);
+        
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText || 'Unknown error' };
+        }
+        
+        alert(`Error (${res.status}): ${errorData.error || errorData.details || 'Failed to update template'}\n\nCheck console for details.`);
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      alert(`Network Error: ${error instanceof Error ? error.message : 'Unknown error'}\n\nCheck console for details.`);
     }
   }
 
@@ -127,12 +160,12 @@ export default function EditTemplatePage() {
                 <FormControl>
                   <Textarea
                     placeholder="<h1>Template</h1>"
-                    className="resize-y"
+                    className="resize-y min-h-[400px] font-mono text-sm"
                     {...field}
                   />
                 </FormControl>
                 <FormDescription>
-                  The HTML content of the template.
+                  The HTML content of the template. Use variables like {`{{work.name}}`} and {`{{contract.status}}`}.
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -154,7 +187,32 @@ export default function EditTemplatePage() {
               </FormItem>
             )}
           />
-          <Button type="submit">Submit</Button>
+          <FormField
+            control={form.control}
+            name="jurisdiction"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Jurisdiction (Optional)</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., Colombia, Mexico" {...field} />
+                </FormControl>
+                <FormDescription>
+                  The jurisdiction or country for this template.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div className="flex gap-4">
+            <Button type="submit" className="flex-1">Update Template</Button>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => router.push('/management/templates')}
+            >
+              Cancel
+            </Button>
+          </div>
         </form>
       </Form>
     </div>

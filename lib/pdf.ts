@@ -6,10 +6,16 @@
 export async function generatePdfFromHtml(html: string): Promise<Buffer> {
   const apiKey = process.env.PDFSHIFT_API_KEY;
   
+  console.log('=== PDF GENERATION START ===');
+  console.log('PDFSHIFT_API_KEY exists:', !!apiKey);
+  console.log('API Key length:', apiKey?.length);
+  console.log('HTML length:', html?.length);
+  
   // Try PDFShift first if API key is available
   if (apiKey) {
     try {
-      console.log('Generating PDF with PDFShift...');
+      console.log('✓ Generating PDF with PDFShift...');
+      console.log('PDFShift API endpoint: https://api.pdfshift.io/v3/convert/pdf');
       
       const response = await fetch('https://api.pdfshift.io/v3/convert/pdf', {
         method: 'POST',
@@ -25,19 +31,26 @@ export async function generatePdfFromHtml(html: string): Promise<Buffer> {
         })
       });
 
+      console.log('PDFShift response status:', response.status);
+      console.log('PDFShift response ok:', response.ok);
+
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`PDFShift error: ${response.status} ${response.statusText}`, errorText);
+        console.error(`❌ PDFShift error: ${response.status} ${response.statusText}`);
+        console.error('Error details:', errorText);
         throw new Error(`PDFShift error: ${response.status}`);
       }
 
       const arrayBuffer = await response.arrayBuffer();
-      console.log('PDF generated successfully with PDFShift');
+      console.log('✓ PDF generated successfully with PDFShift');
+      console.log('PDF size:', arrayBuffer.byteLength, 'bytes');
       return Buffer.from(arrayBuffer);
     } catch (error) {
-      console.error('Error with PDFShift, trying fallback:', error);
+      console.error('❌ Error with PDFShift, trying fallback:', error);
       // Continue to fallback
     }
+  } else {
+    console.log('⚠️ No PDFSHIFT_API_KEY found, using fallback');
   }
 
   // Fallback: Use simple HTML to text conversion with jsPDF

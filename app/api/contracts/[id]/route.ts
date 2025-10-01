@@ -31,7 +31,9 @@ SELECT
       'type', t.type,
       'language', t.language,
       'version', t.version,
-      'jurisdiction', t.jurisdiction
+      'jurisdiction', t.jurisdiction,
+      'auco_template_id', t.auco_template_id,
+      'template_html', t.auco_template_id
     ),
     '{}'::json
   ) as template,

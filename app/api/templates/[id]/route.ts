@@ -44,8 +44,16 @@ export async function PATCH(request: Request, context: any) {
     client = await pool.connect();
     const body = await request.json();
 
+    console.log('PATCH /api/templates/[id] - Received data:', { id, ...body, html_length: body.template_html?.length });
+
+    // Mapear template_html a auco_template_id
+    if (body.template_html) {
+      body.auco_template_id = body.template_html;
+      delete body.template_html;
+    }
+
     // Whitelist of updatable fields
-    const allowedFields = ['type', 'language', 'template_html', 'version', 'jurisdiction'];
+    const allowedFields = ['type', 'language', 'auco_template_id', 'version', 'jurisdiction'];
 
     const updateFields = Object.keys(body).filter(field => allowedFields.includes(field));
 
@@ -53,7 +61,7 @@ export async function PATCH(request: Request, context: any) {
       return NextResponse.json({ error: 'No valid fields provided for update.' }, { status: 400 });
     }
 
-    const setClause = updateFields.map((field, index) => `"${field}" = $${index + 1}`).join(', ');
+    const setClause = updateFields.map((field, index) => `${field} = $${index + 1}`).join(', ');
     const values = updateFields.map(field => body[field]);
     values.push(id); // Add the id for the WHERE clause
 
@@ -64,18 +72,30 @@ export async function PATCH(request: Request, context: any) {
       RETURNING *;
     `;
 
+    console.log('Executing PATCH query:', { setClause, valuesLength: values.length });
     const { rows } = await client.query(query, values);
 
     if (rows.length === 0) {
       return NextResponse.json({ error: 'Template not found' }, { status: 404 });
     }
 
+    console.log('Template updated successfully:', rows[0].id);
+    revalidatePath('/management/templates');
+
     return NextResponse.json(rows[0]);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Database Error on PATCH:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return NextResponse.json({ error: 'Failed to update template', details: errorMessage }, { status: 500 });
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail
+    });
+    return NextResponse.json({ 
+      error: 'Failed to update template', 
+      details: error.message,
+      code: error.code
+    }, { status: 500 });
   } finally {
     if (client) {
       try {

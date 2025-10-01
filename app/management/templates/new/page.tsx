@@ -30,7 +30,7 @@ const formSchema = z.object({
   version: z.string().min(1, {
     message: "Version is required.",
   }),
-  
+  jurisdiction: z.string().optional(),
 });
 
 export default function NewTemplatePage() {
@@ -38,28 +38,50 @@ export default function NewTemplatePage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      type: "",
-      language: "en",
+      type: "contract",
+      language: "es",
       template_html: "",
       version: "1.0",
-      
+      jurisdiction: "",
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const res = await fetch("/api/templates", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(values),
-    });
+    try {
+      console.log('Submitting template:', values);
+      
+      const res = await fetch("/api/templates", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(values),
+      });
 
-    if (res.ok) {
-      router.push("/management/templates");
-    } else {
-      // Handle error
-      console.error("Failed to create template");
+      console.log('Response status:', res.status);
+      console.log('Response ok:', res.ok);
+
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Template created successfully:', data);
+        router.push("/management/templates");
+      } else {
+        const errorText = await res.text();
+        console.error("Error response text:", errorText);
+        
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText || 'Unknown error' };
+        }
+        
+        console.error("Failed to create template:", errorData);
+        alert(`Error (${res.status}): ${errorData.error || errorData.details || 'Failed to create template'}\n\nCheck console for details.`);
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      alert(`Network Error: ${error instanceof Error ? error.message : 'Unknown error'}\n\nCheck console for details.`);
     }
   }
 
@@ -137,7 +159,23 @@ export default function NewTemplatePage() {
               </FormItem>
             )}
           />
-          <Button type="submit">Submit</Button>
+          <FormField
+            control={form.control}
+            name="jurisdiction"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Jurisdiction (Optional)</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., Colombia, Mexico" {...field} />
+                </FormControl>
+                <FormDescription>
+                  The jurisdiction or country for this template.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit">Create Template</Button>
         </form>
       </Form>
     </div>

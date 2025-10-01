@@ -34,29 +34,42 @@ export async function POST(request: Request) {
   let client;
   try {
     const body = await request.json();
-    const { type, language, template_html, version, jurisdiction } = body;
+    const { type, language, template_html, version, jurisdiction, auco_template_id } = body;
+
+    console.log('POST /api/templates - Received data:', { type, language, version, html_length: template_html?.length });
 
     // Basic validation
-    if (!type || !language || !template_html || !version) {
-      return NextResponse.json({ error: 'type, language, template_html and version are required fields.' }, { status: 400 });
+    if (!type || !language || !version) {
+      return NextResponse.json({ error: 'type, language and version are required fields.' }, { status: 400 });
     }
 
     client = await pool.connect();
     const query = `
-      INSERT INTO public.templates (type, language, template_html, version, jurisdiction)
+      INSERT INTO public.templates (type, language, version, jurisdiction, auco_template_id)
       VALUES ($1, $2, $3, $4, $5)
       RETURNING *;
     `;
-    const values = [type, language, template_html, version, jurisdiction];
+    const values = [type, language, version, jurisdiction || null, auco_template_id || template_html || null];
 
+    console.log('Executing query with values:', { type, language, version, jurisdiction });
     const { rows } = await client.query(query, values);
+    console.log('Template created successfully:', rows[0]?.id);
 
     revalidatePath('/management/templates');
 
     return NextResponse.json(rows[0], { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Database Error on POST:', error);
-    return NextResponse.json({ error: 'Failed to create template' }, { status: 500 });
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail
+    });
+    return NextResponse.json({ 
+      error: 'Failed to create template',
+      details: error.message,
+      code: error.code
+    }, { status: 500 });
   } finally {
     if (client) {
       client.release();

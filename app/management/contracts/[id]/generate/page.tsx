@@ -28,7 +28,33 @@ export default function GenerateContractPage() {
 
   useEffect(() => {
     if (contract) {
-      let html = contract.template.template_html;
+      console.log('Contract data:', contract);
+      console.log('Template:', contract.template);
+      
+      if (!contract.template) {
+        console.error('No template associated with this contract');
+        setGeneratedHtml('<div style="padding: 20px;"><h2>Error: No Template</h2><p>This contract does not have a template associated. Please assign a template first.</p></div>');
+        return;
+      }
+      
+      // La columna se llama auco_template_id, no template_html
+      let html = contract.template.auco_template_id || contract.template.template_html || '';
+      
+      console.log('Template HTML length:', html?.length);
+      
+      if (!html) {
+        console.error('No template HTML found in template:', contract.template);
+        setGeneratedHtml(`
+          <div style="padding: 20px;">
+            <h2>Error: No Template HTML</h2>
+            <p>The template exists but has no HTML content.</p>
+            <p>Template ID: ${contract.template.id}</p>
+            <p>Template Type: ${contract.template.type}</p>
+            <p>Please edit the template and add HTML content.</p>
+          </div>
+        `);
+        return;
+      }
 
       const today = new Date();
       html = html.replace(/{{current_date}}/g, today.toLocaleDateString());
