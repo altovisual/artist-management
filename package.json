@@ -57,6 +57,7 @@
     "embla-carousel-react": "8.5.1",
     "framer-motion": "^12.23.22",
     "geist": "latest",
+    "html-pdf-node": "^1.0.8",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
     "moment": "^2.30.1",
