@@ -280,21 +280,37 @@ export default function NewParticipantPage() {
         router.push('/management/participants');
       } else {
         let finalErrorDetails;
+        let responseText = '';
+        
         try {
-          const responseText = await res.text();
-          finalErrorDetails = JSON.parse(responseText);
+          responseText = await res.text();
+          console.log('📋 Raw response text:', responseText);
+          
+          if (responseText) {
+            finalErrorDetails = JSON.parse(responseText);
+          } else {
+            finalErrorDetails = { message: 'No response from server' };
+          }
         } catch (e) {
-          finalErrorDetails = { message: 'Error desconocido' };
+          console.error('❌ Error parsing response:', e);
+          finalErrorDetails = { 
+            message: 'Error parsing server response',
+            rawResponse: responseText 
+          };
         }
         
         console.error('❌ Final error creating participant:', {
           status: res.status,
           statusText: res.statusText,
-          errorDetails: finalErrorDetails
+          errorDetails: finalErrorDetails,
+          rawResponse: responseText
         });
         
-        const errorMessage = finalErrorDetails.message || finalErrorDetails.error || 'Error desconocido';
-        alert(`❌ Error al crear participante:\n\n${errorMessage}`);
+        const errorMessage = finalErrorDetails?.message || finalErrorDetails?.error || res.statusText || 'Error desconocido';
+        const errorCode = finalErrorDetails?.code ? `\nCódigo: ${finalErrorDetails.code}` : '';
+        const errorHint = finalErrorDetails?.hint ? `\nSugerencia: ${finalErrorDetails.hint}` : '';
+        
+        alert(`❌ Error al crear participante:\n\n${errorMessage}${errorCode}${errorHint}`);
       }
     } catch (error) {
       console.error('❌ Network error:', error);

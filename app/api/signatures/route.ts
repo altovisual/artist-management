@@ -2,11 +2,22 @@ import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = await createClient();
 
   try {
-    const { data, error } = await supabase
+    // Get query parameters
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const showArchived = searchParams.get('showArchived') === 'true';
+    const status = searchParams.get('status');
+    const search = searchParams.get('search') || '';
+    
+    const offset = (page - 1) * limit;
+
+    // Build query
+    let query = supabase
       .from('signatures')
       .select(`
         *,
@@ -15,8 +26,34 @@ export async function GET() {
           status,
           projects(name)
         )
-      `)
-      .order('created_at', { ascending: false });
+      `, { count: 'exact' });
+
+    // Filter by archived status
+    if (!showArchived) {
+      query = query.or('archived.is.null,archived.eq.false');
+    }
+
+    // Filter by deleted (never show deleted)
+    query = query.is('deleted_at', null);
+
+    // Filter by status if provided
+    if (status && status !== 'all') {
+      if (status === 'pending') {
+        query = query.in('status', ['sent', 'pending']);
+      } else {
+        query = query.eq('status', status);
+      }
+    }
+
+    // Filter by search query
+    if (search) {
+      query = query.or(`document_name.ilike.%${search}%,signer_email.ilike.%${search}%,signer_name.ilike.%${search}%,signature_request_id.ilike.%${search}%`);
+    }
+
+    // Apply pagination and ordering
+    const { data, error, count } = await query
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (error) {
       throw new Error(`Error fetching signatures: ${error.message}`);
@@ -32,7 +69,15 @@ export async function GET() {
       } : null
     })) || [];
 
-    return NextResponse.json(transformedData);
+    return NextResponse.json({
+      data: transformedData,
+      pagination: {
+        page,
+        limit,
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit)
+      }
+    });
 
   } catch (error: any) {
     console.error('[API /signatures Error]', error);

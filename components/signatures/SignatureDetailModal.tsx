@@ -35,7 +35,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 interface SignatureData {
-  id: string;
+  id: number;
   contract_id: string;
   signer_email: string;
   signature_request_id: string;
@@ -43,6 +43,8 @@ interface SignatureData {
   created_at: string;
   completed_at?: string;
   document_url?: string;
+  archived?: boolean;
+  deleted_at?: string;
   contract?: {
     internal_reference: string;
     work_name: string;
@@ -251,29 +253,41 @@ export function SignatureDetailModal({ signature, isOpen, onClose }: SignatureDe
                 </Badge>
               </div>
 
-              {/* Additional Info */}
+              {/* Additional Info - Always show all fields */}
               <div className="space-y-2">
-                {signature.signature_platform && (
-                  <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl">
-                    <Smartphone className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Plataforma:</span>
-                    <Badge variant="outline" className="ml-auto">
-                      {signature.signature_platform || 'Email'}
-                    </Badge>
-                  </div>
-                )}
+                {/* Platform */}
+                <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl">
+                  <Smartphone className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Plataforma:</span>
+                  <Badge variant="outline" className="ml-auto">
+                    {signature.signature_platform || 'Email'}
+                  </Badge>
+                </div>
 
-                {signature.signature_location && (
-                  <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-xl">
-                    <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                    <div className="flex-1">
-                      <p className="text-xs text-muted-foreground">Ubicación de firma</p>
-                      <p className="text-sm font-medium mt-0.5">{signature.signature_location}</p>
-                    </div>
+                {/* Location - Always show */}
+                <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-xl">
+                  <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground">Ubicación de firma</p>
+                    <p className="text-sm font-medium mt-0.5">
+                      {signature.signature_location || 'Pendiente de firma'}
+                    </p>
                   </div>
-                )}
+                </div>
 
-                {signature.signed_at && (
+                {/* Reading Time - Always show */}
+                <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-xl">
+                  <Clock className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground">Tiempo de lectura</p>
+                    <p className="text-sm font-medium mt-0.5">
+                      {signature.reading_time || 'No disponible aún'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Signed At - Conditional styling */}
+                {signature.signed_at ? (
                   <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-950/20 rounded-xl border border-green-200 dark:border-green-900">
                     <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
                     <div className="flex-1">
@@ -283,34 +297,98 @@ export function SignatureDetailModal({ signature, isOpen, onClose }: SignatureDe
                       </p>
                     </div>
                   </div>
+                ) : (
+                  <div className="flex items-center gap-3 p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-xl border border-yellow-200 dark:border-yellow-900">
+                    <Clock className="w-4 h-4 text-yellow-600 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-xs text-yellow-700 dark:text-yellow-400">Pendiente de firma</p>
+                      <p className="text-sm font-medium text-yellow-900 dark:text-yellow-300 mt-0.5">
+                        Esperando que el firmante complete el proceso
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Completed At - if different from signed_at */}
+                {signature.completed_at && signature.completed_at !== signature.signed_at && (
+                  <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-xl">
+                    <Calendar className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground">Fecha de completado</p>
+                      <p className="text-sm font-medium mt-0.5">
+                        {format(new Date(signature.completed_at), 'dd/MM/yyyy HH:mm', { locale: es })}
+                      </p>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Métricas de Lectura - iOS Style */}
-          {signature.reading_time && (
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 rounded-2xl border border-blue-200 dark:border-blue-900 overflow-hidden">
-              <div className="p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                    <Eye className="w-4 h-4 text-white" />
-                  </div>
-                  <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                    Tiempo de lectura
-                  </h4>
-                </div>
-                <div className="text-center py-4">
-                  <div className="text-4xl font-bold text-blue-600 dark:text-blue-400">
-                    {signature.reading_time}
-                  </div>
-                  <div className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                    Tiempo total de lectura del documento
+          {/* Timeline de Eventos - iOS Style */}
+          <div className="bg-card rounded-2xl border shadow-sm overflow-hidden">
+            <div className="p-5">
+              <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
+                Línea de tiempo
+              </h4>
+              <div className="space-y-3">
+                {/* Created */}
+                <div className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Documento creado</p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(signature.created_at), 'dd/MM/yyyy HH:mm', { locale: es })}
+                    </p>
                   </div>
                 </div>
+
+                {/* Sent */}
+                {signature.status !== 'pending' && (
+                  <div className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Enviado al firmante</p>
+                      <p className="text-xs text-muted-foreground">
+                        {signature.signer_email}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Signed */}
+                {signature.signed_at && (
+                  <div className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Firmado exitosamente</p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(signature.signed_at), 'dd/MM/yyyy HH:mm', { locale: es })}
+                      </p>
+                      {signature.reading_time && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Tiempo de lectura: <span className="font-medium">{signature.reading_time}</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pending state */}
+                {!signature.signed_at && signature.status === 'sent' && (
+                  <div className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full mt-2 flex-shrink-0 animate-pulse" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-muted-foreground">Esperando firma...</p>
+                      <p className="text-xs text-muted-foreground">
+                        El documento está pendiente de ser firmado
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          )}
+          </div>
 
           {/* Acciones - iOS Style */}
           <div className="bg-card rounded-2xl border shadow-sm overflow-hidden">

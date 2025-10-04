@@ -17,7 +17,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RefreshCw, ExternalLink, Download, Clock, CheckCircle, XCircle, AlertCircle, ArrowLeftRight, Eye } from 'lucide-react';
+import { RefreshCw, ExternalLink, Download, Clock, CheckCircle, XCircle, AlertCircle, ArrowLeftRight, Eye, Search, X } from 'lucide-react';
+import { Input } from "@/components/ui/input";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { SignatureDetailModal } from '@/components/signatures/SignatureDetailModal';
@@ -49,7 +50,7 @@ function SignaturesTableSkeleton() {
 }
 
 interface SignatureData {
-  id: string;
+  id: number;
   contract_id: string;
   signer_email: string;
   signature_request_id: string;
@@ -57,6 +58,8 @@ interface SignatureData {
   created_at: string;
   completed_at?: string;
   document_url?: string;
+  archived?: boolean;
+  deleted_at?: string;
   contract?: {
     internal_reference: string;
     work_name: string;
@@ -144,14 +147,35 @@ export default function SignaturesPage() {
   const [selectedSignature, setSelectedSignature] = useState<SignatureData | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [showArchived, setShowArchived] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const itemsPerPage = 10;
 
-  const fetchSignatures = useCallback(async () => {
+  const fetchSignatures = useCallback(async (page = 1) => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/signatures');
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: itemsPerPage.toString(),
+        showArchived: showArchived.toString(),
+        status: activeTab,
+        search: searchQuery
+      });
+      
+      const res = await fetch(`/api/signatures?${params}`);
       if (res.ok) {
-        const data = await res.json();
+        const response = await res.json();
+        const { data, pagination } = response;
+        
         setSignatures(data);
+        setCurrentPage(pagination.page);
+        setTotalPages(pagination.totalPages);
+        setTotalItems(pagination.total);
         
         // Calcular estadísticas
         const total = data.length;
@@ -160,14 +184,14 @@ export default function SignaturesPage() {
         const rejected = data.filter((s: SignatureData) => s.status === 'rejected').length;
         const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
         
-        setStats({ total, completed, pending, rejected, completionRate });
+        setStats({ total: pagination.total, completed, pending, rejected, completionRate });
       }
     } catch (error) {
       console.error('Failed to fetch signatures:', error);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [showArchived, activeTab, searchQuery, itemsPerPage]);
 
   const syncFromAuco = useCallback(async (silent: boolean = false) => {
     if (!silent) setIsLoading(true);
@@ -195,29 +219,59 @@ export default function SignaturesPage() {
   }, [fetchSignatures]);
 
   useEffect(() => {
-    const initializeData = async () => {
-      await syncFromAuco(true); // Sincronización silenciosa
-      await fetchSignatures();
-    };
+    // Solo cargar datos de la DB, NO sincronizar automáticamente
+    fetchSignatures(1);
     
-    initializeData();
-    
-    // Sincronización automática cada 5 minutos
-    const syncInterval = setInterval(() => {
-      syncFromAuco(true);
-    }, 5 * 60 * 1000); // 5 minutos
-    
-    // Cleanup del interval
-    return () => clearInterval(syncInterval);
-  }, [syncFromAuco, fetchSignatures]);
+    // Sincronización automática deshabilitada para evitar errores 404
+    // Si necesitas sincronizar, usa el botón "Refresh" manualmente
+  }, [activeTab, showArchived]);
 
-  const filteredSignatures = signatures.filter(signature => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'pending') return ['sent', 'pending'].includes(signature.status);
-    if (activeTab === 'completed') return signature.status === 'completed';
-    if (activeTab === 'rejected') return signature.status === 'rejected';
-    return true;
-  });
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery !== undefined) {
+        fetchSignatures(1);
+      }
+    }, 500); // Wait 500ms after user stops typing
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Archive/Unarchive signature
+  const handleArchive = async (id: number, currentlyArchived: boolean) => {
+    try {
+      const res = await fetch(`/api/signatures/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archived: !currentlyArchived })
+      });
+      
+      if (res.ok) {
+        await fetchSignatures(currentPage);
+      }
+    } catch (error) {
+      console.error('Failed to archive signature:', error);
+    }
+  };
+
+  // Delete signature (soft delete)
+  const handleDelete = async (id: number) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar este documento?')) return;
+    
+    try {
+      const res = await fetch(`/api/signatures/${id}`, {
+        method: 'DELETE'
+      });
+      
+      if (res.ok) {
+        await fetchSignatures(currentPage);
+      }
+    } catch (error) {
+      console.error('Failed to delete signature:', error);
+    }
+  };
+
+  const filteredSignatures = signatures;
 
   if (isLoading) {
     return <SignaturesTableSkeleton />;
@@ -287,14 +341,44 @@ export default function SignaturesPage() {
             </div>
           </div>
 
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Buscar por documento, email, nombre..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-10"
+            />
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
           <div className="flex flex-col sm:flex-row gap-3">
             <Button 
-              onClick={fetchSignatures}
+              onClick={() => fetchSignatures(1)}
               variant="outline" 
               className="flex-1 sm:flex-none"
             >
               <RefreshCw className="mr-2 h-4 w-4" />
               Refresh
+            </Button>
+            
+            <Button
+              onClick={() => setShowArchived(!showArchived)}
+              variant={showArchived ? "default" : "outline"}
+              className="flex-1 sm:flex-none"
+            >
+              {showArchived ? "Ocultar Archivados" : "Mostrar Archivados"}
             </Button>
           </div>
         </div>
@@ -506,6 +590,26 @@ export default function SignaturesPage() {
                                     <Eye className="w-3 h-3" aria-hidden="true" />
                                     <span>Ver</span>
                                   </Button>
+                                  
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleArchive(signature.id, signature.archived || false)}
+                                    className="flex items-center gap-1"
+                                    title={signature.archived ? "Desarchivar" : "Archivar"}
+                                  >
+                                    <ArrowLeftRight className="w-3 h-3" />
+                                  </Button>
+                                  
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDelete(signature.id)}
+                                    className="flex items-center gap-1 text-destructive hover:text-destructive"
+                                    title="Eliminar"
+                                  >
+                                    <XCircle className="w-3 h-3" />
+                                  </Button>
                                 </div>
                               </TableCell>
                             </TableRow>
@@ -593,6 +697,48 @@ export default function SignaturesPage() {
           </Tabs>
         </div>
       </div>
+
+      {/* Paginación */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-6 py-4 bg-card border rounded-xl">
+          <div className="text-sm text-muted-foreground">
+            Mostrando {signatures.length} de {totalItems} documentos
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchSignatures(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              Anterior
+            </Button>
+            
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => fetchSignatures(page)}
+                  className="min-w-[40px]"
+                >
+                  {page}
+                </Button>
+              ))}
+            </div>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchSignatures(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              Siguiente
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Modal de detalles */}
       <SignatureDetailModal

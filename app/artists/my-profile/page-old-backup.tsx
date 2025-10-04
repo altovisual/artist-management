@@ -14,8 +14,6 @@ import Image from "next/image"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { ProfileSkeleton } from "./profile-skeleton"
 import { DatePickerField } from "@/components/ui/datepicker"
-import { ArrowLeft } from "lucide-react"
-import Link from "next/link"
 
 const extractSpotifyId = (urlOrId: string): string | null => {
   const trimmedUrl = urlOrId.trim()
@@ -261,27 +259,11 @@ export default function MyProfilePage() {
     }
 
     return (
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Header */}
-        <div className="mb-8">
-          <Link href="/dashboard">
-            <Button variant="ghost" size="sm" className="gap-2 mb-4">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Dashboard
-            </Button>
-          </Link>
-          <h1 className="text-3xl font-bold">My Profile</h1>
-          <p className="text-muted-foreground mt-2">
-            Update your artist information
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader className="border-b border-border/50">
-              <CardTitle className="text-xl">Basic Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6 pt-6">
+      <div className="container mx-auto px-4 py-8">
+        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
+          <Card>
+            <CardHeader><CardTitle>Basic Information</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Artist Name *</Label>
@@ -360,16 +342,23 @@ export default function MyProfilePage() {
 }`} rows={6} />
               </div>
               <div className="space-y-2">
-                <Label>Profile Image</Label>
-                {artist?.profile_image && <Image src={artist.profile_image} alt={name} width={96} height={96} className="rounded-full object-cover"/>}
-                <Input id="profile-image" type="file" accept="image/*" onChange={(e) => setNewProfileImage(e.target.files ? e.target.files[0] : null)} />
-              </div>
+                  <Label>Profile Image</Label>
+                  {artist?.profile_image && <Image src={artist.profile_image} alt={name} width={96} height={96} className="rounded-full object-cover"/>}
+                  <Input id="profile-image" type="file" accept="image/*" onChange={(e) => setNewProfileImage(e.target.files ? e.target.files[0] : null)} />
+                  <p className="text-sm text-muted-foreground">Upload a new image to replace the current one.</p>
+                </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>Integrations</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="muso-ai-url">Muso.AI Profile URL</Label>
                 <Input id="muso-ai-url" value={musoAiInput} onChange={(e) => setMusoAiInput(e.target.value)} placeholder="Paste your Muso.AI profile URL" />
-                <p className="text-sm text-muted-foreground">
-                  Example: https://credits.muso.ai/profile/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-                </p>
+                 <p className="text-sm text-muted-foreground">
+                    Example: https://credits.muso.ai/profile/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+                  </p>
               </div>
               <Button type="button" onClick={handleLinkMusoProfile} disabled={isLinkingMuso}>
                 {isLinkingMuso ? 'Linking...' : 'Link Muso.AI Profile'}
@@ -377,20 +366,14 @@ export default function MyProfilePage() {
             </CardContent>
           </Card>
 
-          <div className="flex items-center justify-end gap-4 pt-6">
-            <Link href="/dashboard">
-              <Button type="button" variant="outline">
-                Cancel
-              </Button>
-            </Link>
-            <Button type="submit" disabled={isLoading} className="min-w-[120px]">
-              {isLoading ? "Updating..." : "Update Profile"}
-            </Button>
+          <div className="flex items-center justify-end gap-4">
+            <Button type="submit" disabled={isLoading}>{isLoading ? "Updating..." : "Update Profile"}</Button>
           </div>
         </form>
       </div>
     );
   };
+
   return (
     <DashboardLayout>
       <PageContent />

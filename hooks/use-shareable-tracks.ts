@@ -261,15 +261,29 @@ export function usePublicTrack(shareCode: string) {
         const { data, error } = await supabase
           .rpc('get_shareable_track_by_code', { p_share_code: shareCode })
 
-        if (error) throw error
+        if (error) {
+          console.error('RPC Error:', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+          })
+          throw new Error(error.message || 'Failed to fetch track')
+        }
+        
         if (!data || data.length === 0) {
           throw new Error('Track not found or no longer available')
         }
 
         setTrack(data[0] as any)
       } catch (err: any) {
-        setError(err.message)
-        console.error('Error fetching public track:', err)
+        const errorMessage = err?.message || err?.toString() || 'Unknown error occurred'
+        setError(errorMessage)
+        console.error('Error fetching public track:', {
+          message: errorMessage,
+          error: err,
+          shareCode
+        })
       } finally {
         setIsLoading(false)
       }

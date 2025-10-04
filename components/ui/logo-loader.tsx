@@ -38,14 +38,19 @@ const LightLogo = React.forwardRef<SVGSVGElement>((props, ref) => (
 LightLogo.displayName = 'LightLogo'
 
 export function LogoLoader({ size = 'md', text }: LogoLoaderProps) {
-  const { theme } = useTheme()
+  const { theme, resolvedTheme } = useTheme()
   const logoRef = useRef<SVGSVGElement>(null)
+  const [mounted, setMounted] = React.useState(false)
 
   const sizes = {
     sm: { width: 150, height: 32 },
     md: { width: 240, height: 48 },
     lg: { width: 380, height: 72 }
   }
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     const anime = (window as any).anime
@@ -121,9 +126,13 @@ export function LogoLoader({ size = 'md', text }: LogoLoaderProps) {
           height: sizes[size].height 
         }}
       >
-        {theme === 'dark' 
-          ? <DarkLogo ref={logoRef} /> 
-          : <LightLogo ref={logoRef} />}
+        {!mounted ? (
+          <DarkLogo ref={logoRef} />
+        ) : (resolvedTheme === 'dark' || theme === 'dark') ? (
+          <DarkLogo ref={logoRef} />
+        ) : (
+          <LightLogo ref={logoRef} />
+        )}
       </motion.div>
 
       {/* Texto de carga */}
