@@ -285,7 +285,7 @@ export default function SignaturesDebugPage() {
           <p><strong>2. Cargar desde Auco:</strong> Ver qué documentos tienes en Auco</p>
           <p><strong>3. Sincronizar:</strong> Importar todos los documentos de Auco a tu base de datos</p>
           <p className="text-muted-foreground mt-4">
-            Si ves documentos en Auco pero no en DB, usa "Sincronizar Ahora"
+            Si ves documentos en Auco pero no en DB, usa &quot;Sincronizar Ahora&quot;
           </p>
         </CardContent>
       </Card>
