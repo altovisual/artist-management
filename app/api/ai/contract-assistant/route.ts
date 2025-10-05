@@ -1,294 +1,789 @@
 import { NextResponse } from 'next/server';
 import { systemPrompt } from './system-prompt';
-import { GoogleGenerativeAI, FunctionDeclaration, SchemaType, Content, Part } from '@google/generative-ai';
-
-// Argument Interfaces
-interface SearchByNameArgs {
-  name: string;
-}
+import OpenAI from 'openai';
+import { createClient } from '@/lib/supabase/server';
 
 // Type for client-side message history
 interface ClientMessage {
   text: string;
   isUser: boolean;
-  image?: string; // Base64 data URL
+  image?: string;
   file?: { name: string; type: string; };
 }
 
-
-// Initialize the client with the API key
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-
-// --- Tool Schemas ---
-const buscarParticipantePorNombreTool: FunctionDeclaration = {
-    name: "buscarParticipantePorNombre",
-    description: "Busca participantes por su nombre para obtener su ID.",
-    parameters: {
-        type: SchemaType.OBJECT,
-        properties: {
-            name: { type: SchemaType.STRING, description: "El nombre del participante a buscar." }
-        },
-        required: ["name"]
-    }
-};
-
-const buscarObraPorNombreTool: FunctionDeclaration = {
-    name: "buscarObraPorNombre",
-    description: "Busca obras (proyectos o canciones) por su nombre para obtener su ID.",
-    parameters: {
-        type: SchemaType.OBJECT,
-        properties: {
-            name: { type: SchemaType.STRING, description: "El nombre de la obra a buscar." }
-        },
-        required: ["name"]
-    }
-};
-
-const buscarPlantillaPorNombreTool: FunctionDeclaration = {
-  name: "buscarPlantillaPorNombre",
-  description: "Busca una plantilla de contrato por su nombre (campo 'type') y devuelve su ID.",
-  parameters: {
-    type: SchemaType.OBJECT,
-    properties: {
-      name: { type: SchemaType.STRING, description: "El nombre o tipo de la plantilla a buscar." }
-    },
-    required: ["name"]
-  }
-};
-
-const listTemplatesTool: FunctionDeclaration = {
-  name: "listarPlantillas",
-  description: "Obtiene una lista de todas las plantillas de contrato existentes en la base de datos.",
-  parameters: { type: SchemaType.OBJECT, properties: {}, required: [] }
-};
-
-const listarContratosTool: FunctionDeclaration = {
-    name: "listarContratos",
-    description: "Obtiene una lista de todos los contratos en la base de datos.",
-    parameters: { type: SchemaType.OBJECT, properties: {}, required: [] }
-};
-
-const consultarDetallesContratoTool: FunctionDeclaration = {
-    name: "consultarDetallesContrato",
-    description: "Obtiene los detalles completos de un contrato específico por su ID.",
-    parameters: {
-        type: SchemaType.OBJECT,
-        properties: {
-            contract_id: { type: SchemaType.NUMBER, description: "El ID del contrato a consultar." }
-        },
-        required: ["contract_id"]
-    }
-};
-
-// --- NEW TOOLS ---
-const buscarInformacionCompletaDeArtistaTool: FunctionDeclaration = {
-    name: "buscarInformacionCompletaDeArtista",
-    description: "Busca un artista por su nombre y devuelve toda su información asociada, incluyendo datos biográficos, contratos, obras, participaciones y cuentas de redes sociales.",
-    parameters: {
-        type: SchemaType.OBJECT,
-        properties: {
-            name: { type: SchemaType.STRING, description: "El nombre del artista a buscar." }
-        },
-        required: ["name"]
-    }
-};
-
-const listarUsuariosTool: FunctionDeclaration = {
-    name: "listarUsuarios",
-    description: "Obtiene una lista de todos los usuarios registrados en el sistema (de la tabla auth.users).",
-    parameters: { type: SchemaType.OBJECT, properties: {}, required: [] }
-};
-
-const listarFirmasTool: FunctionDeclaration = {
-    name: "listarFirmas",
-    description: "Obtiene una lista de todas las firmas de contratos registradas en la base de datos.",
-    parameters: { type: SchemaType.OBJECT, properties: {}, required: [] }
-};
-
-const listarObrasTool: FunctionDeclaration = {
-    name: "listarObras",
-    description: "Obtiene una lista de todas las obras (proyectos, canciones) en la base de datos.",
-    parameters: { type: SchemaType.OBJECT, properties: {}, required: [] }
-};
-
-
-// --- Model Definition ---
-const model = genAI.getGenerativeModel({
-  model: "gemini-1.5-flash",
-  systemInstruction: systemPrompt,
-  tools: [{
-    functionDeclarations: [
-      // Existing tools
-      buscarParticipantePorNombreTool,
-      buscarObraPorNombreTool,
-      buscarPlantillaPorNombreTool,
-      listTemplatesTool,
-      listarContratosTool,
-      consultarDetallesContratoTool,
-      // New tools
-      buscarInformacionCompletaDeArtistaTool,
-      listarUsuariosTool,
-      listarFirmasTool,
-      listarObrasTool
-    ]
-  }]
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || '',
 });
+
+// ===== MCP-STYLE DATABASE ACCESS =====
+// Direct Supabase access for complete control
+
+async function getSupabaseData(table: string, filters?: any, select?: string) {
+  try {
+    const supabase = await createClient();
+    let query = supabase.from(table).select(select || '*');
+    
+    if (filters) {
+      Object.keys(filters).forEach(key => {
+        query = query.eq(key, filters[key]);
+      });
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error(`Error fetching ${table}:`, error);
+      return { success: false, error: error.message, data: [] };
+    }
+    
+    return { success: true, data: data || [] };
+  } catch (error: any) {
+    console.error(`Error in getSupabaseData:`, error);
+    return { success: false, error: error.message, data: [] };
+  }
+}
+
+async function createSupabaseRecord(table: string, record: any) {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.from(table).insert(record).select();
+    
+    if (error) {
+      console.error(`Error creating ${table}:`, error);
+      return { success: false, error: error.message, data: null };
+    }
+    
+    return { success: true, data: data?.[0] || null };
+  } catch (error: any) {
+    console.error(`Error in createSupabaseRecord:`, error);
+    return { success: false, error: error.message, data: null };
+  }
+}
+
+async function updateSupabaseRecord(table: string, id: string, updates: any) {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from(table)
+      .update(updates)
+      .eq('id', id)
+      .select();
+    
+    if (error) {
+      console.error(`Error updating ${table}:`, error);
+      return { success: false, error: error.message, data: null };
+    }
+    
+    return { success: true, data: data?.[0] || null };
+  } catch (error: any) {
+    console.error(`Error in updateSupabaseRecord:`, error);
+    return { success: false, error: error.message, data: null };
+  }
+}
+
+async function deleteSupabaseRecord(table: string, id: string) {
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.from(table).delete().eq('id', id);
+    
+    if (error) {
+      console.error(`Error deleting ${table}:`, error);
+      return { success: false, error: error.message };
+    }
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error(`Error in deleteSupabaseRecord:`, error);
+    return { success: false, error: error.message };
+  }
+}
+
+async function searchSupabaseData(table: string, searchField: string, searchTerm: string) {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from(table)
+      .select('*')
+      .ilike(searchField, `%${searchTerm}%`);
+    
+    if (error) {
+      console.error(`Error searching ${table}:`, error);
+      return { success: false, error: error.message, data: [] };
+    }
+    
+    return { success: true, data: data || [] };
+  } catch (error: any) {
+    console.error(`Error in searchSupabaseData:`, error);
+    return { success: false, error: error.message, data: [] };
+  }
+}
+
+// --- Tool/Function Definitions for OpenAI ---
+const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
+  // ===== ARTISTS CRUD =====
+  {
+    type: "function",
+    function: {
+      name: "listarArtistas",
+      description: "Obtiene la lista completa de artistas en el sistema.",
+      parameters: { type: "object", properties: {}, required: [] }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "buscarArtista",
+      description: "Busca un artista por nombre o ID.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Nombre o ID del artista" }
+        },
+        required: ["query"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "crearArtista",
+      description: "Crea un nuevo artista en el sistema.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Nombre del artista" },
+          genre: { type: "string", description: "Género musical" },
+          email: { type: "string", description: "Email del artista" },
+          bio: { type: "string", description: "Biografía" }
+        },
+        required: ["name"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "actualizarArtista",
+      description: "Actualiza la información de un artista existente.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "ID del artista" },
+          name: { type: "string", description: "Nuevo nombre" },
+          genre: { type: "string", description: "Nuevo género" },
+          email: { type: "string", description: "Nuevo email" }
+        },
+        required: ["id"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "eliminarArtista",
+      description: "Elimina un artista del sistema.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "ID del artista a eliminar" }
+        },
+        required: ["id"]
+      }
+    }
+  },
+
+  // ===== PARTICIPANTS CRUD =====
+  {
+    type: "function",
+    function: {
+      name: "listarParticipantes",
+      description: "Obtiene la lista de todos los participantes.",
+      parameters: { type: "object", properties: {}, required: [] }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "buscarParticipante",
+      description: "Busca un participante por nombre.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Nombre del participante" }
+        },
+        required: ["name"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "crearParticipante",
+      description: "Crea un nuevo participante.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Nombre completo" },
+          email: { type: "string", description: "Email" },
+          type: { type: "string", description: "Tipo: artist, producer, etc" }
+        },
+        required: ["name", "email"]
+      }
+    }
+  },
+
+  // ===== CONTRACTS CRUD =====
+  {
+    type: "function",
+    function: {
+      name: "listarContratos",
+      description: "Obtiene todos los contratos del sistema.",
+      parameters: { type: "object", properties: {}, required: [] }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "buscarContrato",
+      description: "Busca un contrato específico.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "ID del contrato" }
+        },
+        required: ["id"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "crearContrato",
+      description: "Crea un nuevo contrato.",
+      parameters: {
+        type: "object",
+        properties: {
+          template_id: { type: "string", description: "ID de la plantilla" },
+          participant_id: { type: "string", description: "ID del participante" },
+          work_id: { type: "string", description: "ID de la obra" }
+        },
+        required: ["template_id"]
+      }
+    }
+  },
+
+  // ===== SIGNATURES =====
+  {
+    type: "function",
+    function: {
+      name: "listarFirmas",
+      description: "Obtiene todas las firmas digitales.",
+      parameters: { type: "object", properties: {}, required: [] }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "enviarFirma",
+      description: "Envía un documento para firma digital.",
+      parameters: {
+        type: "object",
+        properties: {
+          contract_id: { type: "string", description: "ID del contrato" },
+          signer_email: { type: "string", description: "Email del firmante" }
+        },
+        required: ["contract_id", "signer_email"]
+      }
+    }
+  },
+
+  // ===== ANALYTICS =====
+  {
+    type: "function",
+    function: {
+      name: "obtenerAnalytics",
+      description: "Obtiene estadísticas y analytics del sistema.",
+      parameters: {
+        type: "object",
+        properties: {
+          type: { type: "string", description: "Tipo: revenue, artists, projects, etc" }
+        },
+        required: []
+      }
+    }
+  },
+
+  // ===== TEMPLATES =====
+  {
+    type: "function",
+    function: {
+      name: "listarPlantillas",
+      description: "Lista todas las plantillas de contrato.",
+      parameters: { type: "object", properties: {}, required: [] }
+    }
+  },
+
+  // ===== MCP-STYLE UNIVERSAL ACCESS =====
+  {
+    type: "function",
+    function: {
+      name: "consultarTabla",
+      description: "Consulta directa a cualquier tabla de Supabase. Acceso MCP completo.",
+      parameters: {
+        type: "object",
+        properties: {
+          table: { type: "string", description: "Nombre de la tabla: artists, participants, contracts, works, transactions, finance_categories, etc" },
+          filters: { type: "object", description: "Filtros opcionales como {status: 'active'}" }
+        },
+        required: ["table"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "crearRegistro",
+      description: "Crea un nuevo registro en cualquier tabla.",
+      parameters: {
+        type: "object",
+        properties: {
+          table: { type: "string", description: "Nombre de la tabla" },
+          data: { type: "object", description: "Datos del registro a crear" }
+        },
+        required: ["table", "data"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "actualizarRegistro",
+      description: "Actualiza un registro existente en cualquier tabla.",
+      parameters: {
+        type: "object",
+        properties: {
+          table: { type: "string", description: "Nombre de la tabla" },
+          id: { type: "string", description: "ID del registro" },
+          updates: { type: "object", description: "Campos a actualizar" }
+        },
+        required: ["table", "id", "updates"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "eliminarRegistro",
+      description: "Elimina un registro de cualquier tabla.",
+      parameters: {
+        type: "object",
+        properties: {
+          table: { type: "string", description: "Nombre de la tabla" },
+          id: { type: "string", description: "ID del registro a eliminar" }
+        },
+        required: ["table", "id"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "buscarEnTabla",
+      description: "Búsqueda avanzada en cualquier tabla.",
+      parameters: {
+        type: "object",
+        properties: {
+          table: { type: "string", description: "Nombre de la tabla" },
+          searchField: { type: "string", description: "Campo donde buscar (ej: 'name', 'email')" },
+          searchTerm: { type: "string", description: "Término de búsqueda" }
+        },
+        required: ["table", "searchField", "searchTerm"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "obtenerEstadisticas",
+      description: "Obtiene estadísticas agregadas de cualquier tabla.",
+      parameters: {
+        type: "object",
+        properties: {
+          table: { type: "string", description: "Nombre de la tabla" },
+          operation: { type: "string", description: "Operación: count, sum, avg, etc" }
+        },
+        required: ["table", "operation"]
+      }
+    }
+  }
+];
 
 // --- API Handler ---
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { prompt, history = [], file: fileDataUrl = null } = body;
+    const { prompt, history = [] } = body;
 
-    if (!prompt && !fileDataUrl) {
-      return NextResponse.json({ error: 'Prompt or file is required' }, { status: 400 });
+    if (!prompt) {
+      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
     }
 
-    const formattedHistory: Content[] = history.map((msg: ClientMessage) => ({
-      role: msg.isUser ? 'user' : 'model',
-      parts: [{ text: msg.text }],
-    }));
+    // Format history for OpenAI
+    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+      { role: 'system', content: systemPrompt },
+      ...history.map((msg: ClientMessage) => ({
+        role: msg.isUser ? 'user' as const : 'assistant' as const,
+        content: msg.text
+      })),
+      { role: 'user', content: prompt }
+    ];
 
-    const chat = model.startChat({
-      history: formattedHistory,
+    // Call OpenAI with function calling
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4-turbo-preview', // or 'gpt-3.5-turbo' for cheaper option
+      messages,
+      tools,
+      tool_choice: 'auto',
     });
 
-    const messageParts: Part[] = [];
-    if (prompt) {
-      messageParts.push({ text: prompt });
-    }
+    const responseMessage = response.choices[0].message;
 
-    if (fileDataUrl) {
-      const match = fileDataUrl.match(/^data:(.+);base64,(.+)$/);
-      if (match) {
-        const mimeType = match[1];
-        const base64Data = match[2];
-        messageParts.push({ inlineData: { mimeType, data: base64Data } });
-      } else {
-        console.error("Malformed data URL received");
-      }
-    }
+    // Check if the model wants to call functions
+    if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
+      // Get base URL from request headers
+      const protocol = request.headers.get('x-forwarded-proto') || 'http';
+      const host = request.headers.get('host') || 'localhost:3000';
+      const baseUrl = `${protocol}://${host}`;
+      
+      // Execute all function calls
+      const functionResults = await Promise.all(
+        responseMessage.tool_calls.map(async (toolCall: any) => {
+          const functionName = toolCall.function.name;
+          const functionArgs = JSON.parse(toolCall.function.arguments);
 
-    const result = await chat.sendMessage(messageParts);
-    const response = result.response;
-    const functionCalls = response.functionCalls();
+          console.log(`AI is calling function: ${functionName} with args:`, functionArgs);
 
-    if (functionCalls && functionCalls.length > 0) {
-      const toolExecutionPromises = functionCalls.map(async (call) => {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:3000`;
-        let data;
-        let apiResponse;
+          let apiResponse;
+          let data;
 
-        console.log(`AI is calling tool: ${call.name} with args:`, call.args);
+          switch (functionName) {
+            // ===== ARTISTS CRUD =====
+            case "listarArtistas":
+              const artistsResult = await getSupabaseData('artists');
+              return {
+                tool_call_id: toolCall.id,
+                role: 'tool' as const,
+                content: JSON.stringify({ 
+                  artists: artistsResult.data, 
+                  count: artistsResult.data.length,
+                  success: artistsResult.success 
+                })
+              };
 
-        switch (call.name) {
-          // --- NEW TOOL IMPLEMENTATIONS ---
-          case "buscarInformacionCompletaDeArtista":
-            const { name: artistNameForSearch } = call.args as SearchByNameArgs;
-            apiResponse = await fetch(`${baseUrl}/api/artists/full-profile?name=${encodeURIComponent(artistNameForSearch)}`);
-            if (!apiResponse.ok) throw new Error(`API call failed for ${call.name}: ${apiResponse.statusText}`);
-            data = await apiResponse.json();
-            return { name: call.name, response: { artist_profile: data } };
+            case "buscarArtista":
+              apiResponse = await fetch(`${baseUrl}/api/artists?search=${encodeURIComponent(functionArgs.query)}`);
+              data = await apiResponse.json();
+              return {
+                tool_call_id: toolCall.id,
+                role: 'tool' as const,
+                content: JSON.stringify({ results: data, found: data?.length || 0 })
+              };
 
-          case "listarUsuarios":
-            apiResponse = await fetch(`${baseUrl}/api/users`);
-            if (!apiResponse.ok) throw new Error(`API call failed for ${call.name}: ${apiResponse.statusText}`);
-            data = await apiResponse.json();
-            return { name: call.name, response: { users: data } };
+            case "crearArtista":
+              apiResponse = await fetch(`${baseUrl}/api/artists`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(functionArgs)
+              });
+              data = await apiResponse.json();
+              return {
+                tool_call_id: toolCall.id,
+                role: 'tool' as const,
+                content: JSON.stringify({ success: true, artist: data, message: 'Artista creado exitosamente' })
+              };
 
-          case "listarFirmas":
-            apiResponse = await fetch(`${baseUrl}/api/signatures`);
-            if (!apiResponse.ok) throw new Error(`API call failed for ${call.name}: ${apiResponse.statusText}`);
-            data = await apiResponse.json();
-            return { name: call.name, response: { signatures: data } };
+            case "actualizarArtista":
+              apiResponse = await fetch(`${baseUrl}/api/artists/${functionArgs.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(functionArgs)
+              });
+              data = await apiResponse.json();
+              return {
+                tool_call_id: toolCall.id,
+                role: 'tool' as const,
+                content: JSON.stringify({ success: true, artist: data, message: 'Artista actualizado' })
+              };
 
-          case "listarObras":
-            apiResponse = await fetch(`${baseUrl}/api/works`);
-            if (!apiResponse.ok) throw new Error(`API call failed for ${call.name}: ${apiResponse.statusText}`);
-            data = await apiResponse.json();
-            return { name: call.name, response: { works: data } };
+            case "eliminarArtista":
+              apiResponse = await fetch(`${baseUrl}/api/artists/${functionArgs.id}`, {
+                method: 'DELETE'
+              });
+              return {
+                tool_call_id: toolCall.id,
+                role: 'tool' as const,
+                content: JSON.stringify({ success: true, message: 'Artista eliminado' })
+              };
 
-          // --- EXISTING TOOL IMPLEMENTATIONS ---
-          case "buscarEntidadesVinculables":
-            const { name: entityName } = call.args as SearchByNameArgs;
-            apiResponse = await fetch(`${baseUrl}/api/linkable-entities?name=${encodeURIComponent(entityName)}`);
-            if (!apiResponse.ok) throw new Error(`API call failed for ${call.name}: ${apiResponse.statusText}`);
-            data = await apiResponse.json();
-            return { name: call.name, response: { entities: data } };
+            // ===== PARTICIPANTS CRUD =====
+            case "listarParticipantes":
+              const participantsResult = await getSupabaseData('participants');
+              return {
+                tool_call_id: toolCall.id,
+                role: 'tool' as const,
+                content: JSON.stringify({ 
+                  participants: participantsResult.data, 
+                  count: participantsResult.data.length,
+                  success: participantsResult.success 
+                })
+              };
 
-          case "buscarParticipantePorNombre":
-            const { name: participantName } = call.args as SearchByNameArgs;
-            apiResponse = await fetch(`${baseUrl}/api/participants?name=${encodeURIComponent(participantName)}`);
-            if (!apiResponse.ok) throw new Error(`API call failed for ${call.name}: ${apiResponse.statusText}`);
-            data = await apiResponse.json();
-            return { name: call.name, response: { participants: data } };
+            case "buscarParticipante":
+              apiResponse = await fetch(`${baseUrl}/api/participants?search=${encodeURIComponent(functionArgs.name)}`);
+              data = await apiResponse.json();
+              return {
+                tool_call_id: toolCall.id,
+                role: 'tool' as const,
+                content: JSON.stringify({ results: data, found: data?.length || 0 })
+              };
 
-          case "buscarObraPorNombre":
-            const { name: workName } = call.args as SearchByNameArgs;
-            apiResponse = await fetch(`${baseUrl}/api/works?name=${encodeURIComponent(workName)}`);
-            if (!apiResponse.ok) throw new Error(`API call failed for ${call.name}: ${apiResponse.statusText}`);
-            data = await apiResponse.json();
-            return { name: call.name, response: { works: data } };
+            case "crearParticipante":
+              apiResponse = await fetch(`${baseUrl}/api/participants`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(functionArgs)
+              });
+              data = await apiResponse.json();
+              return {
+                tool_call_id: toolCall.id,
+                role: 'tool' as const,
+                content: JSON.stringify({ success: true, participant: data, message: 'Participante creado' })
+              };
 
-          case "listarContratos":
-            apiResponse = await fetch(`${baseUrl}/api/contracts`);
-            if (!apiResponse.ok) throw new Error(`API call failed for ${call.name}: ${apiResponse.statusText}`);
-            data = await apiResponse.json();
-            return { name: call.name, response: { contracts: data } };
+            // ===== CONTRACTS CRUD =====
+            case "listarContratos":
+              const contractsResult = await getSupabaseData('contracts');
+              return {
+                tool_call_id: toolCall.id,
+                role: 'tool' as const,
+                content: JSON.stringify({ 
+                  contracts: contractsResult.data, 
+                  count: contractsResult.data.length,
+                  success: contractsResult.success 
+                })
+              };
 
-          case "consultarDetallesContrato":
-            const { contract_id } = call.args as { contract_id: number };
-            apiResponse = await fetch(`${baseUrl}/api/contracts/${contract_id}`);
-            if (!apiResponse.ok) throw new Error(`API call failed for ${call.name}: ${apiResponse.statusText}`);
-            data = await apiResponse.json();
-            return { name: call.name, response: { contract: data } };
-            
-          case "listarPlantillas":
-            apiResponse = await fetch(`${baseUrl}/api/templates`);
-            if (!apiResponse.ok) throw new Error(`API call failed for ${call.name}: ${apiResponse.statusText}`);
-            data = await apiResponse.json();
-            return { name: call.name, response: { templates: data } };
+            case "buscarContrato":
+              apiResponse = await fetch(`${baseUrl}/api/contracts/${functionArgs.id}`);
+              data = await apiResponse.json();
+              return {
+                tool_call_id: toolCall.id,
+                role: 'tool' as const,
+                content: JSON.stringify({ contract: data })
+              };
 
-          case "buscarPlantillaPorNombre":
-            const { name } = call.args as SearchByNameArgs;
-            apiResponse = await fetch(`${baseUrl}/api/templates`);
-            if (!apiResponse.ok) throw new Error(`API call failed for ${call.name}: ${apiResponse.statusText}`);
-            const allTemplates = await apiResponse.json();
-            const foundTemplates = allTemplates.filter((template: any) =>
-              template.type.toLowerCase().includes(name.toLowerCase())
-            );
-            return { name: call.name, response: { templates: foundTemplates.map((t: any) => ({ id: t.id, type: t.type })) } };
+            case "crearContrato":
+              apiResponse = await fetch(`${baseUrl}/api/contracts`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(functionArgs)
+              });
+              data = await apiResponse.json();
+              return {
+                tool_call_id: toolCall.id,
+                role: 'tool' as const,
+                content: JSON.stringify({ success: true, contract: data, message: 'Contrato creado' })
+              };
 
-          default:
-            // Fallback for tools defined in the prompt but not implemented here
-            console.warn(`Tool call received for unimplemented tool: ${call.name}`);
-            // For now, we can return a generic response or throw an error.
-            // Throwing an error might be better for debugging during development.
-            throw new Error(`Unknown or unimplemented tool call: ${call.name}`);
-        }
+            // ===== SIGNATURES =====
+            case "listarFirmas":
+              apiResponse = await fetch(`${baseUrl}/api/signatures`);
+              data = await apiResponse.json();
+              return {
+                tool_call_id: toolCall.id,
+                role: 'tool' as const,
+                content: JSON.stringify({ signatures: data, count: data?.length || 0 })
+              };
+
+            case "enviarFirma":
+              apiResponse = await fetch(`${baseUrl}/api/signatures/send`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(functionArgs)
+              });
+              data = await apiResponse.json();
+              return {
+                tool_call_id: toolCall.id,
+                role: 'tool' as const,
+                content: JSON.stringify({ success: true, signature: data, message: 'Documento enviado para firma' })
+              };
+
+            // ===== ANALYTICS =====
+            case "obtenerAnalytics":
+              const analyticsType = functionArgs.type || 'general';
+              apiResponse = await fetch(`${baseUrl}/api/analytics?type=${analyticsType}`);
+              data = await apiResponse.json();
+              return {
+                tool_call_id: toolCall.id,
+                role: 'tool' as const,
+                content: JSON.stringify({ analytics: data, type: analyticsType })
+              };
+
+            // ===== TEMPLATES =====
+            case "listarPlantillas":
+              const templatesResult = await getSupabaseData('contract_templates');
+              // If no templates in DB, return mock data
+              const templates = templatesResult.data.length > 0 ? templatesResult.data : [
+                { id: '1', name: 'Contrato de Management', description: 'Gestión y representación artística', type: 'management' },
+                { id: '2', name: 'Contrato de Producción', description: 'Producción musical', type: 'production' },
+                { id: '3', name: 'Contrato de Distribución', description: 'Distribución digital y física', type: 'distribution' }
+              ];
+              return {
+                tool_call_id: toolCall.id,
+                role: 'tool' as const,
+                content: JSON.stringify({ templates, count: templates.length, success: true })
+              };
+
+            // ===== MCP-STYLE UNIVERSAL ACCESS =====
+            case "consultarTabla":
+              const tableResult = await getSupabaseData(functionArgs.table, functionArgs.filters);
+              return {
+                tool_call_id: toolCall.id,
+                role: 'tool' as const,
+                content: JSON.stringify({
+                  table: functionArgs.table,
+                  data: tableResult.data,
+                  count: tableResult.data.length,
+                  success: tableResult.success
+                })
+              };
+
+            case "crearRegistro":
+              const createResult = await createSupabaseRecord(functionArgs.table, functionArgs.data);
+              return {
+                tool_call_id: toolCall.id,
+                role: 'tool' as const,
+                content: JSON.stringify({
+                  table: functionArgs.table,
+                  data: createResult.data,
+                  success: createResult.success,
+                  message: createResult.success ? 'Registro creado exitosamente' : createResult.error
+                })
+              };
+
+            case "actualizarRegistro":
+              const updateResult = await updateSupabaseRecord(functionArgs.table, functionArgs.id, functionArgs.updates);
+              return {
+                tool_call_id: toolCall.id,
+                role: 'tool' as const,
+                content: JSON.stringify({
+                  table: functionArgs.table,
+                  data: updateResult.data,
+                  success: updateResult.success,
+                  message: updateResult.success ? 'Registro actualizado exitosamente' : updateResult.error
+                })
+              };
+
+            case "eliminarRegistro":
+              const deleteResult = await deleteSupabaseRecord(functionArgs.table, functionArgs.id);
+              return {
+                tool_call_id: toolCall.id,
+                role: 'tool' as const,
+                content: JSON.stringify({
+                  table: functionArgs.table,
+                  success: deleteResult.success,
+                  message: deleteResult.success ? 'Registro eliminado exitosamente' : deleteResult.error
+                })
+              };
+
+            case "buscarEnTabla":
+              const searchResult = await searchSupabaseData(functionArgs.table, functionArgs.searchField, functionArgs.searchTerm);
+              return {
+                tool_call_id: toolCall.id,
+                role: 'tool' as const,
+                content: JSON.stringify({
+                  table: functionArgs.table,
+                  results: searchResult.data,
+                  found: searchResult.data.length,
+                  success: searchResult.success
+                })
+              };
+
+            case "obtenerEstadisticas":
+              const statsResult = await getSupabaseData(functionArgs.table);
+              const count = statsResult.data.length;
+              return {
+                tool_call_id: toolCall.id,
+                role: 'tool' as const,
+                content: JSON.stringify({
+                  table: functionArgs.table,
+                  operation: functionArgs.operation,
+                  count: count,
+                  data: statsResult.data,
+                  success: statsResult.success
+                })
+              };
+
+            default:
+              return {
+                tool_call_id: toolCall.id,
+                role: 'tool' as const,
+                content: JSON.stringify({ error: 'Función desconocida', function: functionName })
+              };
+          }
+        })
+      );
+
+      // Send function results back to get final response
+      const finalResponse = await openai.chat.completions.create({
+        model: 'gpt-4-turbo-preview',
+        messages: [
+          ...messages,
+          responseMessage,
+          ...functionResults,
+          {
+            role: 'system',
+            content: 'IMPORTANTE: Termina tu respuesta ofreciendo botones de acción específicos. Usa el formato: [BOTONES: texto1|texto2|texto3] al final de tu mensaje.'
+          }
+        ],
       });
 
-      const toolResults = await Promise.all(toolExecutionPromises);
+      const responseText = finalResponse.choices[0].message.content || 'No response generated.';
       
-      const functionResponseParts = toolResults.map(toolResult => ({
-        functionResponse: {
-          name: toolResult.name,
-          response: toolResult.response
-        }
-      }));
+      // Extract button suggestions from response
+      const buttonMatch = responseText.match(/\[BOTONES:\s*([^\]]+)\]/);
+      let suggestions = [];
+      let cleanText = responseText;
+      
+      if (buttonMatch) {
+        const buttons = buttonMatch[1].split('|').map(b => b.trim());
+        suggestions = buttons.map(button => ({
+          name: button,
+          prompt: button,
+          type: 'action'
+        }));
+        cleanText = responseText.replace(/\[BOTONES:[^\]]+\]/, '').trim();
+      }
 
-      const result2 = await chat.sendMessage(functionResponseParts);
-      const finalResponse = result2.response;
-      const text = finalResponse.text();
-      return NextResponse.json({ response: text });
-
-    } else {
-      const text = response.text();
-      return NextResponse.json({ response: text });
+      return NextResponse.json({
+        text: cleanText,
+        isUser: false,
+        suggestions: suggestions.length > 0 ? suggestions : undefined
+      });
     }
+
+    // No function calls, return direct response
+    return NextResponse.json({
+      text: responseMessage.content || 'No response generated.',
+      isUser: false
+    });
 
   } catch (error: any) {
     console.error('[API Handler Error]', error);
-    return NextResponse.json({ error: `Error en el servidor: ${error.message}` }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }

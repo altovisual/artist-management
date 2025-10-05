@@ -30,33 +30,60 @@ interface ToolCategory {
 
 const allTools: ToolCategory[] = [
   {
-    category: "Gestión de Contratos",
+    category: "🎤 Gestión de Artistas",
+    tools: [
+      { name: "Crear Artista", description: "Crear un nuevo artista con nombre, género, email y biografía.", prompt: "Quiero crear un nuevo artista" },
+      { name: "Buscar Artista", description: "Buscar artistas existentes por nombre o ID.", prompt: "Busca al artista " },
+      { name: "Listar Artistas", description: "Ver todos los artistas en el sistema.", prompt: "Muéstrame todos los artistas" },
+      { name: "Actualizar Artista", description: "Actualizar información de un artista.", prompt: "Quiero actualizar la información de un artista" },
+      { name: "Eliminar Artista", description: "Eliminar un artista del sistema.", prompt: "Quiero eliminar un artista" },
+    ]
+  },
+  {
+    category: "👥 Gestión de Participantes",
+    tools: [
+      { name: "Crear Participante", description: "Crear un nuevo participante (productor, colaborador, etc.).", prompt: "Quiero crear un nuevo participante" },
+      { name: "Buscar Participante", description: "Buscar un participante específico por nombre.", prompt: "Busca al participante " },
+      { name: "Listar Participantes", description: "Ver todos los participantes y colaboradores.", prompt: "Lista todos los participantes" },
+    ]
+  },
+  {
+    category: "📄 Gestión de Contratos",
     tools: [
       { name: "Crear Contrato", description: "Crear un nuevo contrato desde una plantilla.", prompt: "Quiero crear un contrato" },
+      { name: "Buscar Contrato", description: "Buscar un contrato específico por ID.", prompt: "Busca el contrato " },
       { name: "Listar Contratos", description: "Ver todos los contratos existentes.", prompt: "Lista todos mis contratos" },
+      { name: "Listar Plantillas", description: "Ver todas las plantillas de contrato disponibles.", prompt: "Muéstrame todas las plantillas de contrato" },
     ]
   },
   {
-    category: "Gestión de Entidades",
+    category: "✍️ Firmas Digitales",
     tools: [
-      { name: "Buscar Persona", description: "Encontrar un artista, participante o usuario.", prompt: "Busca a " },
-      { name: "Listar Obras", description: "Ver todas tus canciones y proyectos.", prompt: "Lista todas mis obras" },
-      { name: "Listar Plantillas", description: "Ver todas las plantillas de contrato.", prompt: "Muéstrame todas las plantillas" },
+      { name: "Enviar para Firma", description: "Enviar un contrato para firma digital con Auco.", prompt: "Quiero enviar un contrato para firma" },
+      { name: "Ver Firmas", description: "Ver el estado de todas las firmas digitales.", prompt: "Muéstrame todas las firmas" },
     ]
   },
   {
-    category: "Análisis y Asistencia",
+    category: "📊 Analytics y Estadísticas",
     tools: [
-      { name: "Resumir Contrato", description: "Analizar un documento y extraer los puntos clave.", prompt: "Resume el siguiente documento" },
-      { name: "Sugerir Cláusulas", description: "Obtener sugerencias de cláusulas para un contrato.", prompt: "Sugiere cláusulas para un contrato de management" },
+      { name: "Ver Analytics", description: "Obtener estadísticas de ingresos, artistas y proyectos.", prompt: "Muéstrame las estadísticas del sistema" },
+      { name: "Analytics de Artista", description: "Ver estadísticas específicas de un artista.", prompt: "Muéstrame las estadísticas de un artista" },
+    ]
+  },
+  {
+    category: "🔍 Búsqueda Inteligente",
+    tools: [
+      { name: "Búsqueda Global", description: "Buscar información en toda la aplicación.", prompt: "Busca " },
+      { name: "Búsqueda Avanzada", description: "Búsqueda detallada con filtros específicos.", prompt: "Quiero hacer una búsqueda avanzada" },
     ]
   }
 ];
 
 const quickStartTools: Tool[] = [
-  allTools[0].tools[0], // Crear Contrato
-  allTools[1].tools[0], // Buscar Persona
-  allTools[1].tools[1], // Listar Obras
+  allTools[0].tools[0], // Crear Artista
+  allTools[2].tools[0], // Crear Contrato
+  allTools[4].tools[0], // Ver Analytics
+  allTools[5].tools[0], // Búsqueda Global
 ];
 
 interface Suggestion {
@@ -72,11 +99,18 @@ interface Message {
   image?: string;
   file?: { name: string; type: string; };
   suggestions?: Suggestion[];
+  actions?: ActionIndicator[];
+}
+
+interface ActionIndicator {
+  type: 'thinking' | 'searching' | 'creating' | 'updating' | 'deleting' | 'success' | 'error';
+  message: string;
+  timestamp?: number;
 }
 
 const welcomeMessage: Message = {
   id: 'initial-message',
-  text: "Hola, soy MVPX AI. ¿En qué puedo ayudarte hoy?",
+  text: "¡Hola! Soy **MVPX AI**, tu asistente especializado en gestión de artistas musicales y contratos.\n\n**¿Qué puedo hacer por ti?**\n\n✨ Gestionar artistas, participantes y contratos\n✨ Enviar documentos para firma digital\n✨ Analizar datos y estadísticas\n✨ Búsqueda inteligente en toda la aplicación\n\nSelecciona una acción rápida abajo o escribe tu solicitud:",
   isUser: false,
   suggestions: quickStartTools.map(t => ({ ...t, type: 'tool' })),
 };
@@ -158,7 +192,35 @@ const AIContractChat = () => {
       }
 
       const data = await response.json();
-      const aiMessage: Message = { id: Date.now().toString() + '-ai', text: data.response, isUser: false };
+      
+      // Simular indicadores de acción basados en la respuesta
+      const actions: ActionIndicator[] = [];
+      const lowerText = promptText.toLowerCase();
+      
+      if (lowerText.includes('busca') || lowerText.includes('encuentra') || lowerText.includes('muestra')) {
+        actions.push({ type: 'searching', message: 'Buscando en la base de datos...' });
+        actions.push({ type: 'success', message: 'Búsqueda completada' });
+      } else if (lowerText.includes('crea') || lowerText.includes('nuevo') || lowerText.includes('añade')) {
+        actions.push({ type: 'creating', message: 'Creando nuevo registro...' });
+        actions.push({ type: 'success', message: 'Creado exitosamente' });
+      } else if (lowerText.includes('actualiza') || lowerText.includes('modifica') || lowerText.includes('edita')) {
+        actions.push({ type: 'updating', message: 'Actualizando información...' });
+        actions.push({ type: 'success', message: 'Actualizado correctamente' });
+      } else if (lowerText.includes('elimina') || lowerText.includes('borra')) {
+        actions.push({ type: 'deleting', message: 'Eliminando registro...' });
+        actions.push({ type: 'success', message: 'Eliminado correctamente' });
+      } else if (lowerText.includes('lista') || lowerText.includes('todos')) {
+        actions.push({ type: 'searching', message: 'Obteniendo lista...' });
+        actions.push({ type: 'success', message: 'Lista cargada' });
+      }
+      
+      const aiMessage: Message = { 
+        id: Date.now().toString() + '-ai', 
+        text: data.text || data.response || 'No response', 
+        isUser: false,
+        actions: actions.length > 0 ? actions : undefined,
+        suggestions: data.suggestions || undefined
+      };
       setMessages((prev) => [...prev, aiMessage]);
 
     } catch (error: any) {
@@ -233,19 +295,136 @@ const AIContractChat = () => {
     return null;
   }
 
+  const ActionIndicators = ({ actions }: { actions?: ActionIndicator[] }) => {
+    if (!actions || actions.length === 0) return null;
+    
+    const getIcon = (type: ActionIndicator['type']) => {
+      switch (type) {
+        case 'thinking':
+          return (
+            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          );
+        case 'searching':
+          return (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          );
+        case 'creating':
+          return (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+          );
+        case 'updating':
+          return (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          );
+        case 'deleting':
+          return (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          );
+        case 'success':
+          return (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          );
+        case 'error':
+          return (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          );
+        default:
+          return null;
+      }
+    };
+
+    const getColorClass = (type: ActionIndicator['type']) => {
+      switch (type) {
+        case 'thinking':
+        case 'searching':
+          return 'text-blue-600 bg-blue-50 border-blue-200';
+        case 'creating':
+          return 'text-green-600 bg-green-50 border-green-200';
+        case 'updating':
+          return 'text-orange-600 bg-orange-50 border-orange-200';
+        case 'deleting':
+          return 'text-red-600 bg-red-50 border-red-200';
+        case 'success':
+          return 'text-green-600 bg-green-50 border-green-200';
+        case 'error':
+          return 'text-red-600 bg-red-50 border-red-200';
+        default:
+          return 'text-gray-600 bg-gray-50 border-gray-200';
+      }
+    };
+
+    return (
+      <div className="flex flex-col gap-1.5 mt-2 mb-2">
+        {actions.map((action, i) => (
+          <div
+            key={i}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-md border text-xs font-medium ${getColorClass(action.type)}`}
+          >
+            {getIcon(action.type)}
+            <span>{action.message}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   const SuggestionButtons = ({ msg }: { msg: Message }) => {
     if (!msg.suggestions || msg.suggestions.length === 0) return null;
+    
+    // Determine button style based on suggestion type
+    const getButtonStyle = (index: number) => {
+      const styles = [
+        'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white border-0 shadow-sm',
+        'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-0 shadow-sm',
+        'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white border-0 shadow-sm',
+        'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white border-0 shadow-sm',
+      ];
+      return styles[index % styles.length];
+    };
+
     return (
-      <div className="flex flex-wrap gap-2 mt-3">
-        {msg.suggestions.map((suggestion, i) => (
-          <Button key={i} variant="outline" size="sm" onClick={() => handleSuggestionClick(suggestion.prompt)} disabled={isLoading}>
-            {suggestion.name}
-          </Button>
-        ))}
-        {msg.id === 'initial-message' && (
-            <Button variant="secondary" size="sm" onClick={() => setIsAllToolsOpen(true)} disabled={isLoading}>
-                Ver todas las herramientas
+      <div className="flex flex-col gap-2 mt-3">
+        <div className="flex flex-wrap gap-2">
+          {msg.suggestions.map((suggestion, i) => (
+            <Button 
+              key={i} 
+              size="sm" 
+              onClick={() => handleSuggestionClick(suggestion.prompt)} 
+              disabled={isLoading}
+              className={`${getButtonStyle(i)} transition-all duration-200 hover:scale-105 font-medium`}
+            >
+              {suggestion.name}
             </Button>
+          ))}
+        </div>
+        {msg.id === 'initial-message' && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setIsAllToolsOpen(true)} 
+            disabled={isLoading}
+            className="w-full border-2 hover:bg-accent"
+          >
+            Ver todas las herramientas
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Button>
         )}
       </div>
     )
@@ -277,6 +456,54 @@ const AIContractChat = () => {
             </div>
           </DialogHeader>
 
+          {/* Quick Actions Panel */}
+          <div className="px-4 py-3 border-b bg-gradient-to-r from-muted/30 to-muted/10">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Acciones Rápidas
+              </h3>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setIsAllToolsOpen(true)}
+                className="h-7 text-xs hover:bg-primary/10"
+              >
+                Ver todas
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {quickStartTools.map((tool, i) => {
+                const colors = [
+                  'hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-950',
+                  'hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950',
+                  'hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-950',
+                  'hover:border-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950',
+                ];
+                return (
+                  <Button
+                    key={i}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSuggestionClick(tool.prompt)}
+                    disabled={isLoading}
+                    className={`justify-start h-auto py-2.5 px-3 text-left transition-all duration-200 hover:scale-[1.02] ${colors[i % colors.length]}`}
+                  >
+                    <div className="flex flex-col items-start w-full">
+                      <span className="text-xs font-semibold">{tool.name}</span>
+                      <span className="text-[10px] text-muted-foreground line-clamp-1">{tool.description}</span>
+                    </div>
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="flex-1 py-4 overflow-y-auto">
             <div className="px-4 space-y-4">
               {messages.map((msg) => (
@@ -284,7 +511,8 @@ const AIContractChat = () => {
                   <div className={`flex items-end gap-2 ${msg.isUser ? 'justify-end' : 'justify-start'} w-full`}>
                       <div className={`px-4 py-3 rounded-lg max-w-xs md:max-w-md ${msg.isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
                         <MessageFile msg={msg} />
-                        <div className="prose prose-sm max-w-none text-current" dangerouslySetInnerHTML={{ __html: msg.text.replace(/\n/g, '<br />') }} />
+                        <ActionIndicators actions={msg.actions} />
+                        <div className="prose prose-sm max-w-none text-current" dangerouslySetInnerHTML={{ __html: (msg.text || '').replace(/\n/g, '<br />') }} />
                         <SuggestionButtons msg={msg} />
                       </div>
                   </div>
@@ -292,7 +520,15 @@ const AIContractChat = () => {
               ))}
               {isLoading && (
                 <div className="flex items-end gap-2 justify-start">
-                  <div className="px-4 py-2 rounded-lg bg-muted animate-pulse">...</div>
+                  <div className="px-4 py-3 rounded-lg bg-muted max-w-xs md:max-w-md">
+                    <div className="flex items-center gap-2 text-blue-600 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-md text-xs font-medium">
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>Pensando...</span>
+                    </div>
+                  </div>
                 </div>
               )}
               <div ref={messagesEndRef} />
@@ -314,23 +550,35 @@ const AIContractChat = () => {
       </Dialog>
 
       <Dialog open={isAllToolsOpen} onOpenChange={setIsAllToolsOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-4xl max-h-[85vh]">
           <DialogHeader>
-            <DialogTitle>Todas las Herramientas</DialogTitle>
-            <DialogDescription>Selecciona una herramienta para iniciar una acción.</DialogDescription>
+            <DialogTitle className="text-2xl">🤖 Todas las Herramientas de MVPX AI</DialogTitle>
+            <DialogDescription>Selecciona cualquier acción para que el asistente te ayude</DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-6 py-4">
+          <div className="flex flex-col gap-6 py-4 overflow-y-auto max-h-[calc(85vh-120px)]">
             {allTools.map((category, index) => (
               <div key={category.category}>
-                <h3 className="text-lg font-semibold mb-3">{category.category}</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3">
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  {category.category}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {category.tools.map(tool => (
-                    <Button key={tool.name} variant="outline" className="justify-start text-left h-auto p-4 hover:bg-accent hover:text-accent-foreground" onClick={() => { handleSuggestionClick(tool.prompt); setIsAllToolsOpen(false); }}>
-                      <div className="flex items-start gap-4">
-                        <ToolIcon />
-                        <div className="flex flex-col">
-                          <span className="font-semibold">{tool.name}</span>
-                          <span className="text-sm text-muted-foreground">{tool.description}</span>
+                    <Button 
+                      key={tool.name} 
+                      variant="outline" 
+                      className="justify-start text-left h-auto p-4 hover:bg-accent hover:text-accent-foreground hover:border-primary transition-all" 
+                      onClick={() => { 
+                        handleSuggestionClick(tool.prompt); 
+                        setIsAllToolsOpen(false); 
+                      }}
+                    >
+                      <div className="flex items-start gap-3 w-full">
+                        <div className="mt-0.5">
+                          <ToolIcon />
+                        </div>
+                        <div className="flex flex-col flex-1">
+                          <span className="font-semibold text-sm">{tool.name}</span>
+                          <span className="text-xs text-muted-foreground mt-0.5">{tool.description}</span>
                         </div>
                       </div>
                     </Button>
