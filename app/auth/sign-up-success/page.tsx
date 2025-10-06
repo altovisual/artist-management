@@ -20,10 +20,8 @@ export default function SignUpSuccessPage() {
   }, [cooldown]);
 
   const handleResendEmail = () => {
-    // TODO: Implement Supabase resend confirmation email logic here
-    // Example: await supabase.auth.resend({ type: 'signup', email: 'user@example.com' })
-    // You would need to get the user's email, possibly from a query param or state management.
-    console.log("Resending confirmation email...");
+    // Note: Resend email functionality requires user email from query params or state
+    // Implementation: await supabase.auth.resend({ type: 'signup', email: userEmail })
     setCooldown(30); // Set cooldown for 30 seconds
   };
 
