@@ -136,7 +136,6 @@ export function useChat(conversationId?: string) {
 
       setConversations(conversationsBasic)
     } catch (err: any) {
-      console.error('Error fetching conversations:', err)
       setError(err.message)
     }
   }, [supabase, teamMembers])
@@ -170,7 +169,6 @@ export function useChat(conversationId?: string) {
 
       setMessages(messagesWithSender)
     } catch (err: any) {
-      console.error('Error fetching messages:', err)
       setError(err.message)
     }
   }, [supabase, teamMembers])
@@ -188,7 +186,6 @@ export function useChat(conversationId?: string) {
       await fetchConversations()
       return data
     } catch (err: any) {
-      console.error('Error creating conversation:', err)
       setError(err.message)
       return null
     }
@@ -254,7 +251,6 @@ export function useChat(conversationId?: string) {
 
       return data
     } catch (err: any) {
-      console.error('Error sending message:', err)
       setError(err.message)
       throw err
     } finally {
@@ -285,7 +281,7 @@ export function useChat(conversationId?: string) {
         )
       )
     } catch (err: any) {
-      console.error('Error marking as read:', err)
+      // Silent fail for mark as read
     }
   }
 
@@ -312,7 +308,7 @@ export function useChat(conversationId?: string) {
           .eq('user_id', user.id)
       }
     } catch (err: any) {
-      console.error('Error setting typing status:', err)
+      // Silent fail for typing indicator
     }
   }
 
@@ -345,7 +341,6 @@ export function useChat(conversationId?: string) {
           filter: `conversation_id=eq.${conversationId}`
         },
         (payload) => {
-          console.log('New message received:', payload)
           const newMessage = payload.new as any
           
           // Agregar sender info desde teamMembers

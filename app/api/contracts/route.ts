@@ -59,13 +59,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   let client;
-  console.log("POST /api/contracts: Received request.");
   try {
-    console.log("POST /api/contracts: Connecting to database...");
     client = await pool.connect();
-    console.log("POST /api/contracts: Database connected. Parsing body...");
     const body = await request.json();
-    console.log("POST /api/contracts: Body parsed:", body);
     const {
       work_id,
       template_id,
@@ -81,7 +77,6 @@ export async function POST(request: Request) {
     } = body;
 
     if (!work_id || !template_id || !participants || !Array.isArray(participants) || participants.length === 0) {
-      console.log("POST /api/contracts: Validation failed.");
       return NextResponse.json({ error: 'work_id, template_id, and a non-empty array of participants are required.' }, { status: 400 });
     }
 
@@ -90,9 +85,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'La suma de los porcentajes de los participantes debe ser exactamente 100%.' }, { status: 400 });
     }
 
-    console.log("POST /api/contracts: Starting transaction...");
     await client.query('BEGIN');
-    console.log("POST /api/contracts: Transaction started. Inserting into contracts...");
 
     const contractQuery = `
       INSERT INTO public.contracts (
@@ -110,9 +103,6 @@ export async function POST(request: Request) {
     ];
     const contractResult = await client.query(contractQuery, contractValues);
     const newContract = contractResult.rows[0];
-    console.log("POST /api/contracts: Inserted into contracts:", newContract);
-
-    console.log("POST /api/contracts: Inserting into contract_participants...");
     const participantQuery = 'INSERT INTO public.contract_participants (contract_id, participant_id, role, percentage) VALUES ($1, $2, $3, $4)';
     for (const participant of participants) {
       if (!participant.id || !participant.role) {
@@ -120,15 +110,10 @@ export async function POST(request: Request) {
       }
       await client.query(participantQuery, [newContract.id, participant.id, participant.role, participant.percentage || null]);
     }
-    console.log("POST /api/contracts: Inserted into contract_participants.");
 
-    console.log("POST /api/contracts: Committing transaction...");
     await client.query('COMMIT');
-    console.log("POST /api/contracts: Transaction committed.");
 
     revalidatePath('/management/contracts');
-
-    console.log("POST /api/contracts: Refetching created contract...");
     const refetchQuery = `
       SELECT
         c.*,
@@ -152,7 +137,6 @@ export async function POST(request: Request) {
       GROUP BY c.id, w.name, t.type, t.version;
     `;
     const { rows } = await client.query(refetchQuery, [newContract.id]);
-    console.log("POST /api/contracts: Refetched contract. Sending response.");
 
     return NextResponse.json(rows[0], { status: 201 });
 
@@ -160,9 +144,7 @@ export async function POST(request: Request) {
     console.error('Database Error on POST /api/contracts:', error);
     if (client) {
       try {
-        console.log("POST /api/contracts: Rolling back transaction...");
         await client.query('ROLLBACK');
-        console.log("POST /api/contracts: Transaction rolled back.");
       } catch (rollbackError) {
         console.error('Error rolling back transaction:', rollbackError);
       }
@@ -172,7 +154,6 @@ export async function POST(request: Request) {
   } finally {
     if (client) {
       try {
-        console.log("POST /api/contracts: Releasing client.");
         client.release();
       } catch (releaseError) {
         console.error('Error releasing client:', releaseError);

@@ -169,30 +169,18 @@ export async function POST(req: Request) {
   let dbClient;
   
   try {
-    console.log('=== START POST /api/auco/start-signature ===');
-    
     const body = await req.json();
     const { contractId } = body;
-    console.log(' Request body received:', body);
-    console.log('Contract ID received:', contractId);
     
     if (!contractId) {
-      console.log('ERROR: Missing contractId');
       return NextResponse.json({ error: 'contractId es requerido' }, { status: 400 });
     }
 
     // Check environment variables
-    console.log('Checking environment variables...');
     const ownerEmail = process.env.AUCO_OWNER_EMAIL?.trim().toLowerCase();
     const postgresUrl = process.env.POSTGRES_URL_POOLER;
     
-    console.log('Environment check:', {
-      ownerEmail: ownerEmail ? 'Present' : 'Missing',
-      postgresUrl: postgresUrl ? 'Present' : 'Missing'
-    });
-    
     if (!ownerEmail) {
-      console.log('ERROR: AUCO_OWNER_EMAIL missing');
       return NextResponse.json(
         { error: 'Config faltante', details: 'AUCO_OWNER_EMAIL no está configurado en el entorno' },
         { status: 500 }
@@ -200,7 +188,6 @@ export async function POST(req: Request) {
     }
 
     if (!postgresUrl) {
-      console.log('ERROR: POSTGRES_URL_POOLER missing');
       return NextResponse.json(
         { error: 'Config faltante', details: 'POSTGRES_URL_POOLER no está configurado en el entorno' },
         { status: 500 }
@@ -208,36 +195,23 @@ export async function POST(req: Request) {
     }
 
     // 1) Datos
-    console.log('Connecting to database...');
     dbClient = await pool.connect();
-    console.log('Database connected successfully');
-    
-    console.log('Executing query with contractId:', contractId);
     let rows;
     try {
       rows = (await dbClient.query(contractDataQuery, [contractId])).rows;
     } catch (e: any) {
       if ((e?.message || '').includes('template_html')) {
-        console.warn('template_html column missing, using fallback query');
         rows = (await dbClient.query(contractDataQueryNoTemplate, [contractId])).rows;
       } else {
         throw e;
       }
     }
-    console.log('Query result rows:', rows.length);
     
     if (rows.length === 0) {
-      console.log('ERROR: Contract not found');
       return NextResponse.json({ error: 'Contrato no encontrado' }, { status: 404 });
     }
     
     const contractData = rows[0];
-    console.log('Contract data:', { 
-      id: contractData.contract_id, 
-      work_name: contractData.work_name,
-      template_html: contractData.template_html ? 'Present' : 'Missing',
-      participants: contractData.participants?.length || 0
-    });
 
     // Si no hay template_html, usaremos una plantilla HTML mínima por defecto
 
@@ -283,13 +257,9 @@ export async function POST(req: Request) {
     renderedHtml += signatureTags;
 
     // 3) PDF
-    console.log('Generating PDF from HTML...');
     const maybePdf = await generatePdfFromHtml(renderedHtml);
-    console.log('PDF generated, normalizing to buffer...');
     const pdfBuffer = await normalizeToBuffer(maybePdf);
-    console.log('Converting to base64...');
     const base64Pdf = toPdfBase64Strict(pdfBuffer);
-    console.log('PDF conversion completed, size:', base64Pdf.length);
 
     // 4) signProfile con validación de duplicados
     const signProfile = contractData.participants.map((p: any) => ({
@@ -315,7 +285,6 @@ export async function POST(req: Request) {
     });
 
     if (duplicateEmails.length > 0) {
-      console.log('ERROR: Duplicate emails found:', duplicateEmails);
       return NextResponse.json(
         { 
           error: 'Emails duplicados detectados en firmantes', 
@@ -329,7 +298,6 @@ export async function POST(req: Request) {
     // Validar emails vacíos
     const emptyEmails = signProfile.filter(s => !s.email || s.email.trim() === '');
     if (emptyEmails.length > 0) {
-      console.log('ERROR: Empty emails found:', emptyEmails.length);
       return NextResponse.json(
         { 
           error: 'Firmantes sin email', 
@@ -353,18 +321,7 @@ export async function POST(req: Request) {
       }))
     };
 
-    console.log('Sending to Auco /document/upload:', {
-      ...uploadBody,
-      file: '[PDF_BASE64_TRUNCATED]'
-    });
-
-    console.log('Making request to Auco API...');
     const uploadResp = await aucoFetch('/document/upload', 'POST', uploadBody, { diagnose: true });
-    console.log('Auco API response received:', {
-      success: !!uploadResp,
-      hasCode: !!(uploadResp?.code || uploadResp?.document),
-      responseKeys: Object.keys(uploadResp || {})
-    });
 
     const documentCode = uploadResp?.code || uploadResp?.document;
     if (!documentCode) {
@@ -378,22 +335,16 @@ export async function POST(req: Request) {
     await saveSignatureRequests(dbClient, contractId, contractData.participants, documentCode);
 
     // Consultar detalles del documento para obtener los IDs de firmantes (2 caracteres)
-    console.log('Fetching document details to resolve signer IDs...');
     let details: any = null;
     let signers: Array<{ id?: string; name?: string; email?: string; status?: string }> = [];
     let signerIds: string[] = [];
     
     try {
       details = await aucoFetch(`/document/get?code=${documentCode}`, 'GET');
-      console.log('Document details received:', {
-        hasData: !!details?.data,
-        signers: details?.data?.signProfile?.length || details?.signProfile?.length || 0
-      });
       
       signers = (details?.data?.signProfile || details?.signProfile || []) as Array<{ id?: string; name?: string; email?: string; status?: string }>;
       signerIds = signers.map(s => s?.id).filter(Boolean) as string[];
     } catch (detailsError: any) {
-      console.warn('Could not fetch document details (this is normal for some Auco configurations):', detailsError.message);
       // Continuar sin los detalles - usar solo el documentCode
     }
     

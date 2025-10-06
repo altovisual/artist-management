@@ -145,7 +145,6 @@ export function useNotifications() {
 
       setNotifications(mockNotifications)
     } catch (error) {
-      console.error('Error fetching notifications:', error)
       toast({
         title: 'Error',
         description: 'Failed to load notifications',
@@ -175,7 +174,6 @@ export function useNotifications() {
         description: 'Notification marked as read'
       })
     } catch (error) {
-      console.error('Error marking notification as read:', error)
       toast({
         title: 'Error',
         description: 'Failed to mark notification as read',
@@ -203,7 +201,6 @@ export function useNotifications() {
         description: 'Notification marked as unread'
       })
     } catch (error) {
-      console.error('Error marking notification as unread:', error)
       toast({
         title: 'Error',
         description: 'Failed to mark notification as unread',
@@ -225,7 +222,6 @@ export function useNotifications() {
         description: 'Notification deleted'
       })
     } catch (error) {
-      console.error('Error deleting notification:', error)
       toast({
         title: 'Error',
         description: 'Failed to delete notification',
@@ -283,7 +279,6 @@ export function useNotifications() {
         description: `${ids.length} notifications ${action === 'delete' ? 'deleted' : `marked as ${action}`}`
       })
     } catch (error) {
-      console.error(`Error performing bulk ${action}:`, error)
       toast({
         title: 'Error',
         description: `Failed to ${action} notifications`,
