@@ -28,32 +28,66 @@ export default function ListenPage() {
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(1)
   const [isMuted, setIsMuted] = useState(false)
-  // Use localStorage to persist session across page reloads
+  // Use localStorage to persist session PER TRACK across page reloads
   const [sessionId] = useState(() => {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('shareable_track_session_id')
+      // Create a unique key per track to track each song separately
+      const sessionKey = `shareable_track_session_${shareCode}`
+      const stored = localStorage.getItem(sessionKey)
       if (stored) {
-        console.log('📌 Using existing session:', stored)
+        console.log('📌 Using existing session for track:', shareCode, stored)
         return stored
       }
       const newId = uuidv4()
-      localStorage.setItem('shareable_track_session_id', newId)
-      console.log('🆕 Created new session:', newId)
+      localStorage.setItem(sessionKey, newId)
+      console.log('🆕 Created new session for track:', shareCode, newId)
       return newId
     }
     return uuidv4()
   })
-  const [playRecorded, setPlayRecorded] = useState(false)
+  // Load persisted state from localStorage
+  const [playRecorded, setPlayRecorded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const key = `play_recorded_${shareCode}_${sessionId}`
+      return localStorage.getItem(key) === 'true'
+    }
+    return false
+  })
   const [playStartTime, setPlayStartTime] = useState<number | null>(null)
-  const [seekCount, setSeekCount] = useState(0)
-  const [pauseCount, setPauseCount] = useState(0)
-  const [maxPositionReached, setMaxPositionReached] = useState(0)
+  const [seekCount, setSeekCount] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const key = `seek_count_${shareCode}_${sessionId}`
+      return parseInt(localStorage.getItem(key) || '0')
+    }
+    return 0
+  })
+  const [pauseCount, setPauseCount] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const key = `pause_count_${shareCode}_${sessionId}`
+      return parseInt(localStorage.getItem(key) || '0')
+    }
+    return 0
+  })
+  const [maxPositionReached, setMaxPositionReached] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const key = `max_position_${shareCode}_${sessionId}`
+      return parseFloat(localStorage.getItem(key) || '0')
+    }
+    return 0
+  })
   
-  // Use refs to always have current values in the interval
-  const seekCountRef = useRef(0)
-  const pauseCountRef = useRef(0)
-  const maxPositionRef = useRef(0)
+  // Use refs to always have current values in the interval (initialize from state)
+  const seekCountRef = useRef(seekCount)
+  const pauseCountRef = useRef(pauseCount)
+  const maxPositionRef = useRef(maxPositionReached)
   const playStartTimeRef = useRef<number | null>(null)
+  
+  // Sync refs with state
+  useEffect(() => {
+    seekCountRef.current = seekCount
+    pauseCountRef.current = pauseCount
+    maxPositionRef.current = maxPositionReached
+  }, [seekCount, pauseCount, maxPositionReached])
 
   // Audio Analytics
   useAudioAnalytics({
@@ -96,6 +130,10 @@ export default function ListenPage() {
       if (newTime > maxPositionRef.current) {
         maxPositionRef.current = newTime
         setMaxPositionReached(newTime)
+        // Persist to localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`max_position_${shareCode}_${sessionId}`, newTime.toString())
+        }
       }
     }
 
@@ -108,6 +146,10 @@ export default function ListenPage() {
       if (!playRecorded) {
         recordPlayStart()
         setPlayRecorded(true)
+        // Persist to localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`play_recorded_${shareCode}_${sessionId}`, 'true')
+        }
         const now = Date.now()
         playStartTimeRef.current = now
         setPlayStartTime(now)
@@ -118,6 +160,10 @@ export default function ListenPage() {
     const handlePause = () => {
       pauseCountRef.current += 1
       setPauseCount(pauseCountRef.current)
+      // Persist to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`pause_count_${shareCode}_${sessionId}`, pauseCountRef.current.toString())
+      }
       console.log('⏸️ PAUSE - Count now:', pauseCountRef.current)
       // Update metrics immediately
       updatePlayMetrics()
@@ -126,6 +172,10 @@ export default function ListenPage() {
     const handleSeeking = () => {
       seekCountRef.current += 1
       setSeekCount(seekCountRef.current)
+      // Persist to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`seek_count_${shareCode}_${sessionId}`, seekCountRef.current.toString())
+      }
       console.log('⏭️ SEEK - Count now:', seekCountRef.current)
     }
 
@@ -147,76 +197,127 @@ export default function ListenPage() {
     }
   }, [track?.audio_file_url])
 
-  // Track accumulated listen time
-  const accumulatedTimeRef = useRef(0)
+  // Track accumulated listen time (load from localStorage)
+  const getInitialAccumulatedTime = () => {
+    if (typeof window !== 'undefined') {
+      const key = `accumulated_time_${shareCode}_${sessionId}`
+      return parseInt(localStorage.getItem(key) || '0')
+    }
+    return 0
+  }
+  const accumulatedTimeRef = useRef(getInitialAccumulatedTime())
   const lastPlayTimeRef = useRef<number | null>(null)
 
-  // Update metrics periodically while playing
+  // ROBUST: Update metrics every second while playing
   useEffect(() => {
-    if (!isPlaying || !playRecorded) return
+    if (!isPlaying || !playRecorded) {
+      // When paused, save final state
+      if (lastPlayTimeRef.current) {
+        const finalTime = Date.now() - lastPlayTimeRef.current
+        accumulatedTimeRef.current += finalTime
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`accumulated_time_${shareCode}_${sessionId}`, accumulatedTimeRef.current.toString())
+        }
+        lastPlayTimeRef.current = null
+        console.log('⏸️ Saved accumulated time:', accumulatedTimeRef.current, 'ms')
+      }
+      return
+    }
 
-    console.log('▶️ Starting metrics interval (will run every 5s)')
+    console.log('▶️ Starting ROBUST metrics tracking (every 1s)')
     lastPlayTimeRef.current = Date.now()
 
+    // Update every 1 second for precision
     const interval = setInterval(() => {
       if (audioRef.current && track && lastPlayTimeRef.current) {
-        // Calculate time since last update
+        // Calculate EXACT time since last update
         const now = Date.now()
         const timeSinceLastUpdate = now - lastPlayTimeRef.current
         accumulatedTimeRef.current += timeSinceLastUpdate
         lastPlayTimeRef.current = now
+        
+        // ALWAYS persist to localStorage immediately
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`accumulated_time_${shareCode}_${sessionId}`, accumulatedTimeRef.current.toString())
+        }
 
         const maxPos = Math.floor(maxPositionRef.current * 1000)
         const completionPct = duration > 0 ? (maxPositionRef.current / duration) * 100 : 0
 
-        console.log('📊 Updating metrics:', {
-          sessionId,
+        console.log('📊 [ROBUST] Metrics:', {
+          sessionId: sessionId.substring(0, 8),
+          accumulatedMs: accumulatedTimeRef.current,
+          accumulatedSec: Math.floor(accumulatedTimeRef.current / 1000),
+          maxPosSec: Math.floor(maxPositionRef.current),
           seeks: seekCountRef.current,
           pauses: pauseCountRef.current,
-          duration: accumulatedTimeRef.current,
-          maxPos,
-          completionPct
+          completion: Math.floor(completionPct)
         })
 
-        supabase
-          .from('shareable_track_plays')
-          .update({
-            listen_duration_ms: accumulatedTimeRef.current,
-            max_position_reached_ms: maxPos,
-            completion_percentage: completionPct,
-            seek_count: seekCountRef.current,
-            pause_count: pauseCountRef.current,
-            play_count: 1
-          })
-          .eq('session_id', sessionId)
-          .select()
-          .then(({ data, error }) => {
-            if (error) {
-              console.error('❌ Error updating metrics:', error)
-            } else if (!data || data.length === 0) {
-              console.error('⚠️ UPDATE returned 0 rows - session not found:', sessionId)
-            } else {
-              console.log('✅ Metrics updated:', { 
-                seeks: seekCountRef.current, 
-                pauses: pauseCountRef.current,
-                duration: accumulatedTimeRef.current,
-                rowsAffected: data.length
-              })
-            }
-          })
+        // Update database every 5 seconds to reduce load
+        const secondsElapsed = Math.floor(accumulatedTimeRef.current / 1000)
+        if (secondsElapsed % 5 === 0 || secondsElapsed < 5) {
+          supabase
+            .from('shareable_track_plays')
+            .update({
+              listen_duration_ms: accumulatedTimeRef.current,
+              max_position_reached_ms: maxPos,
+              completion_percentage: completionPct,
+              seek_count: seekCountRef.current,
+              pause_count: pauseCountRef.current,
+              play_count: 1,
+              updated_at: new Date().toISOString()
+            })
+            .eq('session_id', sessionId)
+            .select()
+            .then(({ data, error }) => {
+              if (error) {
+                console.error('❌ DB Update Error:', error.message)
+              } else if (!data || data.length === 0) {
+                console.error('⚠️ Session not found in DB:', sessionId.substring(0, 8))
+              } else {
+                console.log('✅ DB Updated:', {
+                  durationSec: Math.floor(accumulatedTimeRef.current / 1000),
+                  seeks: seekCountRef.current,
+                  pauses: pauseCountRef.current
+                })
+              }
+            })
+        }
       }
-    }, 5000) // Update every 5 seconds
+    }, 1000) // Update EVERY SECOND for precision
 
     return () => {
-      console.log('⏹️ Stopping metrics interval')
-      // Update accumulated time one last time before stopping
+      console.log('⏹️ Stopping metrics tracking')
+      // Final update before stopping
       if (lastPlayTimeRef.current) {
-        accumulatedTimeRef.current += Date.now() - lastPlayTimeRef.current
+        const finalTime = Date.now() - lastPlayTimeRef.current
+        accumulatedTimeRef.current += finalTime
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`accumulated_time_${shareCode}_${sessionId}`, accumulatedTimeRef.current.toString())
+        }
+        // Final DB update
+        if (track) {
+          const maxPos = Math.floor(maxPositionRef.current * 1000)
+          const completionPct = duration > 0 ? (maxPositionRef.current / duration) * 100 : 0
+          supabase
+            .from('shareable_track_plays')
+            .update({
+              listen_duration_ms: accumulatedTimeRef.current,
+              max_position_reached_ms: maxPos,
+              completion_percentage: completionPct,
+              seek_count: seekCountRef.current,
+              pause_count: pauseCountRef.current,
+              updated_at: new Date().toISOString()
+            })
+            .eq('session_id', sessionId)
+            .then(() => console.log('✅ Final DB update on cleanup'))
+        }
         lastPlayTimeRef.current = null
       }
       clearInterval(interval)
     }
-  }, [isPlaying, playRecorded, duration])
+  }, [isPlaying, playRecorded, duration, track, shareCode, sessionId, supabase])
 
   // Record play start
   const recordPlayStart = async () => {
@@ -272,19 +373,32 @@ export default function ListenPage() {
     }
   }
 
-  // Update play metrics (called on pause)
+  // ROBUST: Update play metrics immediately (called on pause/seek)
   const updatePlayMetrics = async () => {
     if (!track || !audioRef.current) return
 
     try {
-      // Update accumulated time if currently playing
+      // CRITICAL: Update accumulated time if currently playing
       if (lastPlayTimeRef.current) {
-        accumulatedTimeRef.current += Date.now() - lastPlayTimeRef.current
-        lastPlayTimeRef.current = null
+        const additionalTime = Date.now() - lastPlayTimeRef.current
+        accumulatedTimeRef.current += additionalTime
+        lastPlayTimeRef.current = Date.now() // Reset for next interval
+        
+        // ALWAYS save to localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`accumulated_time_${shareCode}_${sessionId}`, accumulatedTimeRef.current.toString())
+        }
       }
 
       const maxPosition = Math.floor(maxPositionRef.current * 1000)
       const completionPercentage = duration > 0 ? (maxPositionRef.current / duration) * 100 : 0
+
+      console.log('💾 [IMMEDIATE UPDATE] Saving metrics:', {
+        durationMs: accumulatedTimeRef.current,
+        durationSec: Math.floor(accumulatedTimeRef.current / 1000),
+        seeks: seekCountRef.current,
+        pauses: pauseCountRef.current
+      })
 
       const { error } = await supabase
         .from('shareable_track_plays')
@@ -294,31 +408,47 @@ export default function ListenPage() {
           completion_percentage: completionPercentage,
           seek_count: seekCountRef.current,
           pause_count: pauseCountRef.current,
-          play_count: 1
+          play_count: 1,
+          updated_at: new Date().toISOString()
         })
         .eq('session_id', sessionId)
 
       if (error) {
-        console.error('Error updating metrics:', error)
+        console.error('❌ Error updating metrics:', error)
+      } else {
+        console.log('✅ Metrics saved successfully')
       }
     } catch (error) {
-      console.error('Error updating play metrics:', error)
+      console.error('❌ Error updating play metrics:', error)
     }
   }
 
-  // Record play end
+  // ROBUST: Record play end with final metrics
   const recordPlayEnd = async (completed: boolean = false) => {
     if (!track || !audioRef.current) return
 
     try {
-      // Update accumulated time one last time
+      // CRITICAL: Update accumulated time one final time
       if (lastPlayTimeRef.current) {
-        accumulatedTimeRef.current += Date.now() - lastPlayTimeRef.current
+        const finalTime = Date.now() - lastPlayTimeRef.current
+        accumulatedTimeRef.current += finalTime
         lastPlayTimeRef.current = null
+        
+        // Save to localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`accumulated_time_${shareCode}_${sessionId}`, accumulatedTimeRef.current.toString())
+        }
       }
 
       const maxPosition = Math.floor(maxPositionRef.current * 1000)
       const completionPercentage = duration > 0 ? (maxPositionRef.current / duration) * 100 : 0
+
+      console.log('🏁 [FINAL] Recording play end:', {
+        totalDurationMs: accumulatedTimeRef.current,
+        totalDurationSec: Math.floor(accumulatedTimeRef.current / 1000),
+        completed: completed || completionPercentage >= 90,
+        completion: Math.floor(completionPercentage)
+      })
 
       await supabase
         .from('shareable_track_plays')
@@ -330,11 +460,14 @@ export default function ListenPage() {
           completed: completed || completionPercentage >= 90,
           seek_count: seekCountRef.current,
           pause_count: pauseCountRef.current,
-          play_count: 1
+          play_count: 1,
+          updated_at: new Date().toISOString()
         })
         .eq('session_id', sessionId)
+      
+      console.log('✅ Play end recorded successfully')
     } catch (error) {
-      console.error('Error recording play end:', error)
+      console.error('❌ Error recording play end:', error)
     }
   }
 
