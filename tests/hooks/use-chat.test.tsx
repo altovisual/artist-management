@@ -198,7 +198,7 @@ describe('useChat Hook - Core Functionality', () => {
   describe('Error Handling', () => {
     it('should handle empty conversation ID', () => {
       const conversationId: string = ''
-      const canSend = conversationId && conversationId.trim() !== ''
+      const canSend = !!(conversationId && conversationId.trim() !== '')
 
       expect(canSend).toBe(false)
     })
