@@ -56,8 +56,8 @@ describe('Contract Validation Utilities', () => {
     })
 
     it('should validate future dates', () => {
-      const futureDate = new Date('2025-01-01')
       const now = new Date()
+      const futureDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000) // 1 year from now
 
       const isFuture = futureDate.getTime() > now.getTime()
 

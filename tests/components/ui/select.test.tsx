@@ -47,7 +47,7 @@ describe('Select Component', () => {
     it('should fail validation when required and empty', () => {
       const value: string = ''
       const isRequired = true
-      const isValid = !isRequired || (value && value !== '')
+      const isValid = !isRequired || (value.trim() !== '')
 
       expect(isValid).toBe(false)
     })
