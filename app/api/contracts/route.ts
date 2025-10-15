@@ -72,8 +72,12 @@ export async function POST(request: Request) {
       internal_reference,
       signing_location,
       additional_notes,
+      artist_name,
+      record_label,
+      recording_date,
       publisher,
       publisher_percentage,
+      publisher_ipi,
       co_publishers,
       publisher_admin,
       participants
@@ -137,15 +141,17 @@ export async function POST(request: Request) {
       INSERT INTO public.contracts (
         project_id, template_id, status,
         internal_reference, signing_location, additional_notes,
-        publisher, publisher_percentage, co_publishers, publisher_admin
+        artist_name, record_label, recording_date,
+        publisher, publisher_percentage, publisher_ipi, co_publishers, publisher_admin
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *;
     `;
     const contractValues = [
       work_id, template_id, status,
       internal_reference, signing_location, additional_notes,
-      publisher, publisher_percentage, co_publishers, publisher_admin
+      artist_name, record_label, recording_date,
+      publisher, publisher_percentage, publisher_ipi, co_publishers, publisher_admin
     ];
     
     console.log('📝 Insertando contrato con valores:', contractValues);
@@ -153,15 +159,21 @@ export async function POST(request: Request) {
     const newContract = contractResult.rows[0];
     console.log('✅ Contrato creado con ID:', newContract.id);
     
-    const participantQuery = 'INSERT INTO public.contract_participants (contract_id, participant_id, role, percentage) VALUES ($1, $2, $3, $4)';
+    const participantQuery = 'INSERT INTO public.contract_participants (contract_id, participant_id, role, percentage, pro) VALUES ($1, $2, $3, $4, $5)';
     console.log('👥 Insertando', participants.length, 'participantes...');
     
     for (const participant of participants) {
       if (!participant.id || !participant.role) {
         throw new Error('Each participant must have an id and a role.');
       }
-      console.log('  - Participante:', participant.id, participant.role, participant.percentage + '%');
-      await client.query(participantQuery, [newContract.id, participant.id, participant.role, participant.percentage || null]);
+      console.log('  - Participante:', participant.id, participant.role, participant.percentage + '%', participant.pro ? `PRO: ${participant.pro}` : '');
+      await client.query(participantQuery, [
+        newContract.id, 
+        participant.id, 
+        participant.role, 
+        participant.percentage || null,
+        participant.pro || null
+      ]);
     }
 
     console.log('💾 Commit de transacción...');

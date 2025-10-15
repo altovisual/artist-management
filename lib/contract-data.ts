@@ -86,6 +86,59 @@ export const PERCENTAGE_PRESETS = [
   { label: '10%', value: 10 },
 ];
 
+// Performing Rights Organizations (PROs)
+export const PRO_OPTIONS = [
+  { value: 'ASCAP', label: '🇺🇸 ASCAP (USA)' },
+  { value: 'BMI', label: '🇺🇸 BMI (USA)' },
+  { value: 'SESAC', label: '🇺🇸 SESAC (USA)' },
+  { value: 'SAYCO', label: '🇨🇴 SAYCO (Colombia)' },
+  { value: 'ACINPRO', label: '🇨🇴 ACINPRO (Colombia)' },
+  { value: 'SACM', label: '🇲🇽 SACM (México)' },
+  { value: 'SGAE', label: '🇪🇸 SGAE (España)' },
+  { value: 'SADAIC', label: '🇦🇷 SADAIC (Argentina)' },
+  { value: 'SCD', label: '🇨🇱 SCD (Chile)' },
+  { value: 'APDAYC', label: '🇵🇪 APDAYC (Perú)' },
+  { value: 'SACVEN', label: '🇻🇪 SACVEN (Venezuela)' },
+  { value: 'SAYCE', label: '🇪🇨 SAYCE (Ecuador)' },
+  { value: 'AGADU', label: '🇺🇾 AGADU (Uruguay)' },
+  { value: 'APA', label: '🇵🇾 APA (Paraguay)' },
+  { value: 'SOBODAYCOM', label: '🇧🇴 SOBODAYCOM (Bolivia)' },
+  { value: 'ACAM', label: '🇨🇷 ACAM (Costa Rica)' },
+  { value: 'SPAC', label: '🇵🇦 SPAC (Panamá)' },
+  { value: 'SGACEDOM', label: '🇩🇴 SGACEDOM (Rep. Dominicana)' },
+  { value: 'ACDAM', label: '🇵🇷 ACDAM (Puerto Rico)' },
+  { value: 'UBC', label: '🇧🇷 UBC (Brasil)' },
+  { value: 'PRS', label: '🇬🇧 PRS (Reino Unido)' },
+  { value: 'SACEM', label: '🇫🇷 SACEM (Francia)' },
+  { value: 'GEMA', label: '🇩🇪 GEMA (Alemania)' },
+  { value: 'SIAE', label: '🇮🇹 SIAE (Italia)' },
+  { value: 'SOCAN', label: '🇨🇦 SOCAN (Canadá)' },
+  { value: 'Ninguna', label: '❌ Ninguna' },
+  { value: 'Otro', label: '✏️ Otro (especificar)' },
+];
+
+// Record Labels (Major and Independent)
+export const RECORD_LABELS = [
+  { value: 'Universal Music Group', label: '🎵 Universal Music Group' },
+  { value: 'Sony Music Entertainment', label: '🎵 Sony Music Entertainment' },
+  { value: 'Warner Music Group', label: '🎵 Warner Music Group' },
+  { value: 'EMI', label: '🎵 EMI' },
+  { value: 'BMG', label: '🎵 BMG' },
+  { value: 'Atlantic Records', label: '🎵 Atlantic Records' },
+  { value: 'Capitol Records', label: '🎵 Capitol Records' },
+  { value: 'Columbia Records', label: '🎵 Columbia Records' },
+  { value: 'RCA Records', label: '🎵 RCA Records' },
+  { value: 'Interscope Records', label: '🎵 Interscope Records' },
+  { value: 'Republic Records', label: '🎵 Republic Records' },
+  { value: 'Def Jam', label: '🎵 Def Jam' },
+  { value: 'Island Records', label: '🎵 Island Records' },
+  { value: 'Epic Records', label: '🎵 Epic Records' },
+  { value: 'Elektra Records', label: '🎵 Elektra Records' },
+  { value: 'Independent', label: '🏠 Independent' },
+  { value: 'Self-Released', label: '👤 Self-Released' },
+  { value: 'Otro', label: '✏️ Otro (especificar)' },
+];
+
 export function getCitiesForCountry(country: string): string[] {
   return CITIES_BY_COUNTRY[country] || [];
 }

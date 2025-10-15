@@ -27,7 +27,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { redirect } from "next/navigation";
 import { LocationSelector } from "@/components/contracts/LocationSelector";
-import { MAJOR_PUBLISHERS, PUBLISHER_ADMINS, CONTRACT_STATUS_OPTIONS, PERCENTAGE_PRESETS } from "@/lib/contract-data";
+import { MAJOR_PUBLISHERS, PUBLISHER_ADMINS, CONTRACT_STATUS_OPTIONS, PERCENTAGE_PRESETS, PRO_OPTIONS, RECORD_LABELS } from "@/lib/contract-data";
 import { Badge } from "@/components/ui/badge";
 import { Info } from "lucide-react";
 
@@ -41,15 +41,21 @@ const formSchema = z.object({
   template_id: z.string({
     required_error: "Por favor seleccione una plantilla.",
   }),
-  status: z.string().optional(), // Added status
+  status: z.string().optional(),
   internal_reference: z.string().optional(),
   signing_location: z.string().optional(),
   additional_notes: z.string().optional(),
+  // New recording fields
+  artist_name: z.string().optional(),
+  record_label: z.string().optional(),
+  recording_date: z.string().optional(),
+  // Publishing fields
   publisher: z.string().optional(),
   publisher_percentage: z.preprocess(
     (val) => (val === "" ? undefined : Number(val)),
     z.number().optional()
   ),
+  publisher_ipi: z.string().optional(),
   co_publishers: z.string().optional(),
   publisher_admin: z.string().optional(),
   participants: z.array(
@@ -60,6 +66,7 @@ const formSchema = z.object({
         (val) => (val === "" ? undefined : Number(val)),
         z.number({ required_error: "El porcentaje es requerido." }).min(0, "El porcentaje no puede ser negativo.").max(100, "El porcentaje no puede ser mayor a 100.")
       ),
+      pro: z.string().optional(), // PRO for each participant
     })
   ),
 });
@@ -79,8 +86,12 @@ export default function NewContractPage() {
       internal_reference: "",
       signing_location: "",
       additional_notes: "",
+      artist_name: "",
+      record_label: "",
+      recording_date: "",
       publisher: "",
       publisher_percentage: undefined,
+      publisher_ipi: "",
       co_publishers: "",
       publisher_admin: "",
       participants: [],
@@ -371,7 +382,101 @@ export default function NewContractPage() {
           />
           </div>
           
-          {/* Sección 2: Información Editorial */}
+          {/* Sección 2: Información de Grabación */}
+          <div className="space-y-6 p-6 border rounded-lg bg-card">
+            <div className="flex items-center gap-2 pb-4 border-b">
+              <span className="text-2xl">🎤</span>
+              <h2 className="text-xl font-semibold">Información de Grabación</h2>
+            </div>
+            
+            <FormField
+              control={form.control}
+              name="artist_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nombre del Artista</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      value={field.value ?? ""} 
+                      placeholder="Ej: Bad Bunny, Shakira, etc."
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Nombre del artista que interpreta la obra musical.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="record_label"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Record Label (Sello Discográfico)</FormLabel>
+                  <Select 
+                    onValueChange={(value) => {
+                      if (value === 'Otro') {
+                        field.onChange('');
+                      } else {
+                        field.onChange(value);
+                      }
+                    }} 
+                    value={field.value || undefined}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona un sello" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {RECORD_LABELS.map((label) => (
+                        <SelectItem key={label.value} value={label.value}>
+                          {label.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {field.value === '' && (
+                    <Input 
+                      placeholder="Escribe el nombre del sello"
+                      onChange={(e) => field.onChange(e.target.value)}
+                      className="mt-2"
+                    />
+                  )}
+                  <FormDescription>
+                    Sello discográfico asociado con la grabación.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="recording_date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Fecha de Grabación</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="date"
+                      {...field} 
+                      value={field.value ?? ""} 
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Fecha en que se grabó la obra musical.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          {/* Sección 3: Información Editorial */}
           <div className="space-y-6 p-6 border rounded-lg bg-card">
             <div className="flex items-center gap-2 pb-4 border-b">
               <span className="text-2xl">🎵</span>
@@ -432,6 +537,26 @@ export default function NewContractPage() {
                 </FormControl>
                 <FormDescription>
                   The percentage of participation for the publisher.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="publisher_ipi"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Publisher IPI</FormLabel>
+                <FormControl>
+                  <Input 
+                    {...field} 
+                    value={field.value ?? ""} 
+                    placeholder="Ej: 00123456789"
+                  />
+                </FormControl>
+                <FormDescription>
+                  Número IPI (Interested Party Information) de la editorial.
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -624,6 +749,51 @@ export default function NewContractPage() {
                     </Button>
                   </div>
                 </div>
+                
+                {/* Campo PRO para el participante */}
+                <FormField
+                  control={form.control}
+                  name={`participants.${index}.pro`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>PRO (Performing Rights Organization)</FormLabel>
+                      <Select 
+                        onValueChange={(value) => {
+                          if (value === 'Otro') {
+                            field.onChange('');
+                          } else {
+                            field.onChange(value);
+                          }
+                        }} 
+                        value={field.value || undefined}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecciona una PRO" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {PRO_OPTIONS.map((pro) => (
+                            <SelectItem key={pro.value} value={pro.value}>
+                              {pro.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {field.value === '' && (
+                        <Input 
+                          placeholder="Escribe el nombre de la PRO"
+                          onChange={(e) => field.onChange(e.target.value)}
+                          className="mt-2"
+                        />
+                      )}
+                      <FormDescription>
+                        Organización de derechos de ejecución del participante.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 
                 {/* Mostrar información del participante seleccionado */}
                 {selectedParticipant && (
