@@ -39,7 +39,14 @@ SELECT
       'email', p.email,
       'phone', p.phone,
       'role', cp.role,
-      'percentage', cp.percentage
+      'percentage', cp.percentage,
+      'ipi', p.ipi,
+      'type', p.type,
+      'id_number', p.id_number,
+      'address', p.address,
+      'country', p.country,
+      'artistic_name', p.artistic_name,
+      'management_entity', p.management_entity
     )
   ) as participants
 FROM public.contracts c
@@ -79,7 +86,14 @@ SELECT
       'email', p.email,
       'phone', p.phone,
       'role', cp.role,
-      'percentage', cp.percentage
+      'percentage', cp.percentage,
+      'ipi', p.ipi,
+      'type', p.type,
+      'id_number', p.id_number,
+      'address', p.address,
+      'country', p.country,
+      'artistic_name', p.artistic_name,
+      'management_entity', p.management_entity
     )
   ) as participants
 FROM public.contracts c

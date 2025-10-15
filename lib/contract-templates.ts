@@ -29,6 +29,13 @@ export interface ContractTemplateData {
     phone: string;
     role: string;
     percentage: string;
+    ipi?: string;
+    type?: string;
+    id_number?: string;
+    address?: string;
+    country?: string;
+    artistic_name?: string;
+    management_entity?: string;
   }>;
   current_date: string;
   current_year: number;
@@ -332,6 +339,7 @@ export const modernContractTemplate = `
           <tr>
             <th>Nombre</th>
             <th>Rol</th>
+            <th>IPI</th>
             <th>Email</th>
             <th>Teléfono</th>
             <th>Participación</th>
@@ -340,11 +348,12 @@ export const modernContractTemplate = `
         <tbody>
           {{#each participants}}
           <tr>
-            <td><strong>{{name}}</strong></td>
+            <td><strong>{{name}}</strong>{{#if artistic_name}}<br/><small style="color: #6b7280;">({{artistic_name}})</small>{{/if}}</td>
             <td>{{role}}</td>
+            <td><strong>{{ipi}}</strong>{{#if management_entity}}<br/><small style="color: #6b7280;">{{management_entity}}</small>{{/if}}</td>
             <td>{{email}}</td>
             <td>{{phone}}</td>
-            <td>{{percentage}}%</td>
+            <td><strong>{{percentage}}%</strong></td>
           </tr>
           {{/each}}
         </tbody>
@@ -501,12 +510,22 @@ export const simpleContractTemplate = `
   </div>
   {{/if}}
 
+  <div class="section">
+    <h2>Participantes</h2>
+    {{#each participants}}
+    <div class="info-row">
+      <span class="label">{{name}}{{#if artistic_name}} ({{artistic_name}}){{/if}}:</span>
+      <span class="value">{{role}} - {{percentage}}%{{#if ipi}} | IPI: {{ipi}}{{/if}}</span>
+    </div>
+    {{/each}}
+  </div>
+
   <div class="signatures">
     <h2>Firmas Requeridas</h2>
     {{#each participants}}
     <div class="signature-box">
-      <strong>{{name}}</strong><br/>
-      {{email}}<br/>
+      <strong>{{name}}</strong>{{#if artistic_name}}<br/><small>({{artistic_name}})</small>{{/if}}<br/>
+      {{email}}{{#if ipi}}<br/><strong>IPI:</strong> {{ipi}}{{/if}}<br/>
       <div style="margin-top: 20px; border-top: 1px solid #000; padding-top: 5px;">
         {{signature:@index}}
       </div>

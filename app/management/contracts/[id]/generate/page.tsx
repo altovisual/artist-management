@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
+import { modernContractTemplate, simpleContractTemplate } from '@/lib/contract-templates';
 
 export default function GenerateContractPage() {
   const router = useRouter();
@@ -37,23 +38,24 @@ export default function GenerateContractPage() {
         return;
       }
       
-      // La columna se llama auco_template_id, no template_html
-      let html = contract.template.auco_template_id || contract.template.template_html || '';
+      // Intentar obtener HTML de la base de datos primero
+      let html = contract.template.template_html || contract.template.auco_template_id || '';
       
-      console.log('Template HTML length:', html?.length);
-      
+      // Si no hay HTML en la BD, usar plantillas del sistema
       if (!html) {
-        console.error('No template HTML found in template:', contract.template);
-        setGeneratedHtml(`
-          <div style="padding: 20px;">
-            <h2>Error: No Template HTML</h2>
-            <p>The template exists but has no HTML content.</p>
-            <p>Template ID: ${contract.template.id}</p>
-            <p>Template Type: ${contract.template.type}</p>
-            <p>Please edit the template and add HTML content.</p>
-          </div>
-        `);
-        return;
+        console.log('No HTML in database, using system template. Template type:', contract.template.type);
+        
+        // Usar plantilla del sistema basada en el tipo
+        if (contract.template.type === 'simple') {
+          html = simpleContractTemplate;
+        } else {
+          // Por defecto usar la plantilla moderna
+          html = modernContractTemplate;
+        }
+        
+        console.log('Using system template, HTML length:', html.length);
+      } else {
+        console.log('Using database template, HTML length:', html.length);
       }
 
       const today = new Date();
@@ -82,11 +84,41 @@ export default function GenerateContractPage() {
 
       const participants = contract.participants || [];
 
+      // Reemplazar cada participante individualmente
       participants.forEach((p: any, index: number) => {
         Object.keys(p).forEach(key => {
-          const regex = new RegExp(`{{participant[${index}].${key}}}`, 'g');
+          const regex = new RegExp(`{{participant\\[${index}\\]\\.${key}}}`, 'g');
           html = html.replace(regex, p[key] || 'N/A');
         });
+      });
+      
+      // Manejar el loop {{#each participants}} para plantillas Handlebars
+      const participantsLoopRegex = /{{#each participants}}([\s\S]*?){{\/each}}/g;
+      html = html.replace(participantsLoopRegex, (match, template) => {
+        return participants.map((p: any, index: number) => {
+          let participantHtml = template;
+          // Reemplazar variables del participante
+          participantHtml = participantHtml.replace(/{{name}}/g, p.name || 'N/A');
+          participantHtml = participantHtml.replace(/{{email}}/g, p.email || 'N/A');
+          participantHtml = participantHtml.replace(/{{phone}}/g, p.phone || 'N/A');
+          participantHtml = participantHtml.replace(/{{role}}/g, p.role || 'N/A');
+          participantHtml = participantHtml.replace(/{{percentage}}/g, p.percentage || '0');
+          participantHtml = participantHtml.replace(/{{ipi}}/g, p.ipi || '');
+          participantHtml = participantHtml.replace(/{{artistic_name}}/g, p.artistic_name || '');
+          participantHtml = participantHtml.replace(/{{management_entity}}/g, p.management_entity || '');
+          participantHtml = participantHtml.replace(/{{type}}/g, p.type || '');
+          participantHtml = participantHtml.replace(/{{signature:@index}}/g, `Firma ${index + 1}`);
+          
+          // Manejar condicionales {{#if}}
+          participantHtml = participantHtml.replace(/{{#if artistic_name}}([\s\S]*?){{\/if}}/g, 
+            p.artistic_name ? '$1' : '');
+          participantHtml = participantHtml.replace(/{{#if ipi}}([\s\S]*?){{\/if}}/g, 
+            p.ipi ? '$1' : '');
+          participantHtml = participantHtml.replace(/{{#if management_entity}}([\s\S]*?){{\/if}}/g, 
+            p.management_entity ? '$1' : '');
+            
+          return participantHtml;
+        }).join('');
       });
       
       const participantsTable = `
@@ -95,6 +127,7 @@ export default function GenerateContractPage() {
             <tr>
               <th style="border: 1px solid; padding: 8px;">Nombre</th>
               <th style="border: 1px solid; padding: 8px;">Nombre Artístico</th>
+              <th style="border: 1px solid; padding: 8px;">IPI</th>
               <th style="border: 1px solid; padding: 8px;">Rol</th>
               <th style="border: 1px solid; padding: 8px;">%</th>
             </tr>
@@ -103,7 +136,8 @@ export default function GenerateContractPage() {
             ${participants.map((p: any) => `
               <tr>
                 <td style="border: 1px solid; padding: 8px;">${p.name || 'N/A'}</td>
-                <td style="border: 1px solid; padding: 8px;">${p.artistic_name || 'N/A'}</td>
+                <td style="border: 1px solid; padding: 8px;">${p.artistic_name || '-'}</td>
+                <td style="border: 1px solid; padding: 8px;">${p.ipi || '-'}</td>
                 <td style="border: 1px solid; padding: 8px;">${p.role || 'N/A'}</td>
                 <td style="border: 1px solid; padding: 8px;">${p.percentage || '0'}%</td>
               </tr>
@@ -116,6 +150,11 @@ export default function GenerateContractPage() {
       const totalPercentage = participants.reduce((sum: number, p: any) => sum + (Number(p.percentage) || 0), 0);
       html = html.replace(/{{participants.total_percentage}}/g, totalPercentage.toString());
 
+      // Manejar condicionales {{#if}} a nivel de contrato
+      html = html.replace(/{{#if contract\.additional_notes}}([\s\S]*?){{\/if}}/g, 
+        contract.additional_notes ? '$1' : '');
+
+      // Reemplazar cualquier variable restante con N/A
       html = html.replace(/{{.*?}}/g, 'N/A');
 
       setGeneratedHtml(html);
@@ -228,18 +267,45 @@ export default function GenerateContractPage() {
   }
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Generate Contract</h1>
-        <Button onClick={handleGeneratePdf} disabled={isGenerating}>
-          {isGenerating ? 'Generating...' : 'Download PDF'}
+    <div className="space-y-6">
+      {/* Header con acciones */}
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            onClick={() => router.back()}
+          >
+            ← Volver
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Vista Previa del Contrato</h1>
+            <p className="text-sm text-muted-foreground">
+              {contract?.work_name || 'Cargando...'}
+            </p>
+          </div>
+        </div>
+        <Button 
+          onClick={handleGeneratePdf} 
+          disabled={isGenerating}
+          size="lg"
+        >
+          {isGenerating ? '⏳ Generando...' : '📥 Descargar PDF'}
         </Button>
       </div>
-      <div 
-        ref={contentRef}
-        className="border p-4 rounded-md" 
-        dangerouslySetInnerHTML={{ __html: generatedHtml }}
-      />
+
+      {/* Contenido del contrato */}
+      <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+        <div 
+          ref={contentRef}
+          className="contract-preview p-8"
+          dangerouslySetInnerHTML={{ __html: generatedHtml }}
+        />
+      </div>
+
+      {/* Footer con información */}
+      <div className="text-center text-sm text-muted-foreground">
+        <p>Esta es una vista previa del contrato. Descarga el PDF para obtener la versión final.</p>
+      </div>
     </div>
   );
 }

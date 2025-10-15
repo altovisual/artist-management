@@ -97,7 +97,7 @@ export default function ContractsPage() {
 
   // Calculate stats
   const signedCount = contracts.filter(c => c.status === 'signed').length;
-  const pendingCount = contracts.filter(c => c.status === 'pending').length;
+  const sentCount = contracts.filter(c => c.status === 'sent').length;
   const draftCount = contracts.filter(c => c.status === 'draft').length;
   const totalCount = contracts.length;
 
@@ -120,10 +120,10 @@ export default function ContractsPage() {
       description: 'Completed contracts'
     },
     {
-      title: 'Pending',
-      value: pendingCount.toString(),
-      change: pendingCount > 0 ? `${pendingCount} waiting` : 'All signed',
-      changeType: pendingCount > 0 ? 'neutral' as const : 'positive' as const,
+      title: 'Enviados',
+      value: sentCount.toString(),
+      change: sentCount > 0 ? `${sentCount} waiting` : 'All signed',
+      changeType: sentCount > 0 ? 'neutral' as const : 'positive' as const,
       icon: Clock,
       description: 'Awaiting signatures'
     },
@@ -282,12 +282,14 @@ export default function ContractsPage() {
                         <TableCell>
                           <Badge variant={
                             contract.status === 'signed' ? 'default' :
-                            contract.status === 'pending' ? 'secondary' :
+                            contract.status === 'sent' ? 'secondary' :
                             contract.status === 'draft' ? 'outline' : 'destructive'
                           }>
                             {contract.status === 'signed' && '✅ '}
-                            {contract.status === 'pending' && '⏳ '}
+                            {contract.status === 'sent' && '📤 '}
                             {contract.status === 'draft' && '📝 '}
+                            {contract.status === 'expired' && '⏰ '}
+                            {contract.status === 'archived' && '📦 '}
                             {contract.status}
                           </Badge>
                         </TableCell>
@@ -342,12 +344,14 @@ export default function ContractsPage() {
                       </div>
                       <Badge variant={
                         contract.status === 'signed' ? 'default' :
-                        contract.status === 'pending' ? 'secondary' :
+                        contract.status === 'sent' ? 'secondary' :
                         contract.status === 'draft' ? 'outline' : 'destructive'
                       }>
                         {contract.status === 'signed' && '✅ '}
-                        {contract.status === 'pending' && '⏳ '}
+                        {contract.status === 'sent' && '📤 '}
                         {contract.status === 'draft' && '📝 '}
+                        {contract.status === 'expired' && '⏰ '}
+                        {contract.status === 'archived' && '📦 '}
                         {contract.status}
                       </Badge>
                     </div>

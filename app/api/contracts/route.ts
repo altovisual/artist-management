@@ -62,6 +62,9 @@ export async function POST(request: Request) {
   try {
     client = await pool.connect();
     const body = await request.json();
+    
+    console.log('📥 Datos recibidos en API:', JSON.stringify(body, null, 2));
+    
     const {
       work_id,
       template_id,
@@ -76,15 +79,58 @@ export async function POST(request: Request) {
       participants
     } = body;
 
-    if (!work_id || !template_id || !participants || !Array.isArray(participants) || participants.length === 0) {
-      return NextResponse.json({ error: 'work_id, template_id, and a non-empty array of participants are required.' }, { status: 400 });
+    // Validaciones detalladas
+    if (!work_id) {
+      return NextResponse.json({ error: 'work_id es requerido', details: 'Debe seleccionar una obra musical' }, { status: 400 });
+    }
+    
+    if (!template_id) {
+      return NextResponse.json({ error: 'template_id es requerido', details: 'Debe seleccionar una plantilla de contrato' }, { status: 400 });
+    }
+    
+    if (!participants || !Array.isArray(participants)) {
+      return NextResponse.json({ error: 'participants debe ser un array', details: 'Formato de participantes inválido' }, { status: 400 });
+    }
+    
+    if (participants.length === 0) {
+      return NextResponse.json({ error: 'Debe agregar al menos un participante', details: 'El contrato requiere al menos un firmante' }, { status: 400 });
     }
 
+    // Validar que cada participante tenga los campos requeridos
+    for (let i = 0; i < participants.length; i++) {
+      const p = participants[i];
+      if (!p.id) {
+        return NextResponse.json({ 
+          error: `Participante ${i + 1} no tiene ID`, 
+          details: 'Cada participante debe tener un ID válido' 
+        }, { status: 400 });
+      }
+      if (!p.role) {
+        return NextResponse.json({ 
+          error: `Participante ${i + 1} no tiene rol asignado`, 
+          details: 'Cada participante debe tener un rol (ARTISTA, PRODUCTOR, etc.)' 
+        }, { status: 400 });
+      }
+      if (p.percentage === undefined || p.percentage === null) {
+        return NextResponse.json({ 
+          error: `Participante ${i + 1} no tiene porcentaje asignado`, 
+          details: 'Cada participante debe tener un porcentaje de participación' 
+        }, { status: 400 });
+      }
+    }
+    
     const totalPercentage = participants.reduce((acc, p) => acc + (p.percentage || 0), 0);
+    console.log('📊 Total de porcentajes:', totalPercentage);
+    
     if (Math.abs(totalPercentage - 100) > 0.001) {
-      return NextResponse.json({ error: 'La suma de los porcentajes de los participantes debe ser exactamente 100%.' }, { status: 400 });
+      return NextResponse.json({ 
+        error: 'La suma de los porcentajes de los participantes debe ser exactamente 100%.', 
+        details: `Actualmente suma: ${totalPercentage}%`,
+        hint: 'Ajusta los porcentajes para que sumen exactamente 100%'
+      }, { status: 400 });
     }
 
+    console.log('✅ Validaciones pasadas, iniciando transacción...');
     await client.query('BEGIN');
 
     const contractQuery = `
@@ -101,17 +147,26 @@ export async function POST(request: Request) {
       internal_reference, signing_location, additional_notes,
       publisher, publisher_percentage, co_publishers, publisher_admin
     ];
+    
+    console.log('📝 Insertando contrato con valores:', contractValues);
     const contractResult = await client.query(contractQuery, contractValues);
     const newContract = contractResult.rows[0];
+    console.log('✅ Contrato creado con ID:', newContract.id);
+    
     const participantQuery = 'INSERT INTO public.contract_participants (contract_id, participant_id, role, percentage) VALUES ($1, $2, $3, $4)';
+    console.log('👥 Insertando', participants.length, 'participantes...');
+    
     for (const participant of participants) {
       if (!participant.id || !participant.role) {
         throw new Error('Each participant must have an id and a role.');
       }
+      console.log('  - Participante:', participant.id, participant.role, participant.percentage + '%');
       await client.query(participantQuery, [newContract.id, participant.id, participant.role, participant.percentage || null]);
     }
 
+    console.log('💾 Commit de transacción...');
     await client.query('COMMIT');
+    console.log('✅ Transacción completada exitosamente');
 
     revalidatePath('/management/contracts');
     const refetchQuery = `
@@ -141,16 +196,26 @@ export async function POST(request: Request) {
     return NextResponse.json(rows[0], { status: 201 });
 
   } catch (error) {
-    console.error('Database Error on POST /api/contracts:', error);
+    console.error('❌ Database Error on POST /api/contracts:', error);
     if (client) {
       try {
         await client.query('ROLLBACK');
+        console.log('🔄 Transaction rolled back');
       } catch (rollbackError) {
         console.error('Error rolling back transaction:', rollbackError);
       }
     }
+    
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return NextResponse.json({ error: 'Failed to create contract', details: errorMessage }, { status: 500 });
+    const errorDetails = error instanceof Error ? error.stack : String(error);
+    
+    console.error('Error details:', errorDetails);
+    
+    return NextResponse.json({ 
+      error: 'Failed to create contract', 
+      details: errorMessage,
+      hint: 'Verifica que todos los campos estén completos y que los porcentajes sumen 100%'
+    }, { status: 500 });
   } finally {
     if (client) {
       try {
