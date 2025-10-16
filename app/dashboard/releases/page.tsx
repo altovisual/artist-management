@@ -50,9 +50,35 @@ function ReleasesPageContent() {
   useEffect(() => {
     const fetchInitialData = async () => {
       setIsLoading(true)
-      const { data: releasesData, error: releasesError } = await supabase
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        setIsLoading(false)
+        return
+      }
+      
+      // Check if user is admin
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+      
+      const isAdmin = profile?.role === 'admin'
+      
+      // Build query based on user role
+      let query = supabase
         .from("projects")
         .select("*")
+      
+      // If not admin, only show user's projects
+      if (!isAdmin) {
+        query = query.eq('user_id', user.id)
+      }
+      
+      const { data: releasesData, error: releasesError } = await query
         .order("release_date", { ascending: true })
 
       if (releasesError) {

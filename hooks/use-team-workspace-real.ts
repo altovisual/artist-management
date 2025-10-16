@@ -53,33 +53,97 @@ export function useTeamWorkspaceReal() {
   // Fetch team members from Supabase
   const fetchTeamMembers = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      // Get current user first
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        console.log('No user found')
+        setTeamMembers([])
+        setCurrentUser(null)
+        return
+      }
+
+      // Try team_members table first, fallback to profiles
+      let data, error
+      
+      const teamMembersResult = await supabase
         .from('team_members')
         .select('*')
         .order('created_at', { ascending: false })
+      
+      if (teamMembersResult.error) {
+        console.log('team_members table not found, using profiles')
+        // Fallback to profiles table
+        const profilesResult = await supabase
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false })
+        
+        data = profilesResult.data
+        error = profilesResult.error
+      } else {
+        data = teamMembersResult.data
+        error = teamMembersResult.error
+      }
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching team members:', error)
+        // Create a default member from current user
+        const defaultMember: TeamMember = {
+          id: user.id,
+          name: user.email?.split('@')[0] || 'User',
+          email: user.email || '',
+          role: 'admin',
+          isOnline: true
+        }
+        setTeamMembers([defaultMember])
+        setCurrentUser(defaultMember)
+        return
+      }
 
       const members: TeamMember[] = (data || []).map(member => ({
         id: member.id,
-        name: member.name,
-        email: member.email,
-        avatar: member.avatar,
-        role: member.role,
+        name: member.name || member.full_name || member.email?.split('@')[0] || 'User',
+        email: member.email || '',
+        avatar: member.avatar || member.avatar_url,
+        role: member.role || 'member',
         isOnline: member.is_online || false,
         lastSeen: member.last_seen ? new Date(member.last_seen) : undefined
       }))
 
       setTeamMembers(members)
 
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const current = members.find(m => m.id === user.id)
-        setCurrentUser(current || null)
+      // Set current user
+      const current = members.find(m => m.id === user.id)
+      if (current) {
+        setCurrentUser(current)
+      } else {
+        // Create current user if not in list
+        const currentMember: TeamMember = {
+          id: user.id,
+          name: user.email?.split('@')[0] || 'User',
+          email: user.email || '',
+          role: 'admin',
+          isOnline: true
+        }
+        setTeamMembers([currentMember, ...members])
+        setCurrentUser(currentMember)
       }
     } catch (err: any) {
       console.error('Error fetching team members:', err)
+      // Create a fallback user
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const fallbackMember: TeamMember = {
+          id: user.id,
+          name: user.email?.split('@')[0] || 'User',
+          email: user.email || '',
+          role: 'admin',
+          isOnline: true
+        }
+        setTeamMembers([fallbackMember])
+        setCurrentUser(fallbackMember)
+      }
     }
   }, [supabase])
 
