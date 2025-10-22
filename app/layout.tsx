@@ -12,19 +12,12 @@ import NextNProgress from 'nextjs-toploader';
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-// La metadata no cambia
+// Metadata configuration
 export const metadata: Metadata = {
   title: "Artist Management System",
   description: "Manage your artists and their social media accounts",
   generator: "v0.app",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-    viewportFit: 'cover'
-  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -33,6 +26,15 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false
   }
+};
+
+// Viewport configuration (separate export as required by Next.js)
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover'
 };
 
 // --- AQUÍ ESTÁ LA PARTE IMPORTANTE ---

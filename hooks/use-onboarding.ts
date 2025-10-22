@@ -34,14 +34,21 @@ export function useOnboarding() {
       description: "Agrega tu primer artista",
       completed: false,
     },
-    {
-      id: "tour",
-      title: "Tour Guiado",
-      description: "Explora las funcionalidades",
-      completed: false,
-    },
   ]);
   const router = useRouter();
+
+  // Load saved progress from localStorage
+  useEffect(() => {
+    const savedStep = localStorage.getItem("onboarding_current_step");
+    if (savedStep) {
+      setCurrentStep(parseInt(savedStep, 10));
+    }
+  }, []);
+
+  // Save current step to localStorage
+  useEffect(() => {
+    localStorage.setItem("onboarding_current_step", currentStep.toString());
+  }, [currentStep]);
 
   useEffect(() => {
     checkOnboardingStatus();
@@ -55,6 +62,18 @@ export function useOnboarding() {
       } = await supabase.auth.getUser();
 
       if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Verificar si el usuario es admin
+      const { data: isAdminData, error: adminError } = await supabase.rpc(
+        "is_admin"
+      );
+
+      // Si es admin, no mostrar onboarding
+      if (isAdminData === true) {
+        console.log("User is admin, skipping onboarding");
         setIsLoading(false);
         return;
       }
@@ -134,15 +153,21 @@ export function useOnboarding() {
   };
 
   const completeOnboarding = async () => {
+    console.log("🎉 Completando onboarding...");
     try {
       const supabase = createClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user) return;
+      if (!user) {
+        console.error("❌ No user found en completeOnboarding");
+        return;
+      }
 
-      await supabase
+      console.log("👤 Actualizando user_profiles para usuario:", user.id);
+
+      const { error } = await supabase
         .from("user_profiles")
         .update({
           onboarding_completed: true,
@@ -150,10 +175,27 @@ export function useOnboarding() {
         })
         .eq("user_id", user.id);
 
+      if (error) {
+        console.error("❌ Error actualizando user_profiles:", error);
+      } else {
+        console.log("✅ user_profiles actualizado");
+      }
+
+      // Clear localStorage data
+      console.log("🧹 Limpiando localStorage...");
+      localStorage.removeItem("onboarding_current_step");
+      localStorage.removeItem("onboarding_profile_data");
+
       setNeedsOnboarding(false);
+      
+      // Navegar al dashboard y marcar que debe iniciar el tour
+      console.log("🚀 Configurando flag para tour guiado");
+      localStorage.setItem("start_guided_tour", "true");
+      
+      console.log("🏠 Navegando a /dashboard");
       router.push("/dashboard");
     } catch (error) {
-      console.error("Error completing onboarding:", error);
+      console.error("❌ Error completing onboarding:", error);
     }
   };
 

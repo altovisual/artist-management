@@ -61,9 +61,9 @@ function ReleasesPageContent() {
       
       // Check if user is admin
       const { data: profile } = await supabase
-        .from('profiles')
+        .from('user_profiles')
         .select('role')
-        .eq('id', user.id)
+        .eq('user_id', user.id)
         .single()
       
       const isAdmin = profile?.role === 'admin'
@@ -71,11 +71,14 @@ function ReleasesPageContent() {
       // Build query based on user role
       let query = supabase
         .from("projects")
-        .select("*")
+        .select(`
+          *,
+          artists!inner(user_id)
+        `)
       
-      // If not admin, only show user's projects
+      // If not admin, only show user's projects (filter by artist's user_id)
       if (!isAdmin) {
-        query = query.eq('user_id', user.id)
+        query = query.eq('artists.user_id', user.id)
       }
       
       const { data: releasesData, error: releasesError } = await query
@@ -83,11 +86,19 @@ function ReleasesPageContent() {
 
       if (releasesError) {
         console.error("Error fetching releases:", releasesError)
+        console.error("Error details:", {
+          message: releasesError.message,
+          details: releasesError.details,
+          hint: releasesError.hint,
+          code: releasesError.code
+        })
         toast({
           title: "Error",
-          description: "Could not load releases.",
+          description: releasesError.message || "Could not load releases.",
           variant: "destructive",
         })
+        setIsLoading(false)
+        return
       } else {
         const formattedEvents = (releasesData || []).map((row: ProjectRow) => ({
           id: String(row.id),

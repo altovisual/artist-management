@@ -19,6 +19,7 @@ import { useRouter } from "next/navigation";
 interface FirstArtistStepProps {
   onNext: () => void;
   onBack: () => void;
+  onComplete: () => void;
 }
 
 const GENRES = [
@@ -77,9 +78,8 @@ const COUNTRIES = [
   "Otro",
 ];
 
-export function FirstArtistStep({ onNext, onBack }: FirstArtistStepProps) {
+export function FirstArtistStep({ onNext, onBack, onComplete }: FirstArtistStepProps) {
   const [loading, setLoading] = useState(false);
-  const [skipArtist, setSkipArtist] = useState(false);
   const [artistData, setArtistData] = useState({
     name: "",
     genre: "",
@@ -89,6 +89,7 @@ export function FirstArtistStep({ onNext, onBack }: FirstArtistStepProps) {
   const router = useRouter();
 
   const handleCreateArtist = async () => {
+    console.log("🎵 Iniciando creación de artista...");
     setLoading(true);
     try {
       const supabase = createClient();
@@ -96,7 +97,13 @@ export function FirstArtistStep({ onNext, onBack }: FirstArtistStepProps) {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user) throw new Error("No user found");
+      if (!user) {
+        console.error("❌ No user found");
+        throw new Error("No user found");
+      }
+
+      console.log("👤 Usuario encontrado:", user.id);
+      console.log("📝 Datos del artista:", artistData);
 
       const { error } = await supabase.from("artists").insert({
         name: artistData.name,
@@ -105,16 +112,26 @@ export function FirstArtistStep({ onNext, onBack }: FirstArtistStepProps) {
         user_id: user.id,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ Error al insertar artista:", error);
+        throw error;
+      }
+
+      console.log("✅ Artista creado exitosamente");
 
       toast({
         title: "¡Artista creado!",
         description: `${artistData.name} ha sido agregado exitosamente.`,
       });
 
-      onNext();
+      // Completar onboarding e iniciar tour después de un pequeño delay
+      console.log("🚀 Completando onboarding en 500ms...");
+      setTimeout(() => {
+        console.log("🎯 Llamando a onComplete()");
+        onComplete();
+      }, 500);
     } catch (error) {
-      console.error("Error creating artist:", error);
+      console.error("❌ Error creating artist:", error);
       toast({
         title: "Error",
         description: "No se pudo crear el artista. Intenta nuevamente.",
@@ -126,8 +143,8 @@ export function FirstArtistStep({ onNext, onBack }: FirstArtistStepProps) {
   };
 
   const handleSkip = () => {
-    setSkipArtist(true);
-    onNext();
+    // Completar onboarding e iniciar tour
+    onComplete();
   };
 
   return (

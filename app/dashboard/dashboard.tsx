@@ -12,6 +12,7 @@ import { PlusCircle, Eye, Edit, ImageIcon, Trash2 } from 'lucide-react';
 import { DashboardSkeleton } from './dashboard-skeleton';
 import { DbSizeCard } from '@/components/db-size-card';
 import { AnimatedTitle } from '@/components/animated-title';
+import { GuidedTour } from '@/components/onboarding/guided-tour';
 import { Card } from "@/components/ui/card";
 import {
   AlertDialog,
@@ -45,6 +46,7 @@ export function Dashboard() {
   const [userRole, setUserRole] = useState('');
   const [user, setUser] = useState<any>(null);
   const [deletingArtistId, setDeletingArtistId] = useState<string | null>(null);
+  const [showTour, setShowTour] = useState(false);
   const isMobile = useIsMobile();
   const supabase = createClient();
   
@@ -66,6 +68,18 @@ export function Dashboard() {
     removeMember,
     refreshData
   } = useCompactWorkspace();
+
+  // Detectar si debe iniciar el tour guiado
+  useEffect(() => {
+    const shouldStartTour = localStorage.getItem("start_guided_tour");
+    if (shouldStartTour === "true") {
+      localStorage.removeItem("start_guided_tour");
+      // Esperar un poco para que el dashboard cargue
+      setTimeout(() => {
+        setShowTour(true);
+      }, 1500);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -363,14 +377,18 @@ export function Dashboard() {
   ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5);
 
   return (
-    <div className="space-y-4 sm:space-y-6 md:space-y-8 p-3 sm:p-4 md:p-6">
-      {/* Hero Section */}
-      <HeroSection 
-        userName={user?.user_metadata?.full_name}
-        userRole={userRole}
-        totalArtists={totalArtists}
-        activeProjects={activeProjects}
-      />
+    <>
+      {showTour && <GuidedTour onComplete={() => setShowTour(false)} />}
+      <div className="space-y-4 sm:space-y-6 md:space-y-8 p-3 sm:p-4 md:p-6">
+        {/* Hero Section */}
+        <div id="dashboard-header">
+        <HeroSection 
+          userName={user?.user_metadata?.full_name}
+          userRole={userRole}
+          totalArtists={totalArtists}
+          activeProjects={activeProjects}
+        />
+      </div>
 
       {/* Metrics Grid */}
       <MetricsGrid data={metricsData} />
@@ -378,7 +396,7 @@ export function Dashboard() {
       {/* Main Content Grid - Mobile: Stack vertically, Desktop: Side by side */}
       <div className="grid gap-4 sm:gap-6 md:gap-8 lg:grid-cols-3">
         {/* Artists Section - Mobile: Full width, Desktop: 2 columns */}
-        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+        <div id="artists-section" className="lg:col-span-2 space-y-4 sm:space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
             <div>
               <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Your Artists</h2>
@@ -478,5 +496,6 @@ export function Dashboard() {
         </div>
       </div>
     </div>
+    </>
   );
 }

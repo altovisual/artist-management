@@ -110,18 +110,18 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   const navLinks = React.useMemo(() => {
     const links = [
-      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/team", label: "Team", icon: Users },
-      { href: "/dashboard/analytics", label: "Analytics", icon: BarChart },
-      { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
-      { href: "/dashboard/finance", label: "Finance", icon: DollarSign },
-      { href: "/dashboard/releases", label: "Releases", icon: Music },
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, id: "dashboard-nav" },
+      { href: "/team", label: "Team", icon: Users, id: "team-nav" },
+      { href: "/dashboard/analytics", label: "Analytics", icon: BarChart, id: "analytics-nav" },
+      { href: "/dashboard/calendar", label: "Calendar", icon: Calendar, id: "calendar-nav" },
+      { href: "/dashboard/finance", label: "Finance", icon: DollarSign, id: "finance-nav" },
+      { href: "/dashboard/releases", label: "Releases", icon: Music, id: "releases-nav" },
     ];
 
     // Conditionally add admin-only links
     if (isAdmin) {
-      links.push({ href: "/management", label: "Management", icon: Shield });
-      links.push({ href: "/share-tracks", label: "Share Tracks", icon: Share2 });
+      links.push({ href: "/management", label: "Management", icon: Shield, id: "management-nav" });
+      links.push({ href: "/share-tracks", label: "Share Tracks", icon: Share2, id: "share-nav" });
     }
 
     return links;
@@ -176,6 +176,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 <Link
                   key={link.href}
                   href={link.href}
+                  id={link.id}
                   ref={el => { navRefs.current[index] = el; }} // Assign ref
                   className={`flex items-center gap-2 transition-all duration-200 hover:text-foreground ${pathname === link.href ? 'text-foreground' : 'text-muted-foreground'}`}
                 >
@@ -215,7 +216,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/artists/my-profile">
+                  <Link href="/artists/my-profile" id="settings-nav">
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </Link>

@@ -4,16 +4,8 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronRight, ChevronLeft, Upload, User } from "lucide-react";
+import { ChevronRight, ChevronLeft, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -25,10 +17,7 @@ interface ProfileStepProps {
 export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
   const [loading, setLoading] = useState(false);
   const [userData, setUserData] = useState({
-    full_name: "",
-    role: "",
-    company: "",
-    bio: "",
+    username: "",
     avatar_url: "",
   });
   const { toast } = useToast();
@@ -37,8 +26,22 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
     loadUserData();
   }, []);
 
+  // Save to localStorage whenever userData changes
+  useEffect(() => {
+    if (userData.username || userData.avatar_url) {
+      localStorage.setItem("onboarding_profile_data", JSON.stringify(userData));
+    }
+  }, [userData]);
+
   const loadUserData = async () => {
     try {
+      // First, try to load from localStorage
+      const savedData = localStorage.getItem("onboarding_profile_data");
+      if (savedData) {
+        setUserData(JSON.parse(savedData));
+      }
+
+      // Then load from database
       const supabase = createClient();
       const {
         data: { user },
@@ -46,17 +49,14 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
 
       if (user) {
         const { data: profile } = await supabase
-          .from("profiles")
+          .from("user_profiles")
           .select("*")
-          .eq("id", user.id)
+          .eq("user_id", user.id)
           .single();
 
         if (profile) {
           setUserData({
-            full_name: profile.full_name || "",
-            role: profile.role || "",
-            company: profile.company || "",
-            bio: profile.bio || "",
+            username: profile.username || "",
             avatar_url: profile.avatar_url || "",
           });
         }
@@ -76,42 +76,140 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
 
       if (!user) throw new Error("No user found");
 
+      // Intentar guardar el perfil, pero continuar incluso si falla
       const { error } = await supabase
-        .from("profiles")
+        .from("user_profiles")
         .upsert({
-          id: user.id,
-          ...userData,
+          user_id: user.id,
+          username: userData.username,
+          avatar_url: userData.avatar_url,
           updated_at: new Date().toISOString(),
         });
 
-      if (error) throw error;
-
-      toast({
-        title: "Perfil actualizado",
-        description: "Tu información ha sido guardada exitosamente.",
-      });
+      if (error) {
+        console.warn("Could not save profile (table may not exist yet):", error);
+        // Continuar de todos modos
+      } else {
+        toast({
+          title: "Perfil actualizado",
+          description: "Tu información ha sido guardada exitosamente.",
+        });
+      }
 
       onNext();
     } catch (error) {
       console.error("Error saving profile:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo guardar tu perfil. Intenta nuevamente.",
-        variant: "destructive",
-      });
+      // Continuar de todos modos para no bloquear el onboarding
+      onNext();
     } finally {
       setLoading(false);
     }
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Archivo muy grande",
+        description: "La imagen debe ser menor a 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: "Tipo de archivo inválido",
+        description: "Solo se permiten imágenes (JPG, PNG, GIF, WEBP).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Create preview URL immediately
+    const previewUrl = URL.createObjectURL(file);
+    setUserData({ ...userData, avatar_url: previewUrl });
+
+    try {
+      const supabase = createClient();
+      
+      let user;
+      try {
+        const { data } = await supabase.auth.getUser();
+        user = data.user;
+      } catch (authError) {
+        console.warn("Auth error (possibly browser extension):", authError);
+        // Try alternative method
+        const { data: sessionData } = await supabase.auth.getSession();
+        user = sessionData?.session?.user;
+      }
+
+      if (!user) {
+        throw new Error("No se pudo obtener el usuario. Intenta recargar la página.");
+      }
+
+      // Upload to Supabase Storage
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        // Revert to no avatar on error
+        URL.revokeObjectURL(previewUrl);
+        setUserData({ ...userData, avatar_url: "" });
+        throw uploadError;
+      }
+
+      // Get public URL and replace preview
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("avatars").getPublicUrl(filePath);
+
+      // Revoke the preview URL to free memory
+      URL.revokeObjectURL(previewUrl);
+      
+      setUserData({ ...userData, avatar_url: publicUrl });
+
+      toast({
+        title: "Foto subida",
+        description: "Tu foto de perfil ha sido actualizada.",
+      });
+    } catch (error: any) {
+      console.error("Error uploading avatar:", error);
+      
+      // Specific error messages
+      let errorMessage = "No se pudo subir la foto. Intenta nuevamente.";
+      
+      if (error?.message?.includes("Bucket not found")) {
+        errorMessage = "El sistema de almacenamiento no está configurado. Contacta al administrador.";
+      } else if (error?.message?.includes("not allowed")) {
+        errorMessage = "No tienes permisos para subir archivos.";
+      }
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  };
+
   const getInitials = () => {
-    if (!userData.full_name) return "U";
-    return userData.full_name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+    if (!userData.username) return "U";
+    return userData.username.slice(0, 2).toUpperCase();
   };
 
   return (
@@ -132,70 +230,46 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
             {getInitials()}
           </AvatarFallback>
         </Avatar>
-        <Button variant="outline" size="sm" className="gap-2">
-          <Upload className="w-4 h-4" />
-          Subir Foto
-        </Button>
+        <label htmlFor="avatar-upload">
+          <Button variant="outline" size="sm" className="gap-2" type="button" asChild>
+            <span className="cursor-pointer">
+              <Upload className="w-4 h-4" />
+              Subir Foto
+            </span>
+          </Button>
+        </label>
+        <input
+          id="avatar-upload"
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleAvatarUpload}
+        />
       </div>
 
       {/* Form */}
-      <div className="space-y-4">
+      <div className="space-y-4 max-w-md mx-auto">
         <div className="space-y-2">
-          <Label htmlFor="full_name">Nombre Completo *</Label>
+          <Label htmlFor="username">Nombre de Usuario *</Label>
           <Input
-            id="full_name"
-            placeholder="Tu nombre completo"
-            value={userData.full_name}
+            id="username"
+            placeholder="Ej: juan_manager"
+            value={userData.username}
             onChange={(e) =>
-              setUserData({ ...userData, full_name: e.target.value })
+              setUserData({ ...userData, username: e.target.value })
             }
           />
+          <p className="text-xs text-muted-foreground">
+            Este será tu identificador en la plataforma
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="role">Rol *</Label>
-            <Select
-              value={userData.role}
-              onValueChange={(value) =>
-                setUserData({ ...userData, role: value })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecciona tu rol" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="artist">Artista</SelectItem>
-                <SelectItem value="manager">Manager</SelectItem>
-                <SelectItem value="producer">Productor</SelectItem>
-                <SelectItem value="label">Sello Discográfico</SelectItem>
-                <SelectItem value="other">Otro</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="company">Compañía/Sello (Opcional)</Label>
-            <Input
-              id="company"
-              placeholder="Nombre de tu compañía"
-              value={userData.company}
-              onChange={(e) =>
-                setUserData({ ...userData, company: e.target.value })
-              }
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="bio">Bio (Opcional)</Label>
-          <Textarea
-            id="bio"
-            placeholder="Cuéntanos sobre ti y tu experiencia en la industria musical..."
-            rows={4}
-            value={userData.bio}
-            onChange={(e) => setUserData({ ...userData, bio: e.target.value })}
-          />
+        {/* Info Card */}
+        <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
+          <p className="text-sm text-muted-foreground">
+            💡 <strong>Tip:</strong> Podrás completar más información de tu perfil
+            desde la sección de Configuración después.
+          </p>
         </div>
       </div>
 
@@ -207,7 +281,7 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
         </Button>
         <Button
           onClick={handleSave}
-          disabled={!userData.full_name || !userData.role || loading}
+          disabled={!userData.username || loading}
           className="gap-2"
         >
           {loading ? "Guardando..." : "Continuar"}

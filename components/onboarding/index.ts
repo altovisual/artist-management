@@ -4,3 +4,4 @@ export { WelcomeStep } from "./steps/welcome-step";
 export { ProfileStep } from "./steps/profile-step";
 export { FirstArtistStep } from "./steps/first-artist-step";
 export { TourStep } from "./steps/tour-step";
+export { GuidedTour } from "./guided-tour";

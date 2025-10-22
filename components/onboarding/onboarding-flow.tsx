@@ -17,13 +17,11 @@ import { useOnboarding } from "@/hooks/use-onboarding";
 import { WelcomeStep } from "./steps/welcome-step";
 import { ProfileStep } from "./steps/profile-step";
 import { FirstArtistStep } from "./steps/first-artist-step";
-import { TourStep } from "./steps/tour-step";
 
 const stepIcons = {
   welcome: Sparkles,
   profile: User,
   "first-artist": Music,
-  tour: Compass,
 };
 
 export function OnboardingFlow() {
@@ -47,9 +45,7 @@ export function OnboardingFlow() {
       case "profile":
         return <ProfileStep onNext={nextStep} onBack={previousStep} />;
       case "first-artist":
-        return <FirstArtistStep onNext={nextStep} onBack={previousStep} />;
-      case "tour":
-        return <TourStep onComplete={completeOnboarding} onBack={previousStep} />;
+        return <FirstArtistStep onNext={nextStep} onBack={previousStep} onComplete={completeOnboarding} />;
       default:
         return null;
     }
