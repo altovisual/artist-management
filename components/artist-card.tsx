@@ -6,8 +6,21 @@ import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Users, Music, ImageIcon, MoreVertical, Edit } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { Users, Music, ImageIcon, MoreVertical, Edit, Trash2 } from "lucide-react"
+import { toast } from "sonner"
+import { useState } from "react"
 
 type Artist = {
   id: string | number
@@ -19,10 +32,46 @@ type Artist = {
   assetCount?: number
 }
 
-export function ArtistCard({ artist }: { artist: Artist }) {
+type ArtistCardProps = {
+  artist: Artist
+  onDelete?: (artistId: string | number) => void
+}
+
+export function ArtistCard({ artist, onDelete }: ArtistCardProps) {
+  const [isDeleting, setIsDeleting] = useState(false);
   const initials = (artist.name || "").split(" ").map((n) => n[0]).join("") || "AR"
   const socialAccountsCount = artist.social_accounts?.length ?? 0
   const distributionAccountsCount = artist.distribution_accounts?.length ?? 0
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/artists/${artist.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete artist');
+      }
+
+      toast.success('Artista eliminado', {
+        description: `${artist.name} ha sido eliminado correctamente.`
+      });
+
+      // Llamar al callback si existe
+      if (onDelete) {
+        onDelete(artist.id);
+      }
+    } catch (error: any) {
+      console.error('Error deleting artist:', error);
+      toast.error('Error al eliminar', {
+        description: error.message || 'No se pudo eliminar el artista.'
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <Card className="relative group overflow-hidden rounded-lg transition-all hover:shadow-xl hover:scale-[1.02] duration-300 ease-in-out">
@@ -41,6 +90,36 @@ export function ArtistCard({ artist }: { artist: Artist }) {
                 <span>Edit Artist</span>
               </Link>
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <DropdownMenuItem 
+                  onSelect={(e) => e.preventDefault()}
+                  disabled={isDeleting}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  <span>Delete Artist</span>
+                </DropdownMenuItem>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Eliminar artista?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta acción no se puede deshacer. Se eliminará permanentemente el perfil de <strong>{artist.name}</strong> y todos sus datos asociados.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={handleDelete}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Eliminar
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

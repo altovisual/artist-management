@@ -8,11 +8,23 @@ import { ArtistCard } from '@/components/artist-card';
 import { ArtistMobileCard } from '@/components/artist-mobile-card';
 import { ArtistViewSwitcher } from '@/components/ui/artist-view-switcher';
 import { useIsMobile } from '@/components/ui/use-mobile';
-import { PlusCircle, Eye, Edit, ImageIcon } from 'lucide-react';
+import { PlusCircle, Eye, Edit, ImageIcon, Trash2 } from 'lucide-react';
 import { DashboardSkeleton } from './dashboard-skeleton';
 import { DbSizeCard } from '@/components/db-size-card';
 import { AnimatedTitle } from '@/components/animated-title';
 import { Card } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { toast } from 'sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { format } from 'date-fns'
@@ -32,6 +44,7 @@ export function Dashboard() {
   const [view, setView] = useState('grid');
   const [userRole, setUserRole] = useState('');
   const [user, setUser] = useState<any>(null);
+  const [deletingArtistId, setDeletingArtistId] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const supabase = createClient();
   
@@ -124,6 +137,34 @@ export function Dashboard() {
     fetchDashboardData();
   }, [supabase]);
 
+  const handleDeleteArtist = async (artistId: string, artistName: string) => {
+    setDeletingArtistId(artistId);
+    try {
+      const response = await fetch(`/api/artists/${artistId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete artist');
+      }
+
+      // Actualizar la lista de artistas localmente
+      setArtists(prevArtists => prevArtists.filter(a => a.id !== artistId));
+      
+      toast.success('Artista eliminado', {
+        description: `${artistName} ha sido eliminado correctamente.`
+      });
+    } catch (error: any) {
+      console.error('Error deleting artist:', error);
+      toast.error('Error al eliminar', {
+        description: error.message || 'No se pudo eliminar el artista.'
+      });
+    } finally {
+      setDeletingArtistId(null);
+    }
+  };
+
   if (isLoading) {
     return <DashboardSkeleton />;
   }
@@ -133,7 +174,13 @@ export function Dashboard() {
       return (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {artists.map(artist => (
-            <ArtistCard key={artist.id} artist={artist} />
+            <ArtistCard 
+              key={artist.id} 
+              artist={artist}
+              onDelete={(artistId) => {
+                setArtists(prevArtists => prevArtists.filter(a => a.id !== artistId));
+              }}
+            />
           ))}
         </div>
       );
@@ -190,6 +237,34 @@ export function Dashboard() {
                   <div className="flex items-center justify-end gap-2">
                     <Link href={`/artists/${artist.id}`}><Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button></Link>
                     <Link href={`/artists/${artist.id}/edit`}><Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button></Link>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          disabled={deletingArtistId === artist.id}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>¿Eliminar artista?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta acción no se puede deshacer. Se eliminará permanentemente el perfil de <strong>{artist.name}</strong> y todos sus datos asociados.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => handleDeleteArtist(artist.id, artist.name)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Eliminar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </TableCell>
               </TableRow>
@@ -343,7 +418,13 @@ export function Dashboard() {
           ) : isMobile ? (
             <div className="space-y-3 sm:space-y-4">
               {artists.map(artist => (
-                <ArtistMobileCard key={artist.id} artist={artist} />
+                <ArtistMobileCard 
+                  key={artist.id} 
+                  artist={artist}
+                  onDelete={(artistId) => {
+                    setArtists(prevArtists => prevArtists.filter(a => a.id !== artistId));
+                  }}
+                />
               ))}
             </div>
           ) : (

@@ -5,7 +5,20 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Eye, Edit, ImageIcon, Users, Music } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { Eye, Edit, ImageIcon, Users, Music, Trash2 } from "lucide-react"
+import { toast } from "sonner"
+import { useState } from "react"
 
 type Artist = {
   id: string | number
@@ -19,7 +32,13 @@ type Artist = {
   created_at?: string
 }
 
-export function ArtistMobileCard({ artist }: { artist: Artist }) {
+type ArtistMobileCardProps = {
+  artist: Artist
+  onDelete?: (artistId: string | number) => void
+}
+
+export function ArtistMobileCard({ artist, onDelete }: ArtistMobileCardProps) {
+  const [isDeleting, setIsDeleting] = useState(false);
   const initials =
     (artist.name || "")
       .split(" ")
@@ -28,6 +47,36 @@ export function ArtistMobileCard({ artist }: { artist: Artist }) {
 
   const socialAccountsCount = artist.social_accounts?.length ?? 0
   const distributionAccountsCount = artist.distribution_accounts?.length ?? 0
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/artists/${artist.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete artist');
+      }
+
+      toast.success('Artista eliminado', {
+        description: `${artist.name} ha sido eliminado correctamente.`
+      });
+
+      // Llamar al callback si existe
+      if (onDelete) {
+        onDelete(artist.id);
+      }
+    } catch (error: any) {
+      console.error('Error deleting artist:', error);
+      toast.error('Error al eliminar', {
+        description: error.message || 'No se pudo eliminar el artista.'
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <Card>
@@ -80,6 +129,35 @@ export function ArtistMobileCard({ artist }: { artist: Artist }) {
               <Edit className="h-4 w-4" /> Edit
             </Button>
           </Link>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon"
+                disabled={isDeleting}
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Eliminar artista?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta acción no se puede deshacer. Se eliminará permanentemente el perfil de <strong>{artist.name}</strong> y todos sus datos asociados.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={handleDelete}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Eliminar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </CardContent>
     </Card>
