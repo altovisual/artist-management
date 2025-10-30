@@ -30,9 +30,10 @@ export function OnboardingWrapper({ children }: OnboardingWrapperProps) {
     );
   }
 
-  if (needsOnboarding) {
-    return <OnboardingFlow />;
-  }
+  // Onboarding desactivado temporalmente
+  // if (needsOnboarding) {
+  //   return <OnboardingFlow />;
+  // }
 
   return <>{children}</>;
 }

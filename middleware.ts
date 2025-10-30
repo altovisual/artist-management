@@ -47,21 +47,22 @@ export async function middleware(request: NextRequest) {
   }
 
   // Redirect to onboarding if user is logged in but has no artist profile
-  if (
-    user &&
-    !request.nextUrl.pathname.startsWith('/artists/onboarding') &&
-    !request.nextUrl.pathname.startsWith('/auth')
-  ) {
-    const { data: artist } = await supabase
-      .from('artists')
-      .select('id')
-      .eq('user_id', user.id)
-      .single()
+  // DESACTIVADO: No forzar onboarding
+  // if (
+  //   user &&
+  //   !request.nextUrl.pathname.startsWith('/artists/onboarding') &&
+  //   !request.nextUrl.pathname.startsWith('/auth')
+  // ) {
+  //   const { data: artist } = await supabase
+  //     .from('artists')
+  //     .select('id')
+  //     .eq('user_id', user.id)
+  //     .single()
 
-    if (!artist) {
-      return NextResponse.redirect(new URL('/artists/onboarding', request.url))
-    }
-  }
+  //   if (!artist) {
+  //     return NextResponse.redirect(new URL('/artists/onboarding', request.url))
+  //   }
+  // }
 
   // Add CSP headers
   const cspHeader = `

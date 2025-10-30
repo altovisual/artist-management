@@ -1,6 +1,6 @@
 'use client' // Directiva para convertirlo en un Componente de Cliente
 
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -17,6 +17,18 @@ export default function LoginPage() {
   const router = useRouter()
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  // Verificar si el usuario ya está autenticado
+  useEffect(() => {
+    const checkAuth = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        router.push('/dashboard')
+      }
+    }
+    checkAuth()
+  }, [router])
 
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault() // Previene la recarga de la página

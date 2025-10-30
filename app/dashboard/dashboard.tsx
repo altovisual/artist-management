@@ -261,20 +261,33 @@ export function Dashboard() {
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>¿Eliminar artista?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Esta acción no se puede deshacer. Se eliminará permanentemente el perfil de <strong>{artist.name}</strong> y todos sus datos asociados.
+                      <AlertDialogContent className="max-w-md">
+                        <AlertDialogHeader className="space-y-4">
+                          <div className="flex items-center justify-center w-12 h-12 mx-auto rounded-full bg-destructive/10">
+                            <Trash2 className="h-6 w-6 text-destructive" />
+                          </div>
+                          <AlertDialogTitle className="text-center text-xl">
+                            ¿Eliminar artista?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription className="text-center">
+                            <div className="space-y-2">
+                              <p>Esta acción no se puede deshacer.</p>
+                              <p className="font-medium text-foreground">
+                                Se eliminará permanentemente el perfil de <span className="font-bold">{artist.name}</span> y todos sus datos asociados.
+                              </p>
+                            </div>
                           </AlertDialogDescription>
                         </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+                          <AlertDialogCancel className="w-full sm:w-auto">
+                            Cancelar
+                          </AlertDialogCancel>
                           <AlertDialogAction 
                             onClick={() => handleDeleteArtist(artist.id, artist.name)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90 font-semibold"
+                            disabled={deletingArtistId === artist.id}
                           >
-                            Eliminar
+                            {deletingArtistId === artist.id ? "Eliminando..." : "Sí, eliminar"}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
