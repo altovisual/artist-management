@@ -8,10 +8,12 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { TrendingUp, TrendingDown, DollarSign, Calendar, FileText, Download, Upload } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, Calendar, FileText, Download, Upload, BarChart3, GitCompare } from 'lucide-react'
 import { ContentSection } from '@/components/ui/design-system/content-section'
 import { StatsGrid } from '@/components/ui/design-system/stats-grid'
 import { formatCurrency, formatDate } from '@/lib/format-utils'
+import { FinancialCharts } from './financial-charts'
+import { PeriodComparison } from './period-comparison'
 
 interface ArtistStatement {
   id: string
@@ -294,9 +296,17 @@ export function ArtistStatementsView() {
         >
           {selectedStatement ? (
             <Tabs defaultValue="summary" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="summary">Resumen</TabsTrigger>
                 <TabsTrigger value="transactions">Transacciones ({transactions.length})</TabsTrigger>
+                <TabsTrigger value="charts">
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Gráficos
+                </TabsTrigger>
+                <TabsTrigger value="comparison">
+                  <GitCompare className="w-4 h-4 mr-2" />
+                  Comparar
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="summary" className="space-y-4">
@@ -420,6 +430,14 @@ export function ArtistStatementsView() {
                     </TableBody>
                   </Table>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="charts">
+                <FinancialCharts transactions={transactions} />
+              </TabsContent>
+
+              <TabsContent value="comparison">
+                <PeriodComparison transactions={transactions} />
               </TabsContent>
             </Tabs>
           ) : (
