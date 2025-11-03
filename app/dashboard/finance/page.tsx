@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { PlusCircle, Search, DollarSign, TrendingUp, TrendingDown, FileText, Filter, BarChart3, Settings, Users } from 'lucide-react'
+import { PlusCircle, Search, DollarSign, TrendingUp, TrendingDown, FileText, Filter, BarChart3, Settings, Users, Upload, Receipt } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { TransactionModal } from '@/components/transaction-modal'
 import { CategoryModal } from '@/components/category-modal'
@@ -22,6 +22,9 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { PageHeader } from '@/components/ui/design-system/page-header'
 import { ContentSection } from '@/components/ui/design-system/content-section'
 import { StatsGrid } from '@/components/ui/design-system/stats-grid'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ArtistStatementsView } from '@/components/finance/artist-statements-view'
+import { ImportStatementsDialog } from '@/components/finance/import-statements-dialog'
 
 interface Transaction {
   id: string
@@ -102,6 +105,8 @@ export default function FinancePage() {
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false)
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState('transactions')
   
   // Info modal states
   const [isTransactionsInfoModalOpen, setIsTransactionsInfoModalOpen] = useState(false)
@@ -284,6 +289,12 @@ export default function FinancePage() {
               }}
               actions={[
                 {
+                  label: 'Import Statements',
+                  onClick: () => setIsImportDialogOpen(true),
+                  variant: 'outline',
+                  icon: Upload
+                },
+                {
                   label: 'Manage Categories',
                   onClick: () => setIsCategoryModalOpen(true),
                   variant: 'outline',
@@ -297,6 +308,21 @@ export default function FinancePage() {
                 }
               ]}
             />
+
+            {/* Tabs for Transactions and Statements */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="transactions" className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Transacciones
+                </TabsTrigger>
+                <TabsTrigger value="statements" className="flex items-center gap-2">
+                  <Receipt className="w-4 h-4" />
+                  Estados de Cuenta
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="transactions" className="space-y-8 mt-6">
 
             {/* Primary Stats Grid */}
             <StatsGrid stats={statsData} columns={3} />
@@ -511,9 +537,31 @@ export default function FinancePage() {
                 </Card>
               )}
             </ContentSection>
+              </TabsContent>
+
+              <TabsContent value="statements" className="space-y-8 mt-6">
+                <ArtistStatementsView />
+              </TabsContent>
+            </Tabs>
           </>
         )}
       </div>
+
+      {/* Import Statements Dialog */}
+      <ImportStatementsDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        onImportComplete={() => {
+          toast({
+            title: 'Importación completada',
+            description: 'Los estados de cuenta se han actualizado correctamente'
+          })
+          // Refrescar la vista si está en el tab de statements
+          if (activeTab === 'statements') {
+            window.location.reload()
+          }
+        }}
+      />
 
       {/* Info Modals */}
       

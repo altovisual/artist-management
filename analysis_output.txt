@@ -1,0 +1,18 @@
+====================================================================================================
+Traceback (most recent call last):
+AN┴LISIS COMPLETO: Estados_de_Cuenta.xlsx
+====================================================================================================
+
+Total de hojas: 27
+Nombres de hojas: ['Base de datos', 'MODELO', 'Jeidi', 'Cesa Dajoy', 'ReneDaSilva', 'Jaime Hospedales', 'William Arteaga', 'JayRozz', 'Marval', 'Dimelo Super', 'Samuel Velazquez', 'Alex Nu±ez', 'Divino', 'LANALIZER', 'SXNTHI', 'GianBeat', 'Carlos Manuel Jr. Agosto', 'MozartMuzik', 'HACHE', 'Borngud', 'Johan Strauss', 'Dayan', 'ErickAnt', 'V1FRO', 'ECBY', 'Saint LL', 'Cesar Da Gold']
+
+
+====================================================================================================
+HOJA: Base de datos
+====================================================================================================
+  File "C:\Users\altov\Downloads\artist-management\analyze_excel_detailed.py", line 33, in <module>
+    print("\n\U0001f4cb INFORMACI╙N DEL ARTISTA:")
+  File "C:\Users\altov\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4cb' in position 2: character maps to <undefined>
