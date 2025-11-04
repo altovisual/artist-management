@@ -314,19 +314,19 @@ export function ArtistStatementsView() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <Card className="p-4 text-center bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
                     <div className="text-lg font-bold text-green-700 dark:text-green-300">
-                      ${selectedStatement.total_income.toFixed(2)}
+                      {formatCurrency(selectedStatement.total_income)}
                     </div>
                     <div className="text-xs text-green-600 dark:text-green-400">Ingresos</div>
                   </Card>
                   <Card className="p-4 text-center bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
                     <div className="text-lg font-bold text-red-700 dark:text-red-300">
-                      ${selectedStatement.total_expenses.toFixed(2)}
+                      {formatCurrency(selectedStatement.total_expenses)}
                     </div>
                     <div className="text-xs text-red-600 dark:text-red-400">Gastos</div>
                   </Card>
                   <Card className="p-4 text-center bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
                     <div className="text-lg font-bold text-blue-700 dark:text-blue-300">
-                      ${Math.abs(selectedStatement.total_advances).toFixed(2)}
+                      {formatCurrency(Math.abs(selectedStatement.total_advances))}
                     </div>
                     <div className="text-xs text-blue-600 dark:text-blue-400">Avances</div>
                   </Card>

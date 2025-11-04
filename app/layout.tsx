@@ -83,7 +83,7 @@ export default function RootLayout({
           `
         }} />
       </head>
-      <body className={`${GeistSans.className} min-h-screen bg-background font-sans antialiased`}>
+      <body className={`${GeistSans.className} min-h-screen bg-background font-sans antialiased`} suppressHydrationWarning>
         <script
           dangerouslySetInnerHTML={{
             __html: `

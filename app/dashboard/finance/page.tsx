@@ -6,13 +6,15 @@ import Link from 'next/link'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { PlusCircle, Search, DollarSign, TrendingUp, TrendingDown, FileText, Filter, BarChart3, Settings, Users, Upload, Receipt } from 'lucide-react'
+import { PlusCircle, Search, DollarSign, TrendingUp, TrendingDown, FileText, Filter, BarChart3, Settings, Users, Upload, Receipt, CreditCard, MessageSquare } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { TransactionModal } from '@/components/transaction-modal'
 import { CategoryModal } from '@/components/category-modal'
@@ -58,7 +60,10 @@ export default function FinancePage() {
   const [artists, setArtists] = useState<Artist[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
-  const [chartView, setChartView] = useState<'daily' | 'monthly'>('monthly');
+  const [chartView, setChartView] = useState<'daily' | 'monthly'>('monthly')
+  const [userRole, setUserRole] = useState<'admin' | 'artist' | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [currentArtistId, setCurrentArtistId] = useState<string | null>(null)
 
   // Filter states (pending changes)
   const [pendingSelectedArtistId, setPendingSelectedArtistId] = useState<string | 'all'>('all')
@@ -77,6 +82,12 @@ export default function FinancePage() {
   const [appliedEndDate, setAppliedEndDate] = useState('')
 
   const handleApplyFilters = () => {
+    console.log('🔍 Applying filters:', {
+      artist: pendingSelectedArtistId,
+      type: pendingTransactionTypeFilter,
+      category: pendingSelectedCategoryId,
+      search: pendingSearchTerm
+    });
     setAppliedSelectedArtistId(pendingSelectedArtistId);
     setAppliedTransactionTypeFilter(pendingTransactionTypeFilter);
     setAppliedSelectedCategoryId(pendingSelectedCategoryId);
@@ -101,41 +112,151 @@ export default function FinancePage() {
     setAppliedEndDate('');
   };
 
+  const handleExportCSV = () => {
+    // Prepare CSV data
+    const headers = ['Date', 'Artist', 'Category', 'Description', 'Type', 'Amount'];
+    const csvData = transactions.map(t => [
+      t.transaction_date,
+      t.artists?.name || 'Unknown',
+      t.transaction_categories?.name || 'N/A',
+      t.description,
+      t.type === 'income' ? 'Income' : 'Expense',
+      t.type === 'income' ? `$${t.amount.toFixed(2)}` : `-$${t.amount.toFixed(2)}`
+    ]);
+
+    // Create CSV content
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `transactions_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: 'Export Successful',
+      description: `Exported ${transactions.length} transactions to CSV`,
+    });
+  };
+
   // Modal states
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false)
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('transactions')
+  const [transactionSource, setTransactionSource] = useState<'manual' | 'statements'>('statements') // Default to statements (Excel data)
   
   // Info modal states
   const [isTransactionsInfoModalOpen, setIsTransactionsInfoModalOpen] = useState(false)
   const [isCategoriesInfoModalOpen, setIsCategoriesInfoModalOpen] = useState(false)
   const [isArtistsInfoModalOpen, setIsArtistsInfoModalOpen] = useState(false)
+  
+  // Advance and Support modals
+  const [isAdvanceModalOpen, setIsAdvanceModalOpen] = useState(false)
+  const [advanceAmount, setAdvanceAmount] = useState('')
+  const [advanceReason, setAdvanceReason] = useState('')
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false)
+  const [supportSubject, setSupportSubject] = useState('')
+  const [supportMessage, setSupportMessage] = useState('')
+
+  // Fetch current user and role
+  const fetchUserRole = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    setCurrentUserId(user.id)
+
+    // Check if user is an artist first
+    const { data: artist } = await supabase
+      .from('artists')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+
+    console.log('Artist data:', artist) // Debug log
+
+    // Check if user is admin (check both 'admin' and 'Admin' for case sensitivity)
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    console.log('User profile:', profile, 'Error:', profileError) // Debug log
+
+    // Priority: Admin role overrides artist status
+    if (profile?.role?.toLowerCase() === 'admin') {
+      setUserRole('admin')
+      console.log('User is admin (has admin role in profiles)')
+    } else if (artist) {
+      // Only set as artist if NOT admin
+      setUserRole('artist')
+      setCurrentArtistId(artist.id)
+      // Auto-select this artist in filters
+      setPendingSelectedArtistId(artist.id)
+      setAppliedSelectedArtistId(artist.id)
+      console.log('User is artist:', artist.id)
+    } else {
+      // If no profile and no artist, default to admin
+      setUserRole('admin')
+      console.log('No role found, defaulting to admin')
+    }
+  }, [supabase])
 
   const fetchTransactions = useCallback(async () => {
     setLoading(true)
+    
+    console.log('📊 Fetching transactions with filters:', {
+      userRole,
+      currentArtistId,
+      appliedSelectedArtistId,
+      appliedTransactionTypeFilter
+    });
+    
+    // Fetch from statement_transactions (real Excel data)
     let query = supabase
-      .from('transactions')
+      .from('statement_transactions')
       .select(`
         *,
-        artists(name),
-        transaction_categories(name, type)
+        artist_statements!inner(
+          artist_id,
+          artists(name)
+        )
       `)
       .order('transaction_date', { ascending: false })
 
-    if (appliedSelectedArtistId !== 'all') {
+    // If user is an artist (not admin), only show their transactions
+    if (userRole === 'artist' && currentArtistId) {
+      console.log('🎤 Filtering by artist (user is artist):', currentArtistId);
+      query = query.eq('artist_id', currentArtistId)
+    } else if (appliedSelectedArtistId !== 'all') {
+      console.log('👑 Filtering by selected artist (admin):', appliedSelectedArtistId);
       query = query.eq('artist_id', appliedSelectedArtistId)
+    } else {
+      console.log('🌐 Showing all artists');
     }
+    
     if (appliedTransactionTypeFilter !== 'all') {
-      query = query.eq('type', appliedTransactionTypeFilter)
+      query = query.eq('transaction_type', appliedTransactionTypeFilter)
     }
+    
     if (appliedSelectedCategoryId !== 'all') {
-      query = query.eq('category_id', appliedSelectedCategoryId)
+      query = query.eq('category', appliedSelectedCategoryId)
     }
+    
     if (appliedSearchTerm) {
-      query = query.ilike('description', `%${appliedSearchTerm}%`)
+      query = query.ilike('concept', `%${appliedSearchTerm}%`)
     }
+    
     if (appliedStartDate) {
       query = query.gte('transaction_date', appliedStartDate)
     }
@@ -146,14 +267,29 @@ export default function FinancePage() {
     const { data, error } = await query
 
     if (error) {
-      console.error('Error fetching transactions:', error)
+      console.error('❌ Error fetching transactions:', error)
       toast({ title: 'Error', description: 'Could not load transactions.', variant: 'destructive' })
       setTransactions([])
     } else {
-      setTransactions(data as Transaction[])
+      console.log(`✅ Fetched ${data?.length || 0} transactions`);
+      // Transform statement_transactions to match Transaction interface
+      const transformedData = data?.map(t => ({
+        id: t.id,
+        created_at: t.created_at,
+        artist_id: t.artist_statements?.artist_id || t.artist_id || '',
+        category_id: '', // statement_transactions don't have categories
+        amount: Math.abs(t.amount),
+        description: t.concept,
+        transaction_date: t.transaction_date,
+        type: t.transaction_type as 'income' | 'expense',
+        artists: { name: t.artist_statements?.artists?.name || 'Unknown' },
+        transaction_categories: { name: t.transaction_type === 'income' ? 'Income' : 'Expense', type: t.transaction_type }
+      })) || []
+      
+      setTransactions(transformedData as Transaction[])
     }
     setLoading(false)
-  }, [supabase, appliedSelectedArtistId, appliedTransactionTypeFilter, appliedSelectedCategoryId, appliedSearchTerm, appliedStartDate, appliedEndDate, toast])
+  }, [supabase, appliedSelectedArtistId, appliedTransactionTypeFilter, appliedSelectedCategoryId, appliedSearchTerm, appliedStartDate, appliedEndDate, toast, userRole, currentArtistId])
 
   const fetchArtistsAndCategories = useCallback(async () => {
     const { data: artistsData, error: artistsError } = await supabase.from('artists').select('id, name').order('name', { ascending: true })
@@ -163,33 +299,64 @@ export default function FinancePage() {
       setArtists(artistsData || [])
     }
 
-    const { data: categoriesData, error: categoriesError } = await supabase.from('transaction_categories').select('id, name, type').order('name', { ascending: true })
+    // Fetch unique categories from statement_transactions
+    const { data: transactionsData, error: categoriesError } = await supabase
+      .from('statement_transactions')
+      .select('category, transaction_type')
+      .not('category', 'is', null)
+    
     if (categoriesError) {
       console.error('Error fetching categories:', categoriesError)
     } else {
-      setCategories(categoriesData || [])
+      // Get unique categories with their types
+      const categoryMap = new Map<string, 'income' | 'expense'>()
+      transactionsData?.forEach(t => {
+        if (t.category && !categoryMap.has(t.category)) {
+          categoryMap.set(t.category, t.transaction_type as 'income' | 'expense')
+        }
+      })
+      
+      const uniqueCategories = Array.from(categoryMap.entries()).map(([name, type]) => ({
+        id: name,
+        name: name,
+        type: type
+      }))
+      setCategories(uniqueCategories)
     }
   }, [supabase])
+
+  useEffect(() => {
+    fetchUserRole()
+  }, [fetchUserRole])
 
   useEffect(() => {
     fetchArtistsAndCategories()
   }, [fetchArtistsAndCategories])
 
   useEffect(() => {
-    fetchTransactions()
-  }, [fetchTransactions])
+    if (userRole !== null) {
+      fetchTransactions()
+    }
+  }, [fetchTransactions, userRole])
 
-  const totalIncome = transactions
+  const totalIncomeNum = transactions
     .filter((t) => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0)
-    .toFixed(2)
 
-  const totalExpenses = transactions
+  const totalExpensesNum = transactions
     .filter((t) => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0)
-    .toFixed(2)
 
-  const netBalance = (parseFloat(totalIncome) - parseFloat(totalExpenses)).toFixed(2)
+  const netBalanceNum = totalIncomeNum - totalExpensesNum
+
+  // Format with Spanish locale (points for thousands, comma for decimals)
+  const formatCurrency = (num: number) => {
+    return num.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
+
+  const totalIncome = formatCurrency(totalIncomeNum)
+  const totalExpenses = formatCurrency(totalExpensesNum)
+  const netBalance = formatCurrency(netBalanceNum)
 
   const chartData = useMemo(() => {
     if (chartView === 'monthly') {
@@ -237,6 +404,49 @@ export default function FinancePage() {
     setIsTransactionModalOpen(true);
   };
 
+  const handleAdvanceRequest = async () => {
+    if (!advanceAmount || !advanceReason) {
+      toast({
+        title: 'Error',
+        description: 'Por favor completa todos los campos',
+        variant: 'destructive'
+      })
+      return
+    }
+
+    // Here you would save to a table like 'advance_requests'
+    // For now, just show success message
+    toast({
+      title: 'Solicitud Enviada',
+      description: `Tu solicitud de avance por $${parseFloat(advanceAmount).toLocaleString('es-ES', { minimumFractionDigits: 2 })} ha sido enviada al equipo financiero.`
+    })
+
+    setIsAdvanceModalOpen(false)
+    setAdvanceAmount('')
+    setAdvanceReason('')
+  }
+
+  const handleSupportRequest = async () => {
+    if (!supportSubject || !supportMessage) {
+      toast({
+        title: 'Error',
+        description: 'Por favor completa todos los campos',
+        variant: 'destructive'
+      })
+      return
+    }
+
+    // Here you would save to a table like 'support_tickets'
+    toast({
+      title: 'Mensaje Enviado',
+      description: 'Tu consulta ha sido enviada al equipo de soporte. Te responderemos pronto.'
+    })
+
+    setIsSupportModalOpen(false)
+    setSupportSubject('')
+    setSupportMessage('')
+  }
+
   const handleTransactionModalSave = () => {
     fetchTransactions(); // Re-fetch transactions after save
     // Also re-fetch artists and categories in case new ones were added (though not via this modal)
@@ -265,10 +475,10 @@ export default function FinancePage() {
     {
       title: 'Net Balance',
       value: `$${netBalance}`,
-      change: parseFloat(netBalance) >= 0 ? '+4.2%' : '-2.1%',
-      changeType: parseFloat(netBalance) >= 0 ? 'positive' as const : 'negative' as const,
+      change: netBalanceNum >= 0 ? '+4.2%' : '-2.1%',
+      changeType: netBalanceNum >= 0 ? 'positive' as const : 'negative' as const,
       icon: DollarSign,
-      description: parseFloat(netBalance) >= 0 ? 'Profitable this period' : 'Loss this period'
+      description: netBalanceNum >= 0 ? 'Profitable this period' : 'Loss this period'
     }
   ]
 
@@ -284,22 +494,36 @@ export default function FinancePage() {
               title="Finance Overview"
               description="Track your artist's income and expenses"
               badge={{
-                text: `$${netBalance} Balance`,
-                variant: parseFloat(netBalance) >= 0 ? 'default' : 'secondary'
+                text: userRole === 'admin' ? '👑 Admin View' : userRole === 'artist' ? '🎤 Artist View' : 'Loading...',
+                variant: 'outline'
               }}
               actions={[
                 {
-                  label: 'Import Statements',
-                  onClick: () => setIsImportDialogOpen(true),
+                  label: 'Solicitar Avance',
+                  onClick: () => setIsAdvanceModalOpen(true),
                   variant: 'outline',
-                  icon: Upload
+                  icon: CreditCard
                 },
                 {
-                  label: 'Manage Categories',
-                  onClick: () => setIsCategoryModalOpen(true),
+                  label: 'Contactar Soporte',
+                  onClick: () => setIsSupportModalOpen(true),
                   variant: 'outline',
-                  icon: Settings
+                  icon: MessageSquare
                 },
+                ...(userRole === 'admin' ? [
+                  {
+                    label: 'Import Statements',
+                    onClick: () => setIsImportDialogOpen(true),
+                    variant: 'outline' as const,
+                    icon: Upload
+                  },
+                  {
+                    label: 'Manage Categories',
+                    onClick: () => setIsCategoryModalOpen(true),
+                    variant: 'outline' as const,
+                    icon: Settings
+                  }
+                ] : []),
                 {
                   label: 'Add Transaction',
                   onClick: handleAddTransactionClick,
@@ -323,7 +547,6 @@ export default function FinancePage() {
               </TabsList>
 
               <TabsContent value="transactions" className="space-y-8 mt-6">
-
             {/* Primary Stats Grid */}
             <StatsGrid stats={statsData} columns={3} />
 
@@ -384,7 +607,14 @@ export default function FinancePage() {
               <Card className="border-0 bg-gradient-to-br from-background to-muted/20">
                 <CardContent className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4">
-                    <Select value={pendingSelectedArtistId} onValueChange={setPendingSelectedArtistId}>
+                    <Select 
+                      value={pendingSelectedArtistId} 
+                      onValueChange={(value) => {
+                        setPendingSelectedArtistId(value);
+                        setAppliedSelectedArtistId(value); // Apply immediately
+                      }}
+                      disabled={userRole === 'artist'}
+                    >
                       <SelectTrigger className="h-11">
                         <SelectValue placeholder="Filter by Artist" />
                       </SelectTrigger>
@@ -409,7 +639,10 @@ export default function FinancePage() {
                       </SelectContent>
                     </Select>
 
-                    <Select value={pendingSelectedCategoryId} onValueChange={setPendingSelectedCategoryId}>
+                    <Select value={pendingSelectedCategoryId} onValueChange={(value) => {
+                      setPendingSelectedCategoryId(value);
+                      setAppliedSelectedCategoryId(value); // Apply immediately
+                    }}>
                       <SelectTrigger className="h-11">
                         <SelectValue placeholder="Filter by Category" />
                       </SelectTrigger>
@@ -461,15 +694,18 @@ export default function FinancePage() {
               title="Transaction History"
               description={`${transactions.length} transactions found`}
               icon={FileText}
-              actions={[
-                {
-                  label: 'Export CSV',
-                  href: '#',
-                  variant: 'outline',
-                  icon: FileText
-                }
-              ]}
             >
+              <div className="flex justify-end mb-4">
+                <Button 
+                  variant="outline" 
+                  onClick={handleExportCSV}
+                  disabled={transactions.length === 0}
+                  className="gap-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  Export CSV
+                </Button>
+              </div>
               {transactions.length === 0 ? (
                 <Card className="border-0 bg-gradient-to-br from-background to-muted/20">
                   <CardContent className="p-12 text-center">
@@ -585,30 +821,30 @@ export default function FinancePage() {
           <ScrollArea className="max-h-[70vh] px-1">
             <div className="space-y-6 py-4">
               {/* Summary Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card className="p-4 text-center bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
-                  <div className="text-lg font-bold text-green-700 dark:text-green-300">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <Card className="p-3 text-center bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+                  <div className="text-xs text-green-600 dark:text-green-400 mb-1">Income Transactions</div>
+                  <div className="text-2xl font-bold text-green-700 dark:text-green-300">
                     {transactions.filter(t => t.type === 'income').length}
                   </div>
-                  <div className="text-xs text-green-600 dark:text-green-400">Income Transactions</div>
                 </Card>
-                <Card className="p-4 text-center bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
-                  <div className="text-lg font-bold text-red-700 dark:text-red-300">
+                <Card className="p-3 text-center bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
+                  <div className="text-xs text-red-600 dark:text-red-400 mb-1">Expense Transactions</div>
+                  <div className="text-2xl font-bold text-red-700 dark:text-red-300">
                     {transactions.filter(t => t.type === 'expense').length}
                   </div>
-                  <div className="text-xs text-red-600 dark:text-red-400">Expense Transactions</div>
                 </Card>
-                <Card className="p-4 text-center bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-                  <div className="text-lg font-bold text-blue-700 dark:text-blue-300">
-                    ${(transactions.reduce((sum, t) => sum + t.amount, 0)).toFixed(2)}
+                <Card className="p-3 text-center bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                  <div className="text-xs text-blue-600 dark:text-blue-400 mb-1">Total Volume</div>
+                  <div className="text-lg font-bold text-blue-700 dark:text-blue-300 break-words">
+                    ${(transactions.reduce((sum, t) => sum + t.amount, 0)).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
-                  <div className="text-xs text-blue-600 dark:text-blue-400">Total Volume</div>
                 </Card>
-                <Card className="p-4 text-center bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800">
-                  <div className="text-lg font-bold text-purple-700 dark:text-purple-300">
-                    ${transactions.length > 0 ? (transactions.reduce((sum, t) => sum + t.amount, 0) / transactions.length).toFixed(2) : '0.00'}
+                <Card className="p-3 text-center bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800">
+                  <div className="text-xs text-purple-600 dark:text-purple-400 mb-1">Average Amount</div>
+                  <div className="text-lg font-bold text-purple-700 dark:text-purple-300 break-words">
+                    ${transactions.length > 0 ? (transactions.reduce((sum, t) => sum + t.amount, 0) / transactions.length).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
                   </div>
-                  <div className="text-xs text-purple-600 dark:text-purple-400">Average Amount</div>
                 </Card>
               </div>
 
@@ -829,6 +1065,89 @@ export default function FinancePage() {
         onClose={() => setIsCategoryModalOpen(false)}
         onSave={fetchArtistsAndCategories} // To refetch categories after saving
       />
+
+      {/* Advance Request Modal */}
+      <Dialog open={isAdvanceModalOpen} onOpenChange={setIsAdvanceModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Solicitar Avance</DialogTitle>
+            <DialogDescription>
+              Completa el formulario para solicitar un avance sobre tus regalías
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="amount">Monto Solicitado</Label>
+              <Input
+                id="amount"
+                type="number"
+                placeholder="0.00"
+                value={advanceAmount}
+                onChange={(e) => setAdvanceAmount(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reason">Motivo</Label>
+              <Textarea
+                id="reason"
+                placeholder="Describe el motivo de tu solicitud..."
+                value={advanceReason}
+                onChange={(e) => setAdvanceReason(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAdvanceModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleAdvanceRequest}>
+              Enviar Solicitud
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Support Request Modal */}
+      <Dialog open={isSupportModalOpen} onOpenChange={setIsSupportModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Contactar Soporte</DialogTitle>
+            <DialogDescription>
+              ¿Tienes alguna pregunta o inquietud? Estamos aquí para ayudarte
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="subject">Asunto</Label>
+              <Input
+                id="subject"
+                placeholder="Ej: Consulta sobre mi balance"
+                value={supportSubject}
+                onChange={(e) => setSupportSubject(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="message">Mensaje</Label>
+              <Textarea
+                id="message"
+                placeholder="Describe tu consulta..."
+                value={supportMessage}
+                onChange={(e) => setSupportMessage(e.target.value)}
+                rows={6}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSupportModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSupportRequest}>
+              Enviar Mensaje
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   )
 }
