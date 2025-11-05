@@ -14,6 +14,9 @@ import { StatsGrid } from '@/components/ui/design-system/stats-grid'
 import { formatCurrency, formatDate } from '@/lib/format-utils'
 import { FinancialCharts } from './financial-charts'
 import { PeriodComparison } from './period-comparison'
+import { exportStatementsReport } from '@/lib/export-statements-report'
+import { toast } from 'sonner'
+import { ImportStatementsDialog } from './import-statements-dialog'
 
 interface ArtistStatement {
   id: string
@@ -63,6 +66,7 @@ export function ArtistStatementsView() {
   const [selectedStatement, setSelectedStatement] = useState<ArtistStatement | null>(null)
   const [transactions, setTransactions] = useState<StatementTransaction[]>([])
   const [loading, setLoading] = useState(true)
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
 
   // Fetch statements
   useEffect(() => {
@@ -124,6 +128,35 @@ export function ArtistStatementsView() {
       console.error('Error fetching transactions:', error)
     } else {
       setTransactions(data || [])
+    }
+  }
+
+  const handleExportReport = () => {
+    try {
+      const reportData = {
+        statements,
+        selectedStatement: selectedStatement || undefined,
+        transactions: selectedStatement ? transactions : undefined,
+        totalIncome,
+        totalExpenses,
+        totalAdvances,
+        totalBalance,
+        filterArtist: selectedArtistId !== 'all' 
+          ? uniqueArtists.find(a => a.id === selectedArtistId)?.name 
+          : undefined,
+        filterMonth: selectedMonth !== 'all' ? selectedMonth : undefined
+      };
+
+      const fileName = exportStatementsReport(reportData);
+
+      toast.success('Reporte Exportado Exitosamente! 📊', {
+        description: `${statements.length} estados de cuenta exportados a ${fileName}`,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Error al Exportar', {
+        description: 'Hubo un error al generar el reporte. Por favor intenta de nuevo.',
+      });
     }
   }
 
@@ -214,9 +247,14 @@ export function ArtistStatementsView() {
               </SelectContent>
             </Select>
 
-            <Button variant="outline" className="w-full">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={handleExportReport}
+              disabled={statements.length === 0}
+            >
               <Download className="w-4 h-4 mr-2" />
-              Exportar Reporte
+              Exportar Reporte Profesional
             </Button>
           </div>
         </CardContent>
@@ -245,7 +283,11 @@ export function ArtistStatementsView() {
               <p className="text-sm text-muted-foreground mb-4">
                 Importa el archivo Excel para comenzar a ver los estados de cuenta de tus artistas
               </p>
-              <Button variant="outline" size="sm">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setIsImportDialogOpen(true)}
+              >
                 <Upload className="w-4 h-4 mr-2" />
                 Importar Estados de Cuenta
               </Button>
@@ -447,6 +489,18 @@ export function ArtistStatementsView() {
           )}
         </ContentSection>
       </div>
+
+      {/* Import Dialog */}
+      <ImportStatementsDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        onImportComplete={() => {
+          toast.success('Importación completada', {
+            description: 'Los estados de cuenta se han actualizado correctamente'
+          });
+          fetchStatements(); // Recargar los estados de cuenta
+        }}
+      />
     </div>
   )
 }

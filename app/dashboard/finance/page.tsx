@@ -15,7 +15,8 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { PlusCircle, Search, DollarSign, TrendingUp, TrendingDown, FileText, Filter, BarChart3, Settings, Users, Upload, Receipt, CreditCard, MessageSquare } from 'lucide-react'
-import { useToast } from '@/components/ui/use-toast'
+import { toast } from 'sonner'
+import { exportFinancialReport } from '@/lib/export-financial-report'
 import { TransactionModal } from '@/components/transaction-modal'
 import { CategoryModal } from '@/components/category-modal'
 import { FinanceSkeleton } from './finance-skeleton' // Import the skeleton
@@ -54,7 +55,6 @@ interface Category {
 
 export default function FinancePage() {
   const supabase = createClient()
-  const { toast } = useToast()
 
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [artists, setArtists] = useState<Artist[]>([])
@@ -113,38 +113,45 @@ export default function FinancePage() {
   };
 
   const handleExportCSV = () => {
-    // Prepare CSV data
-    const headers = ['Date', 'Artist', 'Category', 'Description', 'Type', 'Amount'];
-    const csvData = transactions.map(t => [
-      t.transaction_date,
-      t.artists?.name || 'Unknown',
-      t.transaction_categories?.name || 'N/A',
-      t.description,
-      t.type === 'income' ? 'Income' : 'Expense',
-      t.type === 'income' ? `$${t.amount.toFixed(2)}` : `-$${t.amount.toFixed(2)}`
-    ]);
+    try {
+      // Calcular totales
+      const totalIncome = transactions
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + t.amount, 0);
+      
+      const totalExpenses = transactions
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0);
+      
+      const netBalance = totalIncome - totalExpenses;
 
-    // Create CSV content
-    const csvContent = [
-      headers.join(','),
-      ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n');
+      // Preparar datos del reporte
+      const reportData = {
+        transactions,
+        totalIncome,
+        totalExpenses,
+        netBalance,
+        dateRange: appliedStartDate && appliedEndDate ? {
+          start: new Date(appliedStartDate).toLocaleDateString('es-ES'),
+          end: new Date(appliedEndDate).toLocaleDateString('es-ES')
+        } : undefined,
+        artistName: appliedSelectedArtistId !== 'all' 
+          ? artists.find(a => a.id === appliedSelectedArtistId)?.name 
+          : undefined
+      };
 
-    // Create blob and download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `transactions_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      // Exportar usando la función profesional
+      const fileName = exportFinancialReport(reportData);
 
-    toast({
-      title: 'Export Successful',
-      description: `Exported ${transactions.length} transactions to CSV`,
-    });
+      toast.success('Report Exported Successfully! 📊', {
+        description: `${transactions.length} transactions exported to ${fileName}`,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Export Failed', {
+        description: 'There was an error generating the report. Please try again.',
+      });
+    }
   };
 
   // Modal states
@@ -268,7 +275,7 @@ export default function FinancePage() {
 
     if (error) {
       console.error('❌ Error fetching transactions:', error)
-      toast({ title: 'Error', description: 'Could not load transactions.', variant: 'destructive' })
+      toast.error('Error', { description: 'Could not load transactions.' })
       setTransactions([])
     } else {
       console.log(`✅ Fetched ${data?.length || 0} transactions`);
@@ -406,18 +413,15 @@ export default function FinancePage() {
 
   const handleAdvanceRequest = async () => {
     if (!advanceAmount || !advanceReason) {
-      toast({
-        title: 'Error',
-        description: 'Por favor completa todos los campos',
-        variant: 'destructive'
+      toast.error('Error', {
+        description: 'Por favor completa todos los campos'
       })
       return
     }
 
     // Here you would save to a table like 'advance_requests'
     // For now, just show success message
-    toast({
-      title: 'Solicitud Enviada',
+    toast.success('Solicitud Enviada', {
       description: `Tu solicitud de avance por $${parseFloat(advanceAmount).toLocaleString('es-ES', { minimumFractionDigits: 2 })} ha sido enviada al equipo financiero.`
     })
 
@@ -428,17 +432,14 @@ export default function FinancePage() {
 
   const handleSupportRequest = async () => {
     if (!supportSubject || !supportMessage) {
-      toast({
-        title: 'Error',
-        description: 'Por favor completa todos los campos',
-        variant: 'destructive'
+      toast.error('Error', {
+        description: 'Por favor completa todos los campos'
       })
       return
     }
 
     // Here you would save to a table like 'support_tickets'
-    toast({
-      title: 'Mensaje Enviado',
+    toast.success('Mensaje Enviado', {
       description: 'Tu consulta ha sido enviada al equipo de soporte. Te responderemos pronto.'
     })
 
@@ -703,7 +704,7 @@ export default function FinancePage() {
                   className="gap-2"
                 >
                   <FileText className="h-4 w-4" />
-                  Export CSV
+                  Export Professional Report
                 </Button>
               </div>
               {transactions.length === 0 ? (
@@ -788,8 +789,7 @@ export default function FinancePage() {
         open={isImportDialogOpen}
         onOpenChange={setIsImportDialogOpen}
         onImportComplete={() => {
-          toast({
-            title: 'Importación completada',
+          toast.success('Importación completada', {
             description: 'Los estados de cuenta se han actualizado correctamente'
           })
           // Refrescar la vista si está en el tab de statements

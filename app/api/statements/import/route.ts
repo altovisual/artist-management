@@ -13,23 +13,27 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import * as XLSX from 'xlsx';
 
-// Cliente con service_role para bypass RLS
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
+// Función helper para crear cliente admin
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
     }
-  }
-);
+  );
+}
 
-// Cliente normal para verificar permisos del usuario
-const supabaseClient = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Función helper para crear cliente normal
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 interface ArtistData {
   nombreArtistico: string;
@@ -56,6 +60,10 @@ interface Transaction {
 
 export async function POST(request: NextRequest) {
   try {
+    // Crear clientes de Supabase
+    const supabaseClient = getSupabaseClient();
+    const supabaseAdmin = getSupabaseAdmin();
+
     // 1. Verificar autenticación
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
@@ -148,7 +156,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Guardar el estado de cuenta
-        await saveArtistStatement(artist.id, artistData, user.id);
+        await saveArtistStatement(supabaseAdmin, artist.id, artistData, user.id);
 
         results.exitosos++;
         results.totalTransacciones += artistData.transacciones.length;
@@ -347,7 +355,7 @@ function parseExcelDate(value: any): Date | null {
   return null;
 }
 
-async function saveArtistStatement(artistId: string, artistData: ArtistData, userId: string) {
+async function saveArtistStatement(supabaseAdmin: any, artistId: string, artistData: ArtistData, userId: string) {
   const statementMonth = artistData.fechaInicio
     ? `${artistData.fechaInicio.getFullYear()}-${String(artistData.fechaInicio.getMonth() + 1).padStart(2, '0')}`
     : new Date().toISOString().slice(0, 7);
