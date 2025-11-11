@@ -67,11 +67,20 @@ export function ArtistStatementsView() {
   const [transactions, setTransactions] = useState<StatementTransaction[]>([])
   const [loading, setLoading] = useState(true)
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
+  const [userRole, setUserRole] = useState<'admin' | 'user' | null>(null)
+  const [userArtistIds, setUserArtistIds] = useState<string[]>([])
+
+  // Fetch user role and their artists
+  useEffect(() => {
+    fetchUserRole()
+  }, [])
 
   // Fetch statements
   useEffect(() => {
-    fetchStatements()
-  }, [selectedArtistId, selectedMonth])
+    if (userRole !== null) {
+      fetchStatements()
+    }
+  }, [selectedArtistId, selectedMonth, userRole])
 
   // Fetch transactions when statement is selected
   useEffect(() => {
@@ -79,6 +88,41 @@ export function ArtistStatementsView() {
       fetchTransactions(selectedStatement.id)
     }
   }, [selectedStatement])
+
+  const fetchUserRole = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Check if user is admin
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      const isAdmin = profile?.role?.toLowerCase() === 'admin'
+      setUserRole(isAdmin ? 'admin' : 'user')
+
+      // If not admin, get their artist IDs
+      if (!isAdmin) {
+        const { data: userArtists } = await supabase
+          .from('artists')
+          .select('id')
+          .eq('user_id', user.id)
+
+        const artistIds = userArtists?.map(a => a.id) || []
+        setUserArtistIds(artistIds)
+        
+        console.log('👤 Usuario normal - Artistas:', artistIds)
+      } else {
+        console.log('👑 Usuario admin - Ver todos los estados')
+      }
+    } catch (error) {
+      console.error('Error fetching user role:', error)
+      setUserRole('user') // Default to user for safety
+    }
+  }
 
   const fetchStatements = async () => {
     setLoading(true)
@@ -91,6 +135,12 @@ export function ArtistStatementsView() {
         `)
         .order('period_start', { ascending: false })
 
+      // If user is not admin, filter by their artists only
+      if (userRole === 'user' && userArtistIds.length > 0) {
+        query = query.in('artist_id', userArtistIds)
+        console.log('🔒 Filtrando por artistas del usuario:', userArtistIds)
+      }
+
       if (selectedArtistId !== 'all') {
         query = query.eq('artist_id', selectedArtistId)
       }
@@ -102,8 +152,12 @@ export function ArtistStatementsView() {
 
       if (error) {
         console.error('Error fetching statements:', error)
+        toast.error('Error al cargar estados de cuenta', {
+          description: error.message
+        })
         setStatements([])
       } else {
+        console.log(`✅ Estados de cuenta cargados: ${data?.length || 0}`)
         setStatements(data || [])
         if (data && data.length > 0 && !selectedStatement) {
           setSelectedStatement(data[0])
@@ -169,10 +223,13 @@ export function ArtistStatementsView() {
   // Get unique months
   const uniqueMonths = Array.from(new Set(statements.map(s => s.statement_month))).sort().reverse()
 
-  // Get unique artists
+  // Get unique artists (filtered by user's access)
   const uniqueArtists = Array.from(
     new Map(statements.map(s => [s.artist_id, { id: s.artist_id, name: s.artists?.name || 'Unknown' }])).values()
   )
+
+  // Show role indicator for debugging
+  const roleIndicator = userRole === 'admin' ? '👑 Admin' : '👤 Usuario'
 
   // Stats for grid
   const statsData = [
@@ -217,7 +274,17 @@ export function ArtistStatementsView() {
 
       {/* Filters */}
       <Card className="border-0 bg-gradient-to-br from-background to-muted/20">
-        <CardContent className="p-6">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium">Filtros</CardTitle>
+            {userRole && (
+              <Badge variant="outline" className="text-xs">
+                {roleIndicator}
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="p-6 pt-0">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Select value={selectedArtistId} onValueChange={setSelectedArtistId}>
               <SelectTrigger>
@@ -254,9 +321,16 @@ export function ArtistStatementsView() {
               disabled={statements.length === 0}
             >
               <Download className="w-4 h-4 mr-2" />
-              Exportar Reporte Profesional
+              Exportar Reporte
             </Button>
           </div>
+          {userRole === 'user' && userArtistIds.length === 0 && (
+            <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                ℹ️ No tienes artistas asociados a tu cuenta. Los estados de cuenta se mostrarán cuando tengas artistas asignados.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
