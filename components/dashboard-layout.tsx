@@ -216,7 +216,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/artists/my-profile" id="settings-nav">
+                  <Link href="/profile" id="settings-nav">
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </Link>

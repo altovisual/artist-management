@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import { LogoLoader } from '@/components/ui/logo-loader'
 import Link from 'next/link'
+import { ARTIST_ROLES, PRO_ORGANIZATIONS } from '@/lib/management-companies'
 
 interface SocialAccount {
   platform: string
@@ -58,6 +59,8 @@ export default function EditArtistPage() {
   const [phone, setPhone] = useState('')
   const [managementEntity, setManagementEntity] = useState('')
   const [ipi, setIpi] = useState('')
+  const [role, setRole] = useState('')
+  const [managementEmail, setManagementEmail] = useState('')
 
   // Step 3: Bio & Description
   const [bio, setBio] = useState('')
@@ -102,6 +105,8 @@ export default function EditArtistPage() {
           setPhone(artistData.phone || '')
           setManagementEntity(artistData.management_entity || '')
           setIpi(artistData.ipi || '')
+          setRole(artistData.role || '')
+          setManagementEmail(artistData.management_email || '')
           
           if (artistData.date_of_birth) {
             setDateOfBirth(new Date(artistData.date_of_birth))
@@ -297,6 +302,8 @@ export default function EditArtistPage() {
       if (address !== undefined && address !== null) artistPayload.address = address || null
       if (phone !== undefined && phone !== null) artistPayload.phone = phone || null
       if (managementEntity !== undefined && managementEntity !== null) artistPayload.management_entity = managementEntity || null
+      if (role) artistPayload.role = role
+      if (managementEmail !== undefined && managementEmail !== null) artistPayload.management_email = managementEmail || null
       if (ipi !== undefined && ipi !== null) artistPayload.ipi = ipi || null
 
       console.log('Updating artist with payload:', artistPayload)
@@ -506,6 +513,38 @@ export default function EditArtistPage() {
               />
             </FormFieldItem>
           </FormFieldGroup>
+
+          {/* Role & PRO */}
+          <FormFieldGroup>
+            <FormFieldItem label="Artist Role">
+              <Select value={role || undefined} onValueChange={setRole}>
+                <SelectTrigger className="border-0 bg-transparent focus:ring-0 px-0">
+                  <SelectValue placeholder="Select artist role (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ARTIST_ROLES.map((roleItem) => (
+                    <SelectItem key={roleItem.value} value={roleItem.value}>
+                      {roleItem.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormFieldItem>
+            <FormFieldItem label="PRO Organization" isLast>
+              <Select value={managementEntity || undefined} onValueChange={setManagementEntity}>
+                <SelectTrigger className="border-0 bg-transparent focus:ring-0 px-0">
+                  <SelectValue placeholder="Select PRO (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PRO_ORGANIZATIONS.map((pro) => (
+                    <SelectItem key={pro} value={pro}>
+                      {pro}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormFieldItem>
+          </FormFieldGroup>
         </div>
       )}
 
@@ -540,19 +579,20 @@ export default function EditArtistPage() {
           </FormFieldGroup>
 
           <FormFieldGroup>
-            <FormFieldItem label="Management Entity">
-              <Input
-                value={managementEntity}
-                onChange={(e) => setManagementEntity(e.target.value)}
-                placeholder="Management company name"
-                className="border-0 bg-transparent focus-visible:ring-0 px-0"
-              />
-            </FormFieldItem>
-            <FormFieldItem label="IPI Number" isLast>
+            <FormFieldItem label="IPI Number">
               <Input
                 value={ipi}
                 onChange={(e) => setIpi(e.target.value)}
                 placeholder="International IPI number"
+                className="border-0 bg-transparent focus-visible:ring-0 px-0"
+              />
+            </FormFieldItem>
+            <FormFieldItem label="PRO Email" isLast>
+              <Input
+                type="email"
+                value={managementEmail}
+                onChange={(e) => setManagementEmail(e.target.value)}
+                placeholder="PRO contact email"
                 className="border-0 bg-transparent focus-visible:ring-0 px-0"
               />
             </FormFieldItem>
