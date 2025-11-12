@@ -13,6 +13,7 @@ import { DashboardSkeleton } from './dashboard-skeleton';
 import { DbSizeCard } from '@/components/db-size-card';
 import { AnimatedTitle } from '@/components/animated-title';
 import { GuidedTour } from '@/components/onboarding/guided-tour';
+import { ExportArtistsButton } from '@/components/export-artists-button';
 import { Card } from "@/components/ui/card";
 import {
   AlertDialog,
@@ -420,6 +421,13 @@ export function Dashboard() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              {userRole === 'admin' && (
+                <ExportArtistsButton 
+                  artists={artists}
+                  variant="outline"
+                  size={isMobile ? "sm" : "default"}
+                />
+              )}
               {!isMobile && <ArtistViewSwitcher view={view} setView={setView} />}
             </div>
           </div>

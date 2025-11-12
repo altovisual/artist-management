@@ -1,4 +1,6 @@
 import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface StatementTransaction {
   id: string;
@@ -366,4 +368,277 @@ export function exportStatementsReport(data: StatementsReportData) {
   XLSX.writeFile(workbook, fileName);
 
   return fileName;
+}
+
+/**
+ * Exporta el reporte de estados de cuenta a PDF con logo de la empresa
+ */
+export function exportStatementsReportToPDF(data: StatementsReportData, companyLogo?: string) {
+  try {
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let currentY = 20;
+
+    // ==========================================
+    // HEADER CON LOGO
+    // ==========================================
+    if (companyLogo) {
+      try {
+        doc.addImage(companyLogo, 'PNG', 14, 10, 30, 30);
+        currentY = 45;
+      } catch (error) {
+        console.warn('No se pudo cargar el logo:', error);
+        currentY = 20;
+      }
+    }
+
+    // Título principal
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('Estados de Cuenta', companyLogo ? 50 : 14, companyLogo ? 25 : currentY);
+
+    // Información del reporte
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    const infoY = companyLogo ? 35 : currentY + 8;
+    doc.text(`Generado: ${new Date().toLocaleString('es-ES', { dateStyle: 'full', timeStyle: 'short' })}`, companyLogo ? 50 : 14, infoY);
+    
+    if (data.filterArtist) {
+      doc.text(`Artista: ${data.filterArtist}`, companyLogo ? 50 : 14, infoY + 5);
+    }
+    
+    if (data.filterMonth) {
+      const monthText = new Date(data.filterMonth + '-01').toLocaleDateString('es-ES', { year: 'numeric', month: 'long' });
+      doc.text(`Periodo: ${monthText}`, companyLogo ? 50 : 14, infoY + (data.filterArtist ? 10 : 5));
+    }
+
+    currentY = companyLogo ? 55 : currentY + 25;
+
+    // ==========================================
+    // RESUMEN EJECUTIVO
+    // ==========================================
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('Resumen Ejecutivo', 14, currentY);
+    currentY += 10;
+
+    const summaryData = [
+      ['Ingresos Totales', `$${data.totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+      ['Gastos Totales', `$${data.totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+      ['Avances Totales', `$${Math.abs(data.totalAdvances).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+      ['Balance Total', `$${data.totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+    ];
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [['Métrica', 'Monto']],
+      body: summaryData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [71, 85, 105],
+        textColor: 255,
+        fontStyle: 'bold',
+        fontSize: 11
+      },
+      bodyStyles: {
+        fontSize: 10
+      },
+      columnStyles: {
+        0: { cellWidth: 130, fontStyle: 'bold' },
+        1: { cellWidth: 130, halign: 'right', fontStyle: 'bold', textColor: data.totalBalance >= 0 ? [22, 163, 74] : [220, 38, 38] }
+      },
+      margin: { left: 14, right: 14 }
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 15;
+
+    // ==========================================
+    // ESTADÍSTICAS
+    // ==========================================
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('Estadísticas', 14, currentY);
+    currentY += 8;
+
+    const totalTransactions = data.statements.reduce((sum, s) => sum + s.total_transactions, 0);
+    const avgPerStatement = data.statements.length > 0 ? data.totalBalance / data.statements.length : 0;
+
+    const statsData = [
+      ['Total de Estados de Cuenta', data.statements.length.toString()],
+      ['Total de Transacciones', totalTransactions.toString()],
+      ['Promedio por Estado', `$${avgPerStatement.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+    ];
+
+    autoTable(doc, {
+      startY: currentY,
+      body: statsData,
+      theme: 'plain',
+      bodyStyles: {
+        fontSize: 9,
+        textColor: [71, 85, 105]
+      },
+      columnStyles: {
+        0: { cellWidth: 130 },
+        1: { cellWidth: 130, halign: 'right', fontStyle: 'bold' }
+      },
+      margin: { left: 14, right: 14 }
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 15;
+
+    // Nueva página si es necesario
+    if (currentY > pageHeight - 80) {
+      doc.addPage();
+      currentY = 20;
+    }
+
+    // ==========================================
+    // ESTADOS DE CUENTA
+    // ==========================================
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('Estados de Cuenta', 14, currentY);
+    currentY += 8;
+
+    const statementsRows = data.statements
+      .sort((a, b) => new Date(b.period_start).getTime() - new Date(a.period_start).getTime())
+      .map(s => [
+        s.artists?.name || 'Unknown',
+        new Date(s.statement_month + '-01').toLocaleDateString('es-ES', { year: 'numeric', month: 'short' }),
+        new Date(s.period_start).toLocaleDateString('es-ES'),
+        `$${s.total_income.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+        `$${s.total_expenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+        `$${Math.abs(s.total_advances).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+        `$${s.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+        s.total_transactions.toString()
+      ]);
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [['Artista', 'Mes', 'Inicio', 'Ingresos', 'Gastos', 'Avances', 'Balance', 'Trans.']],
+      body: statementsRows,
+      theme: 'striped',
+      headStyles: {
+        fillColor: [71, 85, 105],
+        textColor: 255,
+        fontStyle: 'bold',
+        fontSize: 8
+      },
+      bodyStyles: {
+        fontSize: 7
+      },
+      columnStyles: {
+        0: { cellWidth: 40 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 22 },
+        3: { cellWidth: 30, halign: 'right' },
+        4: { cellWidth: 30, halign: 'right' },
+        5: { cellWidth: 30, halign: 'right' },
+        6: { cellWidth: 30, halign: 'right', fontStyle: 'bold' },
+        7: { cellWidth: 18, halign: 'center' }
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252]
+      },
+      margin: { left: 14, right: 14 }
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 10;
+
+    // ==========================================
+    // DETALLE DE TRANSACCIONES (si hay un statement seleccionado)
+    // ==========================================
+    if (data.selectedStatement && data.transactions && data.transactions.length > 0) {
+      // Nueva página
+      doc.addPage();
+      currentY = 20;
+
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(30, 41, 59);
+      doc.text(`Detalle de Transacciones - ${data.selectedStatement.artists?.name}`, 14, currentY);
+      currentY += 5;
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 116, 139);
+      const monthText = new Date(data.selectedStatement.statement_month + '-01').toLocaleDateString('es-ES', { year: 'numeric', month: 'long' });
+      doc.text(`Periodo: ${monthText}`, 14, currentY);
+      currentY += 10;
+
+      const transactionRows = data.transactions
+        .sort((a, b) => new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime())
+        .map(t => [
+          new Date(t.transaction_date).toLocaleDateString('es-ES'),
+          t.invoice_number || '—',
+          t.concept.substring(0, 30) + (t.concept.length > 30 ? '...' : ''),
+          t.invoice_value ? `$${t.invoice_value.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—',
+          t.mvpx_payment ? `$${t.mvpx_payment.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—',
+          t.advance_amount ? `$${t.advance_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—',
+          t.final_balance !== null ? `$${t.final_balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—'
+        ]);
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [['Fecha', 'Número', 'Concepto', 'Valor', 'Pagado', 'Avance', 'Balance']],
+        body: transactionRows,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [71, 85, 105],
+          textColor: 255,
+          fontStyle: 'bold',
+          fontSize: 8
+        },
+        bodyStyles: {
+          fontSize: 7
+        },
+        columnStyles: {
+          0: { cellWidth: 22 },
+          1: { cellWidth: 22 },
+          2: { cellWidth: 70 },
+          3: { cellWidth: 30, halign: 'right' },
+          4: { cellWidth: 30, halign: 'right' },
+          5: { cellWidth: 30, halign: 'right' },
+          6: { cellWidth: 30, halign: 'right', fontStyle: 'bold' }
+        },
+        margin: { left: 14, right: 14 }
+      });
+    }
+
+    // ==========================================
+    // PIE DE PÁGINA
+    // ==========================================
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(
+        `Página ${i} de ${pageCount} | Artist Management System`,
+        pageWidth / 2,
+        pageHeight - 10,
+        { align: 'center' }
+      );
+    }
+
+    // Guardar archivo
+    const fileName = `Statements_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+
+    return fileName;
+  } catch (error) {
+    console.error('Error exporting statements report to PDF:', error);
+    throw error;
+  }
 }

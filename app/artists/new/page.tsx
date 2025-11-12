@@ -15,6 +15,7 @@ import { CountrySelect } from '@/components/ui/country-select'
 import { Label } from '@/components/ui/label'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import Link from 'next/link'
+import { PRO_ORGANIZATIONS, ARTIST_ROLES } from '@/lib/management-companies'
 
 interface SocialAccount {
   platform: string
@@ -41,6 +42,7 @@ export default function NewArtistMultiStepPage() {
   // Step 1: Basic Information
   const [name, setName] = useState('')
   const [genre, setGenre] = useState('')
+  const [role, setRole] = useState('') // Nuevo: Rol del artista
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>()
@@ -53,6 +55,7 @@ export default function NewArtistMultiStepPage() {
   const [address, setAddress] = useState('')
   const [phone, setPhone] = useState('')
   const [managementEntity, setManagementEntity] = useState('')
+  const [managementEmail, setManagementEmail] = useState('') // Nuevo: Email de la compañía
   const [ipi, setIpi] = useState('')
 
   // Step 3: Bio & Description
@@ -199,6 +202,7 @@ export default function NewArtistMultiStepPage() {
 
       // Add optional fields only if they have values
       if (bio) artistPayload.bio = bio
+      if (role) artistPayload.role = role
       if (firstName) artistPayload.first_name = firstName
       if (lastName) artistPayload.last_name = lastName
       if (dateOfBirth) artistPayload.date_of_birth = dateOfBirth.toISOString()
@@ -207,6 +211,7 @@ export default function NewArtistMultiStepPage() {
       if (address) artistPayload.address = address
       if (phone) artistPayload.phone = phone
       if (managementEntity) artistPayload.management_entity = managementEntity
+      if (managementEmail) artistPayload.management_email = managementEmail
       if (ipi) artistPayload.ipi = ipi
 
       console.log('Creating artist with payload:', artistPayload)
@@ -345,7 +350,7 @@ export default function NewArtistMultiStepPage() {
                 className="border-0 bg-transparent focus-visible:ring-0 px-0"
               />
             </FormFieldItem>
-            <FormFieldItem label="Genre *" isLast>
+            <FormFieldItem label="Genre *">
               <Select value={genre} onValueChange={setGenre}>
                 <SelectTrigger className="border-0 bg-transparent focus:ring-0 px-0">
                   <SelectValue placeholder="Select music genre" />
@@ -362,6 +367,20 @@ export default function NewArtistMultiStepPage() {
                   <SelectItem value="reggaeton">Reggaeton</SelectItem>
                   <SelectItem value="latin">Latin</SelectItem>
                   <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormFieldItem>
+            <FormFieldItem label="Role" isLast>
+              <Select value={role} onValueChange={setRole}>
+                <SelectTrigger className="border-0 bg-transparent focus:ring-0 px-0">
+                  <SelectValue placeholder="Select artist role" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  {ARTIST_ROLES.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>
+                      {r.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </FormFieldItem>
@@ -437,11 +456,26 @@ export default function NewArtistMultiStepPage() {
           </FormFieldGroup>
 
           <FormFieldGroup>
-            <FormFieldItem label="Management Entity">
+            <FormFieldItem label="PRO / Performing Rights Organization">
+              <Select value={managementEntity} onValueChange={setManagementEntity}>
+                <SelectTrigger className="border-0 bg-transparent focus:ring-0 px-0">
+                  <SelectValue placeholder="Select PRO (BMI, ASCAP, etc.)" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  {PRO_ORGANIZATIONS.map((pro) => (
+                    <SelectItem key={pro} value={pro}>
+                      {pro}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormFieldItem>
+            <FormFieldItem label="PRO Email">
               <Input
-                value={managementEntity}
-                onChange={(e) => setManagementEntity(e.target.value)}
-                placeholder="Management company name"
+                value={managementEmail}
+                onChange={(e) => setManagementEmail(e.target.value)}
+                placeholder="artist@ascap.com"
+                type="email"
                 className="border-0 bg-transparent focus-visible:ring-0 px-0"
               />
             </FormFieldItem>

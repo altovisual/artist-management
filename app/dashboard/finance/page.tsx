@@ -14,9 +14,10 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { PlusCircle, Search, DollarSign, TrendingUp, TrendingDown, FileText, Filter, BarChart3, Settings, Users, Upload, Receipt, CreditCard, MessageSquare } from 'lucide-react'
+import { PlusCircle, Search, DollarSign, TrendingUp, TrendingDown, FileText, Filter, BarChart3, Settings, Users, Upload, Receipt, CreditCard, MessageSquare, Download, FileSpreadsheet } from 'lucide-react'
 import { toast } from 'sonner'
-import { exportFinancialReport } from '@/lib/export-financial-report'
+import { exportFinancialReport, exportFinancialReportToPDF } from '@/lib/export-financial-report'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { TransactionModal } from '@/components/transaction-modal'
 import { CategoryModal } from '@/components/category-modal'
 import { FinanceSkeleton } from './finance-skeleton' // Import the skeleton
@@ -112,7 +113,7 @@ export default function FinancePage() {
     setAppliedEndDate('');
   };
 
-  const handleExportCSV = () => {
+  const handleExportExcel = () => {
     try {
       // Calcular totales
       const totalIncome = transactions
@@ -125,31 +126,69 @@ export default function FinancePage() {
       
       const netBalance = totalIncome - totalExpenses;
 
-      // Preparar datos del reporte
       const reportData = {
         transactions,
         totalIncome,
         totalExpenses,
         netBalance,
-        dateRange: appliedStartDate && appliedEndDate ? {
-          start: new Date(appliedStartDate).toLocaleDateString('es-ES'),
-          end: new Date(appliedEndDate).toLocaleDateString('es-ES')
-        } : undefined,
         artistName: appliedSelectedArtistId !== 'all' 
           ? artists.find(a => a.id === appliedSelectedArtistId)?.name 
+          : undefined,
+        dateRange: appliedStartDate && appliedEndDate
+          ? { start: appliedStartDate, end: appliedEndDate }
           : undefined
       };
 
       // Exportar usando la función profesional
       const fileName = exportFinancialReport(reportData);
 
-      toast.success('Report Exported Successfully! 📊', {
+      toast.success('Excel Report Exported! 📊', {
         description: `${transactions.length} transactions exported to ${fileName}`,
       });
     } catch (error) {
       console.error('Export error:', error);
       toast.error('Export Failed', {
         description: 'There was an error generating the report. Please try again.',
+      });
+    }
+  };
+
+  const handleExportPDF = () => {
+    try {
+      // Calcular totales
+      const totalIncome = transactions
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + t.amount, 0);
+      
+      const totalExpenses = transactions
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0);
+      
+      const netBalance = totalIncome - totalExpenses;
+
+      const reportData = {
+        transactions,
+        totalIncome,
+        totalExpenses,
+        netBalance,
+        artistName: appliedSelectedArtistId !== 'all' 
+          ? artists.find(a => a.id === appliedSelectedArtistId)?.name 
+          : undefined,
+        dateRange: appliedStartDate && appliedEndDate
+          ? { start: appliedStartDate, end: appliedEndDate }
+          : undefined
+      };
+
+      // Exportar a PDF con logo (puedes agregar el logo aquí)
+      const fileName = exportFinancialReportToPDF(reportData);
+
+      toast.success('PDF Report Exported! 📄', {
+        description: `${transactions.length} transactions exported to ${fileName}`,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Export Failed', {
+        description: 'There was an error generating the PDF report. Please try again.',
       });
     }
   };
@@ -697,15 +736,28 @@ export default function FinancePage() {
               icon={FileText}
             >
               <div className="flex justify-end mb-4">
-                <Button 
-                  variant="outline" 
-                  onClick={handleExportCSV}
-                  disabled={transactions.length === 0}
-                  className="gap-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  Export Professional Report
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      disabled={transactions.length === 0}
+                      className="gap-2"
+                    >
+                      <Download className="h-4 w-4" />
+                      Export Report
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleExportExcel}>
+                      <FileSpreadsheet className="h-4 w-4 mr-2" />
+                      Export to Excel (.xlsx)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportPDF}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Export to PDF
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               {transactions.length === 0 ? (
                 <Card className="border-0 bg-gradient-to-br from-background to-muted/20">

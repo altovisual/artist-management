@@ -8,13 +8,14 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { TrendingUp, TrendingDown, DollarSign, Calendar, FileText, Download, Upload, BarChart3, GitCompare } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, Calendar, FileText, Download, Upload, BarChart3, GitCompare, FileSpreadsheet } from 'lucide-react'
 import { ContentSection } from '@/components/ui/design-system/content-section'
 import { StatsGrid } from '@/components/ui/design-system/stats-grid'
 import { formatCurrency, formatDate } from '@/lib/format-utils'
 import { FinancialCharts } from './financial-charts'
 import { PeriodComparison } from './period-comparison'
-import { exportStatementsReport } from '@/lib/export-statements-report'
+import { exportStatementsReport, exportStatementsReportToPDF } from '@/lib/export-statements-report'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
 import { ImportStatementsDialog } from './import-statements-dialog'
 
@@ -185,7 +186,7 @@ export function ArtistStatementsView() {
     }
   }
 
-  const handleExportReport = () => {
+  const handleExportExcel = () => {
     try {
       const reportData = {
         statements,
@@ -203,13 +204,42 @@ export function ArtistStatementsView() {
 
       const fileName = exportStatementsReport(reportData);
 
-      toast.success('Reporte Exportado Exitosamente! 📊', {
+      toast.success('Excel Exportado! 📊', {
         description: `${statements.length} estados de cuenta exportados a ${fileName}`,
       });
     } catch (error) {
       console.error('Export error:', error);
       toast.error('Error al Exportar', {
         description: 'Hubo un error al generar el reporte. Por favor intenta de nuevo.',
+      });
+    }
+  }
+
+  const handleExportPDF = () => {
+    try {
+      const reportData = {
+        statements,
+        selectedStatement: selectedStatement || undefined,
+        transactions: selectedStatement ? transactions : undefined,
+        totalIncome,
+        totalExpenses,
+        totalAdvances,
+        totalBalance,
+        filterArtist: selectedArtistId !== 'all' 
+          ? uniqueArtists.find(a => a.id === selectedArtistId)?.name 
+          : undefined,
+        filterMonth: selectedMonth !== 'all' ? selectedMonth : undefined
+      };
+
+      const fileName = exportStatementsReportToPDF(reportData);
+
+      toast.success('PDF Exportado! 📄', {
+        description: `${statements.length} estados de cuenta exportados a ${fileName}`,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Error al Exportar', {
+        description: 'Hubo un error al generar el reporte PDF. Por favor intenta de nuevo.',
       });
     }
   }
@@ -314,15 +344,28 @@ export function ArtistStatementsView() {
               </SelectContent>
             </Select>
 
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={handleExportReport}
-              disabled={statements.length === 0}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Exportar Reporte
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  disabled={statements.length === 0}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Exportar Reporte
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportExcel}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Export to Excel (.xlsx)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPDF}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Export to PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           {userRole === 'user' && userArtistIds.length === 0 && (
             <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
