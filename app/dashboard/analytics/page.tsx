@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast'
 import { AnalyticsSkeleton } from '@/components/analytics-skeleton'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Input } from '@/components/ui/input'
 import { Users, TrendingUp, Music, DollarSign, Filter, Search, BarChart3, Play, ExternalLink, Headphones, X, Trash2, AlertTriangle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -390,7 +391,7 @@ export default function AnalyticsPage() {
                       <p className="font-semibold">No artists in database</p>
                       <p className="text-sm">Create artists from the Dashboard to see them here</p>
                       <Button asChild className="mt-4">
-                        <a href="/artists/new">Create First Artist</a>
+                        <Link href="/artists/new">Create First Artist</Link>
                       </Button>
                     </div>
                   ) : (
