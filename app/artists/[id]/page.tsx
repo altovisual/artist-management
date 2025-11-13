@@ -287,6 +287,11 @@ export default function ArtistDetailPage() {
   }
 
   const renderTabContent = (tab: string) => {
+    // Guard clause: return null if artist is not loaded yet
+    if (!artist) {
+      return null;
+    }
+
     switch (tab) {
       case 'overview':
         return (
@@ -565,6 +570,11 @@ export default function ArtistDetailPage() {
   );
 
   const renderDesktopView = () => {
+    // Guard clause: return null if artist is not loaded yet
+    if (!artist) {
+      return null;
+    }
+
     // Prepare stats data
     const statsData = [
       {

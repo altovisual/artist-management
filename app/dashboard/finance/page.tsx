@@ -41,6 +41,7 @@ interface Transaction {
   type: 'income' | 'expense'
   artists?: { name: string }
   transaction_categories?: { name: string, type: string }
+  source?: 'manual' | 'statement'
 }
 
 interface Artist {
@@ -268,16 +269,10 @@ export default function FinancePage() {
       appliedTransactionTypeFilter
     });
     
-    // Fetch from statement_transactions (real Excel data)
+    // Fetch from unified_transactions view (combines manual + Excel data)
     let query = supabase
-      .from('statement_transactions')
-      .select(`
-        *,
-        artist_statements!inner(
-          artist_id,
-          artists(name)
-        )
-      `)
+      .from('unified_transactions')
+      .select('*')
       .order('transaction_date', { ascending: false })
 
     // If user is an artist (not admin), only show their transactions
@@ -292,15 +287,15 @@ export default function FinancePage() {
     }
     
     if (appliedTransactionTypeFilter !== 'all') {
-      query = query.eq('transaction_type', appliedTransactionTypeFilter)
+      query = query.eq('type', appliedTransactionTypeFilter)
     }
     
     if (appliedSelectedCategoryId !== 'all') {
-      query = query.eq('category', appliedSelectedCategoryId)
+      query = query.eq('category_name', appliedSelectedCategoryId)
     }
     
     if (appliedSearchTerm) {
-      query = query.ilike('concept', `%${appliedSearchTerm}%`)
+      query = query.ilike('description', `%${appliedSearchTerm}%`)
     }
     
     if (appliedStartDate) {
@@ -318,18 +313,19 @@ export default function FinancePage() {
       setTransactions([])
     } else {
       console.log(`✅ Fetched ${data?.length || 0} transactions`);
-      // Transform statement_transactions to match Transaction interface
+      // Transform unified_transactions to match Transaction interface
       const transformedData = data?.map(t => ({
         id: t.id,
         created_at: t.created_at,
-        artist_id: t.artist_statements?.artist_id || t.artist_id || '',
-        category_id: '', // statement_transactions don't have categories
+        artist_id: t.artist_id || '',
+        category_id: '', 
         amount: Math.abs(t.amount),
-        description: t.concept,
+        description: t.description,
         transaction_date: t.transaction_date,
-        type: t.transaction_type as 'income' | 'expense',
-        artists: { name: t.artist_statements?.artists?.name || 'Unknown' },
-        transaction_categories: { name: t.transaction_type === 'income' ? 'Income' : 'Expense', type: t.transaction_type }
+        type: t.type as 'income' | 'expense',
+        artists: { name: t.artist_name || 'Unknown' },
+        transaction_categories: { name: t.category_name || t.type, type: t.type },
+        source: t.source // 'manual' or 'statement'
       })) || []
       
       setTransactions(transformedData as Transaction[])
@@ -345,11 +341,11 @@ export default function FinancePage() {
       setArtists(artistsData || [])
     }
 
-    // Fetch unique categories from statement_transactions
+    // Fetch unique categories from unified_transactions
     const { data: transactionsData, error: categoriesError } = await supabase
-      .from('statement_transactions')
-      .select('category, transaction_type')
-      .not('category', 'is', null)
+      .from('unified_transactions')
+      .select('category_name, type')
+      .not('category_name', 'is', null)
     
     if (categoriesError) {
       console.error('Error fetching categories:', categoriesError)
@@ -357,8 +353,8 @@ export default function FinancePage() {
       // Get unique categories with their types
       const categoryMap = new Map<string, 'income' | 'expense'>()
       transactionsData?.forEach(t => {
-        if (t.category && !categoryMap.has(t.category)) {
-          categoryMap.set(t.category, t.transaction_type as 'income' | 'expense')
+        if (t.category_name && !categoryMap.has(t.category_name)) {
+          categoryMap.set(t.category_name, t.type as 'income' | 'expense')
         }
       })
       

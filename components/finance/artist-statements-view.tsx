@@ -135,6 +135,8 @@ export function ArtistStatementsView() {
           artists(name, profile_image)
         `)
         .order('period_start', { ascending: false })
+        // Filtrar registros ocultos
+        .or('hidden.is.null,hidden.eq.false')
 
       // If user is not admin, filter by their artists only
       if (userRole === 'user' && userArtistIds.length > 0) {
@@ -177,6 +179,8 @@ export function ArtistStatementsView() {
       .from('statement_transactions')
       .select('*')
       .eq('statement_id', statementId)
+      // Filtrar transacciones ocultas
+      .or('hidden.is.null,hidden.eq.false')
       .order('transaction_date', { ascending: false })
 
     if (error) {

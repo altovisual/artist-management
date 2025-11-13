@@ -110,14 +110,12 @@ export function ArtistCard({ artist, onDelete }: ArtistCardProps) {
                   <AlertDialogTitle className="text-center text-xl">
                     ¿Eliminar artista?
                   </AlertDialogTitle>
-                  <AlertDialogDescription className="text-center">
-                    <div className="space-y-2">
-                      <p>Esta acción no se puede deshacer.</p>
-                      <p className="font-medium text-foreground">
-                        Se eliminará permanentemente el perfil de <span className="font-bold">{artist.name}</span> y todos sus datos asociados.
-                      </p>
-                    </div>
-                  </AlertDialogDescription>
+                  <div className="text-center space-y-2 text-sm text-muted-foreground">
+                    <p>Esta acción no se puede deshacer.</p>
+                    <p className="font-medium text-foreground">
+                      Se eliminará permanentemente el perfil de <span className="font-bold">{artist.name}</span> y todos sus datos asociados.
+                    </p>
+                  </div>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
                   <AlertDialogCancel className="w-full sm:w-auto">

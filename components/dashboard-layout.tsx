@@ -112,7 +112,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     const links = [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, id: "dashboard-nav" },
       { href: "/team", label: "Team", icon: Users, id: "team-nav" },
-      { href: "/dashboard/analytics", label: "Analytics", icon: BarChart, id: "analytics-nav" },
       { href: "/dashboard/calendar", label: "Calendar", icon: Calendar, id: "calendar-nav" },
       { href: "/dashboard/finance", label: "Finance", icon: DollarSign, id: "finance-nav" },
       { href: "/dashboard/releases", label: "Releases", icon: Music, id: "releases-nav" },
@@ -120,6 +119,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
     // Conditionally add admin-only links
     if (isAdmin) {
+      links.push({ href: "/dashboard/analytics", label: "Analytics", icon: BarChart, id: "analytics-nav" });
       links.push({ href: "/management", label: "Management", icon: Shield, id: "management-nav" });
       links.push({ href: "/share-tracks", label: "Share Tracks", icon: Share2, id: "share-nav" });
     }

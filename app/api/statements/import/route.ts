@@ -56,6 +56,18 @@ interface Transaction {
   tipo: 'income' | 'expense' | 'advance' | 'payment';
   categoria: string;
   balanceAcumulado?: number;
+  invoiceNumber?: string;
+  transactionTypeCode?: string;
+  paymentMethod?: string;
+  invoiceValue?: number;
+  bankCharges?: number;
+  countryPercentage?: number;
+  commission20?: number;
+  legal5?: number;
+  taxRetention?: number;
+  mvpxPayment?: number;
+  advanceAmount?: number;
+  finalBalance?: number;
 }
 
 export async function POST(request: NextRequest) {
@@ -137,12 +149,13 @@ export async function POST(request: NextRequest) {
 
         if (artistError || !artist) {
           // Crear el artista si no existe
-          const { data: newArtist, error: createError } = await supabaseAdmin
+          const { data: newArtist, error: createError} = await supabaseAdmin
             .from('artists')
             .insert({
               name: artistData.nombreArtistico,
               legal_name: artistData.nombreLegal,
               genre: 'Unknown',
+              country: 'US', // País por defecto
               user_id: user.id // Asociar con el usuario que importa
             })
             .select()
@@ -252,9 +265,12 @@ function processArtistSheet(workbook: XLSX.WorkBook, sheetName: string): ArtistD
   }
 
   if (headerRow !== -1) {
+    const headers = data[headerRow].map((h: any) => String(h || '').toLowerCase().trim());
+    
     for (let i = headerRow + 1; i < data.length; i++) {
       const row = data[i];
       
+      // Extraer fecha
       let fecha: Date | null = null;
       for (let col = 0; col < 5; col++) {
         fecha = parseExcelDate(row[col]);
@@ -263,25 +279,52 @@ function processArtistSheet(workbook: XLSX.WorkBook, sheetName: string): ArtistD
       
       if (!fecha) continue;
 
+      // Extraer concepto
       let concepto = '';
-      for (let col = 0; col < row.length; col++) {
-        if (row[col] && typeof row[col] === 'string' && row[col].length > 5) {
-          concepto = String(row[col]).trim();
-          break;
+      const conceptoIdx = headers.findIndex(h => h.includes('concepto'));
+      if (conceptoIdx >= 0 && row[conceptoIdx]) {
+        concepto = String(row[conceptoIdx]).trim();
+      } else {
+        for (let col = 0; col < row.length; col++) {
+          if (row[col] && typeof row[col] === 'string' && row[col].length > 5) {
+            concepto = String(row[col]).trim();
+            break;
+          }
         }
       }
 
       if (!concepto) continue;
 
-      let monto = 0;
-      let balanceAcumulado: number | undefined;
+      // Extraer todos los campos numéricos
+      const getNumericValue = (headerName: string): number | undefined => {
+        const idx = headers.findIndex(h => h.includes(headerName));
+        if (idx >= 0 && typeof row[idx] === 'number') {
+          return row[idx];
+        }
+        return undefined;
+      };
+
+      const invoiceNumber = row[headers.findIndex(h => h.includes('factura') && h.includes('nº'))] || undefined;
+      const transactionTypeCode = row[headers.findIndex(h => h.includes('tipo'))] || undefined;
+      const paymentMethod = row[headers.findIndex(h => h.includes('método') || h.includes('metodo'))] || undefined;
       
-      for (let col = row.length - 1; col >= 0; col--) {
-        if (typeof row[col] === 'number' && row[col] !== 0) {
-          if (!balanceAcumulado) {
-            balanceAcumulado = row[col];
-          } else if (monto === 0) {
+      const invoiceValue = getNumericValue('valor factura') || getNumericValue('valor');
+      const bankCharges = getNumericValue('cargo') || getNumericValue('cargos banc');
+      const countryPercentage = getNumericValue('80%') || getNumericValue('país');
+      const commission20 = getNumericValue('20%') || getNumericValue('comisión');
+      const legal5 = getNumericValue('5%') || getNumericValue('legal');
+      const taxRetention = getNumericValue('retención') || getNumericValue('iva');
+      const mvpxPayment = getNumericValue('pagado') || getNumericValue('mvpx');
+      const advanceAmount = getNumericValue('avance');
+      const finalBalance = getNumericValue('balance');
+
+      // Calcular monto principal (usar invoice_value o buscar el primer valor numérico significativo)
+      let monto = invoiceValue || 0;
+      if (monto === 0) {
+        for (let col = row.length - 1; col >= 0; col--) {
+          if (typeof row[col] === 'number' && row[col] !== 0 && col !== headers.findIndex(h => h.includes('balance'))) {
             monto = Math.abs(row[col]);
+            break;
           }
         }
       }
@@ -296,7 +339,19 @@ function processArtistSheet(workbook: XLSX.WorkBook, sheetName: string): ArtistD
         monto,
         tipo,
         categoria,
-        balanceAcumulado
+        balanceAcumulado: finalBalance,
+        invoiceNumber: invoiceNumber ? String(invoiceNumber) : undefined,
+        transactionTypeCode: transactionTypeCode ? String(transactionTypeCode) : undefined,
+        paymentMethod: paymentMethod ? String(paymentMethod) : undefined,
+        invoiceValue,
+        bankCharges,
+        countryPercentage,
+        commission20,
+        legal5,
+        taxRetention,
+        mvpxPayment,
+        advanceAmount,
+        finalBalance
       });
 
       if (tipo === 'income') {
@@ -356,16 +411,19 @@ function parseExcelDate(value: any): Date | null {
 }
 
 async function saveArtistStatement(supabaseAdmin: any, artistId: string, artistData: ArtistData, userId: string) {
-  const statementMonth = artistData.fechaInicio
-    ? `${artistData.fechaInicio.getFullYear()}-${String(artistData.fechaInicio.getMonth() + 1).padStart(2, '0')}`
-    : new Date().toISOString().slice(0, 7);
+  // Usar fecha actual si no hay fechaInicio
+  const now = new Date();
+  const fechaInicio = artistData.fechaInicio || new Date(now.getFullYear(), now.getMonth(), 1);
+  const fechaFin = artistData.fechaFin || new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  
+  const statementMonth = `${fechaInicio.getFullYear()}-${String(fechaInicio.getMonth() + 1).padStart(2, '0')}`;
 
   const { data: statement, error: statementError } = await supabaseAdmin
     .from('artist_statements')
     .upsert({
       artist_id: artistId,
-      period_start: artistData.fechaInicio?.toISOString().split('T')[0],
-      period_end: artistData.fechaFin?.toISOString().split('T')[0],
+      period_start: fechaInicio.toISOString().split('T')[0],
+      period_end: fechaFin.toISOString().split('T')[0],
       statement_month: statementMonth,
       legal_name: artistData.nombreLegal,
       total_income: artistData.resumen.totalIngresos,
@@ -402,7 +460,19 @@ async function saveArtistStatement(supabaseAdmin: any, artistId: string, artistD
       amount: t.monto,
       transaction_type: t.tipo,
       category: t.categoria,
-      running_balance: t.balanceAcumulado
+      running_balance: t.balanceAcumulado,
+      invoice_number: t.invoiceNumber,
+      transaction_type_code: t.transactionTypeCode,
+      payment_method_detail: t.paymentMethod,
+      invoice_value: t.invoiceValue,
+      bank_charges_amount: t.bankCharges,
+      country_percentage: t.countryPercentage,
+      commission_20_percentage: t.commission20,
+      legal_5_percentage: t.legal5,
+      tax_retention: t.taxRetention,
+      mvpx_payment: t.mvpxPayment,
+      advance_amount: t.advanceAmount,
+      final_balance: t.finalBalance
     }));
 
     const { error: transactionsError } = await supabaseAdmin
