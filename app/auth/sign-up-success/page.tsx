@@ -8,8 +8,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+type UserRole = 'artist' | 'manager' | 'other'
+
 export default function SignUpSuccessPage() {
   const [cooldown, setCooldown] = useState(0);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+
+  useEffect(() => {
+    // Get the selected role from sessionStorage
+    const role = sessionStorage.getItem('selected_role') as UserRole
+    if (role) {
+      setUserRole(role)
+    }
+  }, [])
 
   useEffect(() => {
     if (!cooldown) return;
@@ -57,6 +68,13 @@ export default function SignUpSuccessPage() {
                 Hemos enviado un enlace de <span className="font-semibold">confirmación</span> a tu
                 correo electrónico. Por favor, revísalo para activar tu cuenta.
               </p>
+              {userRole && (
+                <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-400">
+                  {userRole === 'artist' && '🎵 Después de confirmar, podrás crear tu perfil de artista.'}
+                  {userRole === 'manager' && '💼 Después de confirmar, podrás configurar tu perfil de manager.'}
+                  {userRole === 'other' && '✨ Después de confirmar, podrás acceder a la plataforma.'}
+                </p>
+              )}
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
                 <Mail className="size-4" aria-hidden />
                 <span>¿No lo ves? Revisa SPAM o Promociones.</span>

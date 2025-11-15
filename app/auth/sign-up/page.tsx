@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -18,15 +18,29 @@ const AnimatedLogo = dynamic(() => import('@/components/animated-logo').then(mod
   ssr: false,
 })
 
+type UserRole = 'artist' | 'manager' | 'other'
+
 export default function SignUpPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>()
   const [isLoading, setIsLoading] = useState(false)
+  const [userRole, setUserRole] = useState<UserRole | null>(null)
   const router = useRouter()
   const supabase = createClient()
   const { toast } = useToast()
+
+  useEffect(() => {
+    // Get the selected role from sessionStorage
+    const role = sessionStorage.getItem('selected_role') as UserRole
+    if (!role) {
+      // If no role selected, redirect to role selection
+      router.push('/auth/role-selection')
+      return
+    }
+    setUserRole(role)
+  }, [])
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,20 +53,77 @@ export default function SignUpPage() {
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
+      // Sign up the user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             date_of_birth: dateOfBirth,
+            user_type: userRole,
           },
         },
       })
-      if (error) {
-        toast({ title: "Sign Up Error", description: error.message, variant: "destructive" })
-      } else {
-        router.push('/auth/sign-up-success')
+
+      if (authError) {
+        toast({ title: "Sign Up Error", description: authError.message, variant: "destructive" })
+        setIsLoading(false)
+        return
       }
+
+      if (!authData.user) {
+        toast({ title: "Error", description: "Failed to create user", variant: "destructive" })
+        setIsLoading(false)
+        return
+      }
+
+      // Create user profile with the selected role
+      console.log('📝 Creating user profile with data:', {
+        user_id: authData.user.id,
+        user_type: userRole,
+        onboarding_completed: false,
+      })
+
+      // Create user profile with user_type
+      const profileInsertData = {
+        user_id: authData.user.id,
+        user_type: userRole,
+        onboarding_completed: false,
+      }
+      
+      console.log('🔍 Creating user profile:', profileInsertData)
+      
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .insert(profileInsertData)
+        .select()
+      
+      if (profileError) {
+        console.log('❌ Error creating user profile:')
+        console.log('  Message:', profileError.message)
+        console.log('  Code:', profileError.code)
+        console.log('  Details:', profileError.details)
+        
+        // Show error but continue to email confirmation
+        toast({ 
+          title: "Profile Creation Warning", 
+          description: "Account created but profile incomplete. Contact support if issues persist.",
+          variant: "default",
+          duration: 5000,
+        })
+      } else {
+        console.log('✅ User profile created successfully!')
+        console.log('  User ID:', profileData[0]?.user_id)
+        console.log('  User Type:', profileData[0]?.user_type)
+        console.log('  Profile ID:', profileData[0]?.id)
+      }
+
+      // Don't clear the role yet - we'll need it after email confirmation
+      // sessionStorage will keep the role for after they confirm their email
+      
+      // All users go to email confirmation page first
+      // After confirming email, they'll be redirected to their specific onboarding
+      router.push('/auth/sign-up-success')
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" })
     } finally {
@@ -89,9 +160,16 @@ export default function SignUpPage() {
             <IconoX width={40} height={40} className="mr-3" />
             <AnimatedTitle text="Sign Up" level={1} className="text-4xl font-bold text-zinc-800" />
           </div>
-          <p className="text-zinc-600 mb-8 text-lg">
+          <p className="text-zinc-600 mb-4 text-lg">
             Enter your details below to create your account
           </p>
+          {userRole && (
+            <div className="mb-6 p-3 bg-[#e1348f]/10 border border-[#e1348f]/20 rounded-lg">
+              <p className="text-sm text-zinc-700">
+                Creating account as: <span className="font-bold capitalize">{userRole}</span>
+              </p>
+            </div>
+          )}
           <form onSubmit={handleSignUp} className="grid gap-5">
             <div className="grid gap-2">
               <Label htmlFor="email" className="text-left text-zinc-800 font-semibold text-base">Email</Label>

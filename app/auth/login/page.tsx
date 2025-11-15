@@ -108,7 +108,7 @@ export default function LoginPage() {
           </form>
           <div className="mt-6 text-zinc-600 text-base">
             Don&apos;t have an account?{" "}
-            <Link href="/auth/sign-up" className="text-[#e1348f] font-bold hover:underline">
+            <Link href="/auth/role-selection" className="text-[#e1348f] font-bold hover:underline">
               Sign up
             </Link>
           </div>

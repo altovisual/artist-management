@@ -63,7 +63,7 @@ export default function FinancePage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [chartView, setChartView] = useState<'daily' | 'monthly'>('monthly')
-  const [userRole, setUserRole] = useState<'admin' | 'artist' | null>(null)
+  const [userRole, setUserRole] = useState<'admin' | 'artist' | 'manager' | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [currentArtistId, setCurrentArtistId] = useState<string | null>(null)
 
@@ -222,40 +222,41 @@ export default function FinancePage() {
 
     setCurrentUserId(user.id)
 
-    // Check if user is an artist first
-    const { data: artist } = await supabase
-      .from('artists')
-      .select('id')
+    // Check user profile to determine role
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('user_type, is_admin, artist_profile_id')
       .eq('user_id', user.id)
       .single()
 
-    console.log('Artist data:', artist) // Debug log
+    console.log('👤 User profile:', profile, 'Error:', profileError)
 
-    // Check if user is admin (check both 'admin' and 'Admin' for case sensitivity)
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    console.log('User profile:', profile, 'Error:', profileError) // Debug log
-
-    // Priority: Admin role overrides artist status
-    if (profile?.role?.toLowerCase() === 'admin') {
+    // Priority: Admin role overrides everything
+    if (profile?.is_admin === true) {
       setUserRole('admin')
-      console.log('User is admin (has admin role in profiles)')
-    } else if (artist) {
-      // Only set as artist if NOT admin
+      console.log('✅ User is ADMIN (is_admin = true) - Full access to all transactions')
+    } else if (profile?.user_type === 'artist') {
+      // User is an artist - can only see their own transactions
       setUserRole('artist')
-      setCurrentArtistId(artist.id)
-      // Auto-select this artist in filters
-      setPendingSelectedArtistId(artist.id)
-      setAppliedSelectedArtistId(artist.id)
-      console.log('User is artist:', artist.id)
+      
+      // Get artist profile ID
+      if (profile.artist_profile_id) {
+        setCurrentArtistId(profile.artist_profile_id)
+        setPendingSelectedArtistId(profile.artist_profile_id)
+        setAppliedSelectedArtistId(profile.artist_profile_id)
+        console.log('✅ User is ARTIST:', profile.artist_profile_id, '- Can only see own transactions')
+      } else {
+        console.warn('⚠️ Artist user but no artist_profile_id found')
+      }
+    } else if (profile?.user_type === 'manager') {
+      // Managers can only see their assigned artists (NOT all transactions)
+      setUserRole('manager')
+      console.log('✅ User is MANAGER - Can only see assigned artists')
+      // TODO: Fetch manager's assigned artists from artist_managers table
     } else {
-      // If no profile and no artist, default to admin
-      setUserRole('admin')
-      console.log('No role found, defaulting to admin')
+      // Default: no access (should redirect to onboarding)
+      setUserRole(null)
+      console.warn('⚠️ No valid user_type found:', profile)
     }
   }, [supabase])
 
@@ -275,15 +276,57 @@ export default function FinancePage() {
       .select('*')
       .order('transaction_date', { ascending: false })
 
-    // If user is an artist (not admin), only show their transactions
+    // Filter based on user role
     if (userRole === 'artist' && currentArtistId) {
+      // Artists only see their own transactions
       console.log('🎤 Filtering by artist (user is artist):', currentArtistId);
       query = query.eq('artist_id', currentArtistId)
-    } else if (appliedSelectedArtistId !== 'all') {
-      console.log('👑 Filtering by selected artist (admin):', appliedSelectedArtistId);
-      query = query.eq('artist_id', appliedSelectedArtistId)
+    } else if (userRole === 'manager' && currentUserId) {
+      // Managers only see transactions from their assigned artists
+      console.log('💼 Filtering by manager assigned artists:', currentUserId);
+      
+      // First, get the artist IDs that this manager manages
+      const { data: managedArtists, error: managerError } = await supabase
+        .from('artist_managers')
+        .select('artist_id')
+        .eq('manager_id', currentUserId)
+      
+      if (managerError) {
+        console.error('❌ Error fetching manager artists:', managerError)
+        toast.error('Error', { description: 'Could not load your assigned artists.' })
+        setTransactions([])
+        setLoading(false)
+        return
+      }
+      
+      const artistIds = managedArtists?.map(am => am.artist_id) || []
+      console.log('💼 Manager has access to artists:', artistIds)
+      
+      if (artistIds.length === 0) {
+        console.warn('⚠️ Manager has no assigned artists')
+        setTransactions([])
+        setLoading(false)
+        return
+      }
+      
+      // Filter transactions by managed artists
+      query = query.in('artist_id', artistIds)
+      
+      // If a specific artist is selected, filter further
+      if (appliedSelectedArtistId !== 'all') {
+        console.log('💼 Further filtering by selected artist:', appliedSelectedArtistId);
+        query = query.eq('artist_id', appliedSelectedArtistId)
+      }
+    } else if (userRole === 'admin') {
+      // Admins can see all or filter by specific artist
+      if (appliedSelectedArtistId !== 'all') {
+        console.log('👑 Filtering by selected artist (admin):', appliedSelectedArtistId);
+        query = query.eq('artist_id', appliedSelectedArtistId)
+      } else {
+        console.log('👑 Showing all artists (admin)');
+      }
     } else {
-      console.log('🌐 Showing all artists');
+      console.warn('⚠️ Unknown user role or missing data');
     }
     
     if (appliedTransactionTypeFilter !== 'all') {
@@ -331,15 +374,58 @@ export default function FinancePage() {
       setTransactions(transformedData as Transaction[])
     }
     setLoading(false)
-  }, [supabase, appliedSelectedArtistId, appliedTransactionTypeFilter, appliedSelectedCategoryId, appliedSearchTerm, appliedStartDate, appliedEndDate, toast, userRole, currentArtistId])
+  }, [supabase, appliedSelectedArtistId, appliedTransactionTypeFilter, appliedSelectedCategoryId, appliedSearchTerm, appliedStartDate, appliedEndDate, toast, userRole, currentArtistId, currentUserId])
 
   const fetchArtistsAndCategories = useCallback(async () => {
-    const { data: artistsData, error: artistsError } = await supabase.from('artists').select('id, name').order('name', { ascending: true })
-    if (artistsError) {
-      console.error('Error fetching artists:', artistsError)
-    } else {
-      setArtists(artistsData || [])
+    // Fetch artists based on user role
+    let artistsData: Artist[] = []
+    
+    if (userRole === 'admin') {
+      // Admins see all artists
+      const { data, error: artistsError } = await supabase
+        .from('artists')
+        .select('id, name')
+        .order('name', { ascending: true })
+      
+      if (artistsError) {
+        console.error('Error fetching artists:', artistsError)
+      } else {
+        artistsData = data || []
+      }
+    } else if (userRole === 'manager' && currentUserId) {
+      // Managers only see their assigned artists
+      const { data: managedArtists, error: managerError } = await supabase
+        .from('artist_managers')
+        .select('artist_id, artists!inner(id, name)')
+        .eq('manager_id', currentUserId)
+      
+      if (managerError) {
+        console.error('Error fetching manager artists:', managerError)
+      } else {
+        // Extract artist data from the join
+        artistsData = managedArtists
+          ?.map((am: any) => ({
+            id: am.artists.id,
+            name: am.artists.name
+          }))
+          .filter((a: any) => a.id && a.name) || []
+      }
+    } else if (userRole === 'artist' && currentArtistId) {
+      // Artists only see themselves
+      const { data, error: artistError } = await supabase
+        .from('artists')
+        .select('id, name')
+        .eq('id', currentArtistId)
+        .single()
+      
+      if (artistError) {
+        console.error('Error fetching artist:', artistError)
+      } else if (data) {
+        artistsData = [data]
+      }
     }
+    
+    setArtists(artistsData)
 
     // Fetch unique categories from unified_transactions
     const { data: transactionsData, error: categoriesError } = await supabase
@@ -365,7 +451,7 @@ export default function FinancePage() {
       }))
       setCategories(uniqueCategories)
     }
-  }, [supabase])
+  }, [supabase, userRole, currentUserId, currentArtistId])
 
   useEffect(() => {
     fetchUserRole()
@@ -518,6 +604,37 @@ export default function FinancePage() {
     }
   ]
 
+  // Show error if no valid role
+  if (!loading && !userRole) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Card className="max-w-md p-8 text-center">
+            <CardHeader>
+              <CardTitle className="text-2xl">⚠️ Acceso No Configurado</CardTitle>
+              <CardDescription className="mt-4">
+                Tu cuenta no tiene un rol válido configurado. Por favor contacta al administrador.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-sm text-muted-foreground">
+                <p>Roles válidos:</p>
+                <ul className="mt-2 space-y-1">
+                  <li>🎵 <strong>Artist</strong> - Ver solo tus transacciones</li>
+                  <li>💼 <strong>Manager</strong> - Ver solo artistas asignados</li>
+                  <li>👑 <strong>Admin</strong> - Acceso completo a todo</li>
+                </ul>
+              </div>
+              <Button onClick={() => window.location.reload()} className="w-full">
+                Reintentar
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-8">
@@ -530,7 +647,7 @@ export default function FinancePage() {
               title="Finance Overview"
               description="Track your artist's income and expenses"
               badge={{
-                text: userRole === 'admin' ? '👑 Admin View' : userRole === 'artist' ? '🎤 Artist View' : 'Loading...',
+                text: userRole === 'admin' ? '👑 Admin View' : userRole === 'artist' ? '🎤 Artist View' : userRole === 'manager' ? '💼 Manager View' : 'Loading...',
                 variant: 'outline'
               }}
               actions={[

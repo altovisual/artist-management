@@ -140,8 +140,8 @@ export function MultiStepForm({
       </div>
 
       {/* iOS-style Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border/50 safe-area-inset-bottom z-40">
-        <div className="max-w-2xl mx-auto px-4 py-4 md:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto px-6 pb-8">
+        <div className="sticky bottom-4 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-2xl border border-zinc-200/50 dark:border-zinc-700/50 rounded-2xl shadow-xl p-4">
           <div className="flex items-center gap-3">
             {currentStep > 0 && (
               <Button
@@ -179,9 +179,6 @@ export function MultiStepForm({
           </div>
         </div>
       </div>
-
-      {/* Bottom padding to prevent content from being hidden behind fixed nav */}
-      <div className="h-24" />
     </div>
   )
 }
